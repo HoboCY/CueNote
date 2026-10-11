@@ -35,8 +35,10 @@ button:disabled { opacity:.45; cursor:not-allowed; }
 .state-content pre { max-height:300px; overflow:auto; margin:0; padding:11px; background:#172827; color:#d5e9df; border-radius:7px; font:11px/1.5 Consolas,monospace; white-space:pre-wrap; word-break:break-word; }
 .demo-dot { width:7px; height:7px; background:#9ed4c2; border-radius:50%; display:inline-block; }
 .variant-a-shell { width:min(1440px,100%); margin:14px auto 0; padding:0 16px; display:grid; grid-template-columns:252px minmax(0,1fr); gap:16px; align-items:start; }
+.variant-a-shell.sidebar-closed { grid-template-columns:minmax(0,1fr); }
 .a-sidebar,.b-drawer,.c-drawer { background:#eeeee6; border:1px solid #dfe1d8; border-radius:12px; padding:14px; }
 .a-sidebar { min-height:540px; }
+.a-sidebar .sidebar-collapse { margin-left:auto; padding:5px 7px; font-size:11px; font-weight:400; letter-spacing:0; }
 .brand-row { display:flex; align-items:center; gap:9px; margin-bottom:17px; font-weight:700; letter-spacing:.02em; }
 .brand-mark { display:grid; place-items:center; width:29px; height:29px; background:var(--teal); color:white; border-radius:8px; font-family:Georgia,serif; font-size:16px; }
 .nav-section-title { margin:14px 4px 7px; color:#71807b; text-transform:uppercase; font-size:10px; letter-spacing:.12em; }
@@ -130,7 +132,6 @@ button:disabled { opacity:.45; cursor:not-allowed; }
 .prototype-switcher button { border-color:#58716b; background:#254842; color:#fff; border-radius:999px; padding:5px 9px; }
 .prototype-switcher button.variant-active { background:#f4f4e9; border-color:#f4f4e9; color:#1f514b; font-weight:700; }
 .prototype-switcher button.arrow { width:29px; height:29px; padding:0; font-size:18px; line-height:1; }
-.mobile-nav-trigger { display:none; }
 dialog { width:min(960px,calc(100vw - 24px)); max-width:none; max-height:min(86vh,850px); padding:0; border:1px solid #cdd8d0; border-radius:13px; color:var(--ink); background:#fbfaf4; box-shadow:0 22px 75px rgba(10,29,25,.32); }
 dialog::backdrop { background:rgba(22,38,34,.48); }
 .dialog-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--line); }
@@ -146,11 +147,8 @@ dialog::backdrop { background:rgba(22,38,34,.48); }
 .node-editor button { text-align:left; font-size:11px; }
 .dialog-foot { padding:0 16px 15px; color:#7b8982; font-size:11px; }
 @media(max-width:850px) {
-  .mobile-nav-trigger { display:inline-flex; }
   .variant-a-shell { grid-template-columns:minmax(0,1fr); }
-  .a-sidebar { display:none; min-height:auto; }
-  .variant-a-shell.nav-open .a-sidebar { display:block; }
-  .variant-a-shell.nav-open { grid-template-columns:minmax(0,1fr); }
+  .a-sidebar { min-height:auto; }
   .cornell-a { grid-template-columns:minmax(150px,30%) minmax(0,1fr); }
   .c-workbench { grid-template-columns:minmax(165px,31%) minmax(0,1fr); }
   .c-drawer,.b-drawer { left:10px; top:140px; }
@@ -163,7 +161,6 @@ dialog::backdrop { background:rgba(22,38,34,.48); }
   .prototype-help,.prototype-state { width:calc(100% - 18px); }
   .variant-a-shell { padding:0 9px; margin-top:9px; }
   .a-paper,.b-paper { padding:14px; }
-  .mobile-nav-trigger { display:inline-flex; }
   .cornell-a { grid-template-columns:1fr; }
   .cue-panel { border-right:0; border-bottom:1px solid #d5ddd6; }
   .content-panel { min-height:320px; }
@@ -258,7 +255,7 @@ dialog::backdrop { background:rgba(22,38,34,.48); }
     return {
       variant:getUrlVariant(), currentNoteId:"note-1", activeNotebook:"学习笔记",
       notebooks:["学习笔记","项目记录","默认笔记本"],
-      focusMode:{ navigationOpen:false, cueOpen:true, summaryOpen:true },
+      focusMode:{ navigationOpen:false, notebookSidebarOpen:!window.matchMedia("(max-width:850px)").matches, cueOpen:true, summaryOpen:true },
       notes:[
         { id:"note-1", notebook:"学习笔记", title:"费曼学习法：把理解说清楚",
           cue:"<p><strong>核心问题</strong>：怎样发现自己只是在“眼熟”？</p><p>回忆 · 解释 · 找缺口</p>",
@@ -338,8 +335,9 @@ dialog::backdrop { background:rgba(22,38,34,.48); }
     var notes = visibleNotes.map(function (item) {
       return '<button type="button" class="note-row ' + (item.id === note.id ? "active" : "") + '" data-action="choose-note" data-id="' + escapeHtml(item.id) + '"><span class="note-list-title">' + escapeHtml(item.title) + '</span><span class="note-date">草稿</span></button>';
     }).join("");
-    return '<aside class="' + className + (open ? " open" : "") + '" aria-label="笔记导航">' +
-      '<div class="brand-row"><span class="brand-mark">C</span><span>CueNote</span></div>' +
+    var isASidebar = className === "a-sidebar";
+    return '<aside class="' + className + (open ? " open" : "") + '" aria-label="笔记导航"' + (isASidebar ? ' id="notebookSidebar"' + (state.focusMode.notebookSidebarOpen ? '' : ' hidden') : '') + '>' +
+      '<div class="brand-row"><span class="brand-mark">C</span><span>CueNote</span>' + (isASidebar ? '<button class="sidebar-collapse" type="button" data-action="toggle-a-nav" aria-controls="notebookSidebar" aria-expanded="true" aria-label="收起笔记本栏" title="收起笔记本栏">‹ 收起</button>' : '') + '</div>' +
       '<div class="nav-section-title">笔记本</div><div class="nav-list">' + notebooks + '</div>' +
       '<div class="nav-section-title">笔记列表</div><div class="nav-list">' + notes + '</div>' +
       '<button class="new-note primary" type="button" data-action="new-note">＋ 新建笔记</button>' +
@@ -368,9 +366,9 @@ dialog::backdrop { background:rgba(22,38,34,.48); }
   }
   function renderBlocks(note) { return note.blocks.map(function (block) { return renderBlock(block, note); }).join(""); }
   function renderA(note) {
-    return '<div class="variant-a-shell' + (state.focusMode.navigationOpen ? " nav-open" : "") + '">' +
+    return '<div class="variant-a-shell' + (state.focusMode.notebookSidebarOpen ? "" : " sidebar-closed") + '">' +
       renderNoteNav(note, "a-sidebar", true) +
-      '<section class="a-paper" aria-label="康奈尔笔记编辑器"><div class="note-topline"><div class="note-topline-left"><button class="mobile-nav-trigger" type="button" data-action="toggle-nav">☰ 笔记</button><span>' + escapeHtml(note.notebook) + '　/　康奈尔笔记</span></div><span>布局 A · 纸面</span></div>' +
+      '<section class="a-paper" aria-label="康奈尔笔记编辑器"><div class="note-topline"><div class="note-topline-left"><button class="sidebar-expand" type="button" data-action="toggle-a-nav" aria-controls="notebookSidebar" aria-expanded="false"' + (state.focusMode.notebookSidebarOpen ? ' hidden' : '') + '>☰ 展开笔记本</button><span>' + escapeHtml(note.notebook) + '　/　康奈尔笔记</span></div><span>布局 A · 纸面</span></div>' +
       renderTitle(note) + '<div class="editor-hint">顶部标题　·　线索区约 28%　·　内容区约 72%</div>' + renderToolbar() +
       '<div class="cornell-a"><section class="cue-panel"><div class="panel-kicker"><span>线索区</span><span class="rule"></span></div>' + renderedEditable(note.cue,"cue",note.id,"写下关键词、问题与回顾提示") +
       '</section><section class="content-panel" data-content-area="true" data-note-id="' + escapeHtml(note.id) + '"><div class="panel-kicker"><span>内容区</span><span class="rule"></span></div><div class="content-block-list">' + renderBlocks(note) + '</div></section></div>' +
@@ -441,6 +439,17 @@ dialog::backdrop { background:rgba(22,38,34,.48); }
   function updateInsertHint() {
     var hint = document.getElementById("insertHint");
     if (hint) hint.textContent = selectedBlockId ? "新内容插在当前块后" : "新内容会添加在末尾";
+  }
+  function toggleANotebookSidebar() {
+    var open = state.focusMode.notebookSidebarOpen = !state.focusMode.notebookSidebarOpen;
+    document.querySelector(".variant-a-shell").classList.toggle("sidebar-closed", !open);
+    document.getElementById("notebookSidebar").hidden = !open;
+    document.querySelector(".sidebar-expand").hidden = open;
+    document.querySelectorAll('[data-action="toggle-a-nav"]').forEach(function (button) {
+      button.setAttribute("aria-expanded", String(open));
+    });
+    document.querySelector(open ? ".sidebar-collapse" : ".sidebar-expand").focus();
+    updateStatePanel();
   }
   function cloneForState(note) {
     return {
@@ -616,7 +625,8 @@ dialog::backdrop { background:rgba(22,38,34,.48); }
     var control = event.target.closest("[data-action]");
     if (!control) return;
     var actionName = control.getAttribute("data-action");
-    if (actionName === "toggle-nav") { state.focusMode.navigationOpen = !state.focusMode.navigationOpen; renderApp(); }
+    if (actionName === "toggle-a-nav") toggleANotebookSidebar();
+    else if (actionName === "toggle-nav") { state.focusMode.navigationOpen = !state.focusMode.navigationOpen; renderApp(); }
     else if (actionName === "toggle-cue") { state.focusMode.cueOpen = !state.focusMode.cueOpen; renderApp(); }
     else if (actionName === "toggle-summary") { state.focusMode.summaryOpen = !state.focusMode.summaryOpen; renderApp(); }
     else if (actionName === "choose-notebook") {
