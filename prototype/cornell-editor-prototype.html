@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CueNote 康奈尔编辑原型</title>
+<style>
+:root {
+  color-scheme: light; --ink:#243436; --muted:#687775; --line:#d9dfd9; --paper:#fffdf7;
+  --canvas:#f3f1e9; --teal:#28766f; --teal-dark:#1d5c57; --teal-pale:#e4f0ec; --danger:#a2443d;
+  font-family:"Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;
+}
+* { box-sizing:border-box; }
+body { margin:0; padding:0 0 105px; background:var(--canvas); color:var(--ink); }
+button,input { font:inherit; }
+button { border:1px solid var(--line); background:#fffefa; color:var(--ink); border-radius:8px; padding:7px 11px; cursor:pointer; }
+button:hover { border-color:var(--teal); color:var(--teal-dark); }
+button:focus-visible,input:focus-visible,[contenteditable="true"]:focus-visible { outline:2px solid #65a69d; outline-offset:2px; }
+button.primary { background:var(--teal); border-color:var(--teal); color:white; }
+button.quiet { background:transparent; }
+button.danger { color:var(--danger); }
+button:disabled { opacity:.45; cursor:not-allowed; }
+[hidden] { display:none !important; }
+.prototype-banner { min-height:38px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:6px 18px; background:#243b3b; color:#eef6f1; font-size:12px; }
+.prototype-banner strong { color:#c5e4d9; letter-spacing:.04em; }
+.prototype-actions { display:flex; align-items:center; gap:7px; }
+.prototype-actions button { padding:4px 9px; border-color:#69817d; color:white; background:transparent; font-size:12px; }
+.prototype-help,.prototype-state { margin:10px auto 0; width:min(1180px,calc(100% - 28px)); border:1px solid #d9dfd9; border-radius:10px; background:#fbfaf4; color:var(--ink); }
+.prototype-help summary,.prototype-state summary { cursor:pointer; padding:9px 13px; color:#3e625f; font-size:13px; font-weight:650; }
+.help-content { padding:0 16px 12px; font-size:12px; color:#536462; line-height:1.65; }
+.help-content ol { margin:2px 0 5px; padding-left:22px; }
+.help-content p { margin:7px 0 0; }
+.prototype-state { margin-top:7px; }
+.state-content { padding:0 12px 12px; }
+.state-content pre { max-height:300px; overflow:auto; margin:0; padding:11px; background:#172827; color:#d5e9df; border-radius:7px; font:11px/1.5 Consolas,monospace; white-space:pre-wrap; word-break:break-word; }
+.demo-dot { width:7px; height:7px; background:#9ed4c2; border-radius:50%; display:inline-block; }
+.variant-a-shell { width:min(1440px,100%); margin:14px auto 0; padding:0 16px; display:grid; grid-template-columns:252px minmax(0,1fr); gap:16px; align-items:start; }
+.a-sidebar,.b-drawer,.c-drawer { background:#eeeee6; border:1px solid #dfe1d8; border-radius:12px; padding:14px; }
+.a-sidebar { min-height:540px; }
+.brand-row { display:flex; align-items:center; gap:9px; margin-bottom:17px; font-weight:700; letter-spacing:.02em; }
+.brand-mark { display:grid; place-items:center; width:29px; height:29px; background:var(--teal); color:white; border-radius:8px; font-family:Georgia,serif; font-size:16px; }
+.nav-section-title { margin:14px 4px 7px; color:#71807b; text-transform:uppercase; font-size:10px; letter-spacing:.12em; }
+.nav-list { display:grid; gap:3px; }
+.nav-item,.note-row { display:flex; justify-content:space-between; align-items:center; gap:8px; width:100%; text-align:left; background:transparent; border-color:transparent; padding:8px 9px; font-size:13px; }
+.nav-item.active,.note-row.active { background:#dce9e3; color:var(--teal-dark); border-color:#d1e0d8; }
+.note-row { align-items:flex-start; }
+.note-list-title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.note-date { flex:none; color:#88938d; font-size:10px; }
+.a-sidebar .new-note,.drawer-content .new-note { width:100%; margin-top:12px; }
+.a-paper { min-width:0; padding:clamp(16px,3vw,34px); background:var(--paper); border:1px solid #e7e4d8; box-shadow:0 10px 30px rgba(43,54,47,.045); border-radius:12px; }
+.note-topline { display:flex; justify-content:space-between; align-items:center; gap:10px; color:var(--muted); font-size:11px; }
+.note-topline-left { display:flex; align-items:center; gap:8px; }
+.note-title-input { display:block; width:100%; margin:12px 0 7px; padding:3px 0 8px; border:0; border-bottom:1px solid var(--line); border-radius:0; outline:none; background:transparent; color:var(--ink); font:600 clamp(24px,3vw,35px)/1.25 Georgia,"Songti SC",serif; }
+.note-title-input:focus { border-bottom-color:var(--teal); outline:none; }
+.editor-hint { color:#83908a; font-size:11px; }
+.editor-tools { display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin:17px 0 13px; padding:8px; border:1px solid #e3e5dc; border-radius:9px; background:#faf9f3; }
+.editor-tools button { min-width:34px; padding:5px 8px; font-size:12px; }
+.tool-separator { height:20px; border-left:1px solid var(--line); margin:0 3px; }
+.insert-hint { margin-left:auto; color:#75847e; font-size:10px; }
+.cornell-a { display:grid; grid-template-columns:minmax(180px,28%) minmax(0,1fr); border-top:2px solid #b9c8c0; }
+.cue-panel,.content-panel,.summary-panel,.b-cue-panel,.b-content-panel { min-width:0; padding:17px 18px; }
+.cue-panel { border-right:1px solid #d5ddd6; background:#fbfaf5; }
+.panel-kicker { display:flex; align-items:center; gap:8px; margin-bottom:12px; color:#46635e; font-size:11px; font-weight:700; letter-spacing:.1em; }
+.panel-kicker .rule { height:1px; flex:1; background:#dce2dc; }
+.content-panel { min-height:370px; background:var(--paper); }
+.summary-panel { border-top:1px solid #c9d3cc; background:#f6f5ed; }
+.editable-copy { min-height:70px; color:#354442; font:14px/1.8 "Segoe UI","Microsoft YaHei UI",sans-serif; }
+.editable-copy:empty::before,.editable-body:empty::before { content:attr(data-placeholder); color:#9ba49f; pointer-events:none; }
+.editable-copy p,.editable-body p { margin:0 0 10px; }
+.editable-body { min-height:76px; padding:2px 4px 10px; color:#31403e; font:14px/1.8 "Segoe UI","Microsoft YaHei UI",sans-serif; overflow-wrap:anywhere; }
+.editable-body h2,.editable-body h3 { font-family:Georgia,"Songti SC",serif; line-height:1.35; }
+.editable-body h3 { font-size:19px; }
+.editable-body ul,.editable-body ol { padding-left:23px; }
+.content-block-list { display:grid; gap:15px; }
+.content-block { border-bottom:1px dashed #e0e3db; padding:0 0 12px; }
+.block-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; color:#85918c; font-size:10px; }
+.block-head-actions { display:flex; gap:5px; }
+.block-head button { padding:3px 7px; font-size:10px; }
+.image-block { margin:7px 0 0; }
+.image-block img { display:block; max-width:100%; height:auto; border:1px solid #dfe4dc; border-radius:8px; background:#f2f2ec; }
+.image-caption { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin-top:7px; color:#76827d; font-size:10px; }
+.image-caption input { width:145px; accent-color:var(--teal); }
+.map-preview { overflow:auto; padding:13px; border:1px solid #e3e7df; border-radius:9px; background:#fbfaf5; }
+.map-tree ul { list-style:none; margin:0 0 0 13px; padding:1px 0 1px 19px; border-left:1px solid #b8c8c0; }
+.map-tree>ul { margin:0; padding-left:0; border-left:0; }
+.map-tree li { position:relative; display:flex; align-items:center; min-height:39px; padding:5px 0 5px 13px; }
+.map-tree li::before { content:""; position:absolute; left:0; width:13px; border-top:1px solid #b8c8c0; }
+.map-tree>ul>li::before { display:none; }
+.map-node { display:inline-flex; align-items:center; max-width:240px; min-height:28px; padding:5px 9px; border:1px solid #b6d1c8; border-radius:7px; background:#edf5ef; color:#315a53; font-size:11px; }
+.map-node.root { background:#dcece4; border-color:#93bbae; font-weight:700; }
+.map-edit-button { margin-top:9px; font-size:11px; }
+.variant-b-shell { width:min(1060px,calc(100% - 34px)); margin:16px auto 0; position:relative; }
+.b-drawer,.c-drawer { position:fixed; z-index:15; top:136px; left:max(12px,calc((100vw - 1220px)/2)); width:270px; max-height:min(68vh,610px); overflow:auto; box-shadow:0 14px 35px rgba(29,48,43,.15); display:none; }
+.b-drawer.open,.c-drawer.open { display:block; }
+.b-toolbar-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:0 0 16px; }
+.focus-label { color:#6e7e78; font-size:11px; }
+.b-paper { padding:clamp(20px,4vw,48px); background:var(--paper); border:1px solid #e7e4d8; border-radius:13px; box-shadow:0 10px 32px rgba(43,54,47,.05); }
+.b-title-wrap { max-width:920px; margin:0 auto; }
+.b-writing-area { width:min(890px,100%); margin:12px auto 0; }
+.b-cornell { display:grid; grid-template-columns:minmax(160px,24%) minmax(0,1fr); border-top:1px solid #d5ddd6; }
+.b-cue-panel { background:#faf9f3; border-right:1px solid #e0e4dc; }
+.b-content-panel { min-height:480px; }
+.b-summary { width:min(890px,100%); margin:12px auto 0; padding:14px 18px; border-top:1px solid #c9d3cc; background:#f6f5ed; }
+.collapse-toggle { margin-left:auto; padding:3px 8px; font-size:10px; }
+.b-cue-panel.folded .editable-copy,.b-summary.folded .editable-copy { display:none; }
+.b-cue-panel.folded,.b-summary.folded { min-height:0; padding-top:9px; padding-bottom:9px; }
+.b-cornell.cue-folded { grid-template-columns:104px minmax(0,1fr); }
+.b-cue-panel.folded { padding-left:10px; padding-right:10px; }
+.variant-c-shell { width:min(1500px,100%); margin:13px auto 0; padding:0 16px 240px; }
+.c-top-row { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
+.note-tabs { display:flex; gap:5px; min-width:0; overflow-x:auto; padding:3px 2px 7px; }
+.note-tab { flex:none; max-width:210px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-radius:8px 8px 0 0; }
+.note-tab.active { color:var(--teal-dark); border-color:#b6cec3; background:var(--paper); border-bottom-color:var(--paper); }
+.c-title-paper { padding:10px 20px 0; background:var(--paper); border:1px solid #e7e4d8; border-bottom:0; border-radius:12px 12px 0 0; }
+.c-title-paper .note-title-input { margin-top:7px; }
+.c-workbench { display:grid; grid-template-columns:minmax(220px,28%) minmax(0,1fr); height:max(190px,calc(100vh - 490px)); min-height:190px; max-height:560px; border:1px solid #e4e3d9; background:var(--paper); overflow:hidden; }
+.c-pane { min-width:0; min-height:0; display:flex; flex-direction:column; }
+.c-pane+.c-pane { border-left:1px solid #d6ddd6; }
+.c-pane-head { display:flex; align-items:center; gap:8px; padding:12px 15px 9px; background:#f8f7f0; color:#46635e; font-size:11px; font-weight:700; letter-spacing:.1em; }
+.c-pane-scroll { min-height:0; flex:1; overflow:auto; padding:10px 16px 18px; }
+.c-pane .content-block-list { padding-top:9px; }
+.c-summary-dock { position:fixed; z-index:8; left:clamp(12px,7vw,110px); right:clamp(12px,7vw,110px); bottom:86px; height:94px; overflow:auto; padding:10px 15px; border:1px solid #bccdc5; border-radius:10px; background:rgba(249,249,241,.98); box-shadow:0 8px 27px rgba(27,51,44,.13); }
+.c-summary-dock.in-flow { position:static; left:auto; right:auto; bottom:auto; height:auto; max-height:none; overflow:visible; margin:12px 0 0; }
+.c-summary-dock.in-flow .editable-copy { max-height:none; overflow:visible; }
+.c-summary-dock .panel-kicker { margin-bottom:4px; }
+.c-summary-dock .editable-copy { min-height:28px; max-height:45px; overflow:auto; font-size:12px; line-height:1.55; }
+.prototype-switcher { position:fixed; z-index:30; left:50%; bottom:15px; transform:translateX(-50%); display:flex; align-items:center; gap:6px; max-width:calc(100vw - 18px); padding:7px 9px; border:1px solid #617d77; border-radius:999px; background:#183532; color:#f5f7f2; box-shadow:0 8px 28px rgba(13,39,34,.28); font-size:11px; }
+.prototype-switcher .switch-label { min-width:128px; text-align:center; color:#e6f0e9; }
+.prototype-switcher .switcher-note { color:#a8c8bc; }
+.prototype-switcher button { border-color:#58716b; background:#254842; color:#fff; border-radius:999px; padding:5px 9px; }
+.prototype-switcher button.variant-active { background:#f4f4e9; border-color:#f4f4e9; color:#1f514b; font-weight:700; }
+.prototype-switcher button.arrow { width:29px; height:29px; padding:0; font-size:18px; line-height:1; }
+.mobile-nav-trigger { display:none; }
+dialog { width:min(960px,calc(100vw - 24px)); max-width:none; max-height:min(86vh,850px); padding:0; border:1px solid #cdd8d0; border-radius:13px; color:var(--ink); background:#fbfaf4; box-shadow:0 22px 75px rgba(10,29,25,.32); }
+dialog::backdrop { background:rgba(22,38,34,.48); }
+.dialog-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:14px 18px; border-bottom:1px solid var(--line); }
+.dialog-head h2 { margin:0; font:600 19px Georgia,"Songti SC",serif; }
+.dialog-body { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(240px,.7fr); gap:16px; padding:16px; }
+.dialog-map { min-width:0; overflow:auto; max-height:60vh; padding:12px; border:1px solid #e1e5dc; border-radius:9px; background:white; }
+.dialog-map .map-node { cursor:pointer; }
+.dialog-map .map-node.selected { outline:2px solid var(--teal); outline-offset:1px; background:#d6ece2; }
+.node-editor { padding:12px; border:1px solid #dfe4dc; border-radius:9px; background:#f5f5ee; }
+.node-editor label { display:block; margin-bottom:6px; color:#5b6d67; font-size:11px; }
+.node-editor input { width:100%; padding:8px; border:1px solid #cbd5ce; border-radius:7px; }
+.node-editor .node-actions { display:grid; gap:7px; margin-top:12px; }
+.node-editor button { text-align:left; font-size:11px; }
+.dialog-foot { padding:0 16px 15px; color:#7b8982; font-size:11px; }
+@media(max-width:850px) {
+  .mobile-nav-trigger { display:inline-flex; }
+  .variant-a-shell { grid-template-columns:minmax(0,1fr); }
+  .a-sidebar { display:none; min-height:auto; }
+  .variant-a-shell.nav-open .a-sidebar { display:block; }
+  .variant-a-shell.nav-open { grid-template-columns:minmax(0,1fr); }
+  .cornell-a { grid-template-columns:minmax(150px,30%) minmax(0,1fr); }
+  .c-workbench { grid-template-columns:minmax(165px,31%) minmax(0,1fr); }
+  .c-drawer,.b-drawer { left:10px; top:140px; }
+}
+@media(max-width:620px) {
+  body { padding-bottom:112px; }
+  .prototype-banner { align-items:flex-start; padding:8px 10px; }
+  .prototype-banner .banner-copy { line-height:1.45; }
+  .prototype-actions { flex-direction:column; align-items:flex-end; }
+  .prototype-help,.prototype-state { width:calc(100% - 18px); }
+  .variant-a-shell { padding:0 9px; margin-top:9px; }
+  .a-paper,.b-paper { padding:14px; }
+  .mobile-nav-trigger { display:inline-flex; }
+  .cornell-a { grid-template-columns:1fr; }
+  .cue-panel { border-right:0; border-bottom:1px solid #d5ddd6; }
+  .content-panel { min-height:320px; }
+  .b-cornell { grid-template-columns:1fr; }
+  .b-cornell.cue-folded { grid-template-columns:1fr; }
+  .b-cue-panel { border-right:0; border-bottom:1px solid #e0e4dc; }
+  .b-content-panel { min-height:340px; }
+  .variant-b-shell { width:calc(100% - 18px); margin-top:10px; }
+  .b-drawer,.c-drawer { top:158px; max-height:60vh; }
+  .variant-c-shell { padding:0 9px 230px; }
+  .c-title-paper { padding:8px 12px 0; }
+  .c-workbench { height:300px; min-height:250px; grid-template-columns:1fr; grid-template-rows:minmax(95px,.65fr) minmax(140px,1fr); }
+  .c-pane+.c-pane { border-left:0; border-top:1px solid #d6ddd6; }
+  .c-pane-scroll { padding:8px 11px 14px; }
+  .c-summary-dock { position:static; left:auto; right:auto; bottom:auto; height:auto; max-height:none; overflow:visible; margin:12px 0 0; padding:8px 11px; }
+  .c-summary-dock .editable-copy { max-height:none; overflow:visible; }
+  .prototype-switcher { bottom:10px; gap:4px; padding:6px; }
+  .prototype-switcher .switch-label { min-width:88px; font-size:10px; }
+  .prototype-switcher .switcher-note { display:none; }
+  .prototype-switcher button { padding:5px 7px; }
+  .dialog-body { grid-template-columns:1fr; }
+  .dialog-map { max-height:38vh; }
+}
+</style>
+</head>
+<body>
+<header class="prototype-banner">
+  <div class="banner-copy"><span class="demo-dot"></span> <strong>原型演示</strong>　笔记只保存在当前页面内存；刷新后恢复样例。图片不会上传。</div>
+  <div class="prototype-actions" aria-label="原型工具">
+    <button type="button" data-shell-action="reset">重置样例</button>
+    <button type="button" data-shell-action="toggle-state">状态面板</button>
+  </div>
+</header>
+<details class="prototype-help">
+  <summary>怎么试：标题、康奈尔分区与内容编辑</summary>
+  <div class="help-content">
+    <ol>
+      <li>编辑标题、线索和总结；在内容区选中文字后试试粗体、标题、项目符号和编号。</li>
+      <li>用“插入图片”选本地图片，或在内容区粘贴剪贴板图片；用宽度滑杆调整并可移除。</li>
+      <li>展开思维导图，改节点、加子节点，再缩进或提升层级；切换笔记后切回，比较 A/B/C 的导航和滚动。</li>
+    </ol>
+    <p>文字工具仅模拟基础 WYSIWYG，不承诺完整 Markdown 或生产级选区体验；源码模式是否需要待确认。底部切换器、此说明和状态面板都只属于原型。</p>
+  </div>
+</details>
+<details class="prototype-state" id="stateDrawer">
+  <summary>原型状态 · 内存草稿检查</summary>
+  <div class="state-content"><pre id="stateJson"></pre></div>
+</details>
+<main id="app" aria-live="off"></main>
+<nav class="prototype-switcher" aria-label="原型布局切换">
+  <button class="arrow" type="button" data-variant-step="-1" aria-label="上一个布局">‹</button>
+  <button type="button" data-variant="A" aria-label="布局 A">A</button>
+  <button type="button" data-variant="B" aria-label="布局 B">B</button>
+  <button type="button" data-variant="C" aria-label="布局 C">C</button>
+  <span class="switch-label"><span id="variantLabel">A</span> <span class="switcher-note" id="variantName">康奈尔纸面</span></span>
+  <button class="arrow" type="button" data-variant-step="1" aria-label="下一个布局">›</button>
+</nav>
+<input id="imageFileInput" type="file" accept="image/*" hidden>
+<dialog id="mapDialog" aria-labelledby="mapDialogTitle">
+  <div class="dialog-head"><h2 id="mapDialogTitle">编辑思维导图</h2><button type="button" data-action="close-map" aria-label="关闭思维导图编辑">关闭</button></div>
+  <div class="dialog-body">
+    <div id="dialogMapTree" class="dialog-map" aria-label="导图节点树"></div>
+    <section class="node-editor">
+      <label for="mapNodeText">选中节点文字</label><input id="mapNodeText" type="text" autocomplete="off">
+      <div class="node-actions">
+        <button type="button" data-action="map-add-child">＋ 添加子节点</button>
+        <button type="button" data-action="map-add-sibling">＋ 添加同级节点</button>
+        <button type="button" data-action="map-indent">缩进到上一个同级节点下</button>
+        <button type="button" data-action="map-outdent">提升一级</button>
+        <button type="button" class="danger" data-action="map-delete">删除此节点</button>
+      </div>
+    </section>
+  </div>
+  <div class="dialog-foot">根节点保留；节点与层级改动会即时反映在笔记内的预览中。</div>
+</dialog>
+<script>
+(function () {
+  "use strict";
+  var variantNames = { A:"康奈尔纸面", B:"专注写作", C:"分栏工作台" };
+  var nextId = 30, state, activeEditable = null, selectedBlockId = null;
+  var pendingImageTarget = null, mapTarget = null, mapSelectedNodeId = null, mapOriginBlockId = null;
+  function makeNode(text, children) { return { id:"node-" + (nextId++), text:text, children:children || [] }; }
+  function makeSampleState() {
+    var mapOne = makeNode("让知识可以回想", [
+      makeNode("线索", [makeNode("用问题触发回忆"), makeNode("写出关键词")]),
+      makeNode("练习", [makeNode("遮住内容自测"), makeNode("间隔复习")])
+    ]);
+    var mapTwo = makeNode("复盘一次发布", [
+      makeNode("观察", [makeNode("记录事实"), makeNode("区分假设")]),
+      makeNode("行动", [makeNode("明确负责人"), makeNode("设定回看时间")])
+    ]);
+    return {
+      variant:getUrlVariant(), currentNoteId:"note-1", activeNotebook:"学习笔记",
+      notebooks:["学习笔记","项目记录","默认笔记本"],
+      focusMode:{ navigationOpen:false, cueOpen:true, summaryOpen:true },
+      notes:[
+        { id:"note-1", notebook:"学习笔记", title:"费曼学习法：把理解说清楚",
+          cue:"<p><strong>核心问题</strong>：怎样发现自己只是在“眼熟”？</p><p>回忆 · 解释 · 找缺口</p>",
+          summary:"<p>先合上资料尝试解释，再定位卡住的地方；用自己的话讲通，才算理解。</p>",
+          blocks:[
+            { id:"block-1", type:"text", html:"<h3>先回忆，再阅读</h3><p>合上资料，试着用自己的话讲一遍。写下卡住的位置，再回到原文补上缺口。</p><ul><li>用简单语言解释概念</li><li>记录尚未讲清楚的部分</li></ul>" },
+            { id:"block-2", type:"mindmap", root:mapOne },
+            { id:"block-3", type:"text", html:"<p>下一次复习时，先看线索区的问题，不先看正文。</p>" }
+          ] },
+        { id:"note-2", notebook:"项目记录", title:"项目复盘：从事实到下一步",
+          cue:"<p>发生了什么？</p><p>哪些观察可以被证实？</p>",
+          summary:"<p>把观察与推测分开；每个改进项都要有负责人和回看时间。</p>",
+          blocks:[
+            { id:"block-4", type:"text", html:"<h3>先记录可观察的事实</h3><p>按时间顺序记下关键事件、结果和影响，再补充原因假设。</p>" },
+            { id:"block-5", type:"mindmap", root:mapTwo }
+          ] },
+        { id:"note-3", notebook:"默认笔记本", title:"阅读摘记：留下一条可回看的线索",
+          cue:"<p>这段内容回答了什么问题？</p>",
+          summary:"<p>用一句话写出最值得记住的判断，并留下来源线索。</p>",
+          blocks:[{ id:"block-6", type:"text", html:"<p>读完后先合上材料，写下最重要的一点，再补充依据。</p>" }]
+        }
+      ]
+    };
+  }
+  function getUrlVariant() {
+    var value = new URLSearchParams(window.location.search).get("variant");
+    return value === "B" || value === "C" ? value : "A";
+  }
+  function getCurrentNote() { return state.notes.find(function (note) { return note.id === state.currentNoteId; }) || state.notes[0]; }
+  function escapeHtml(value) {
+    return String(value == null ? "" : value).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+  function cleanHtml(value) {
+    var allowed = { P:1,DIV:1,BR:1,STRONG:1,B:1,EM:1,I:1,U:1,S:1,UL:1,OL:1,LI:1,H2:1,H3:1,BLOCKQUOTE:1,CODE:1,PRE:1 };
+    var doc = new DOMParser().parseFromString(String(value || ""), "text/html");
+    function clean(parent) {
+      Array.from(parent.childNodes).forEach(function (node) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          clean(node);
+          if (!allowed[node.tagName]) {
+            var fragment = doc.createDocumentFragment();
+            while (node.firstChild) fragment.appendChild(node.firstChild);
+            node.replaceWith(fragment);
+          } else {
+            Array.from(node.attributes).forEach(function (attr) { node.removeAttribute(attr.name); });
+          }
+        } else if (node.nodeType !== Node.TEXT_NODE) node.remove();
+      });
+    }
+    clean(doc.body);
+    return doc.body.innerHTML;
+  }
+  function noteById(id) { return state.notes.find(function (note) { return note.id === id; }); }
+  function renderedEditable(value, kind, noteId, placeholder) {
+    return '<div class="editable-copy" contenteditable="true" spellcheck="true" data-edit-kind="' + kind + '" data-note-id="' + escapeHtml(noteId) + '" data-placeholder="' + escapeHtml(placeholder) + '">' + cleanHtml(value) + '</div>';
+  }
+  function renderTitle(note) {
+    return '<input class="note-title-input" type="text" maxlength="100" aria-label="笔记标题" data-edit-kind="title" data-note-id="' + escapeHtml(note.id) + '" value="' + escapeHtml(note.title) + '">';
+  }
+  function renderToolbar() {
+    return '<div class="editor-tools" role="toolbar" aria-label="内容格式和插入">' +
+      '<button type="button" data-format="bold" title="粗体"><strong>B</strong></button>' +
+      '<button type="button" data-format="formatBlock" data-format-value="H3" title="小标题">标题</button>' +
+      '<button type="button" data-format="insertUnorderedList" title="项目符号">• 列表</button>' +
+      '<button type="button" data-format="insertOrderedList" title="编号列表">1. 列表</button><span class="tool-separator"></span>' +
+      '<button type="button" data-action="add-text">＋ 文字块</button>' +
+      '<button type="button" data-action="choose-image">▧ 图片</button>' +
+      '<button type="button" data-action="add-map">⌘ 思维导图</button>' +
+      '<span class="insert-hint" id="insertHint">新内容会添加在末尾</span></div>';
+  }
+  function renderNoteNav(note, className, open) {
+    var visibleNotes = state.notes.filter(function (item) { return item.notebook === state.activeNotebook; });
+    var notebooks = state.notebooks.map(function (name) {
+      var count = state.notes.filter(function (item) { return item.notebook === name; }).length;
+      return '<button type="button" class="nav-item ' + (name === state.activeNotebook ? "active" : "") + '" data-action="choose-notebook" data-name="' + escapeHtml(name) + '"><span>' + escapeHtml(name) + '</span><span class="note-date">' + count + '</span></button>';
+    }).join("");
+    var notes = visibleNotes.map(function (item) {
+      return '<button type="button" class="note-row ' + (item.id === note.id ? "active" : "") + '" data-action="choose-note" data-id="' + escapeHtml(item.id) + '"><span class="note-list-title">' + escapeHtml(item.title) + '</span><span class="note-date">草稿</span></button>';
+    }).join("");
+    return '<aside class="' + className + (open ? " open" : "") + '" aria-label="笔记导航">' +
+      '<div class="brand-row"><span class="brand-mark">C</span><span>CueNote</span></div>' +
+      '<div class="nav-section-title">笔记本</div><div class="nav-list">' + notebooks + '</div>' +
+      '<div class="nav-section-title">笔记列表</div><div class="nav-list">' + notes + '</div>' +
+      '<button class="new-note primary" type="button" data-action="new-note">＋ 新建笔记</button>' +
+      '<div class="editor-hint" style="margin:10px 3px 0">草稿只在本页内存中</div></aside>';
+  }
+  function renderMapTree(node) {
+    return '<li><span class="map-node ' + (node._root ? "root" : "") + '">' + escapeHtml(node.text) + '</span>' +
+      ((node.children && node.children.length) ? '<ul>' + node.children.map(renderMapTree).join("") + '</ul>' : "") + '</li>';
+  }
+  function mapRootForDisplay(root) { var copy = JSON.parse(JSON.stringify(root)); copy._root = true; return copy; }
+  function renderBlock(block, note) {
+    if (block.type === "text") {
+      return '<article class="content-block" data-block-id="' + escapeHtml(block.id) + '"><div class="block-head"><span>文字块</span><div class="block-head-actions"><button type="button" data-action="remove-block" data-block-id="' + escapeHtml(block.id) + '">移除</button></div></div>' +
+        '<div class="editable-body" contenteditable="true" spellcheck="true" data-edit-kind="block" data-note-id="' + escapeHtml(note.id) + '" data-block-id="' + escapeHtml(block.id) + '" data-placeholder="在这里继续记录…">' + cleanHtml(block.html) + '</div></article>';
+    }
+    if (block.type === "image") {
+      var image = block.url ? '<img src="' + escapeHtml(block.url) + '" alt="' + escapeHtml(block.name || "插入的图片") + '" style="width:' + Number(block.width || 72) + '%">' : '<div class="editor-hint">图片预览不可用，请重新插入。</div>';
+      return '<article class="content-block" data-block-id="' + escapeHtml(block.id) + '"><div class="block-head"><span>图片块 · 仅本页内存</span><div class="block-head-actions"><button type="button" data-action="remove-block" data-block-id="' + escapeHtml(block.id) + '">移除</button></div></div>' +
+        '<figure class="image-block">' + image + '<figcaption class="image-caption"><span>' + escapeHtml(block.name || "剪贴板图片") + '</span><label>宽度 <input type="range" min="30" max="100" value="' + Number(block.width || 72) + '" data-action="set-image-width" data-block-id="' + escapeHtml(block.id) + '" aria-label="图片宽度"></label><span data-width-label="' + escapeHtml(block.id) + '">' + Number(block.width || 72) + '%</span></figcaption></figure></article>';
+    }
+    if (block.type === "mindmap") {
+      return '<article class="content-block" data-block-id="' + escapeHtml(block.id) + '"><div class="block-head"><span>可编辑思维导图</span><div class="block-head-actions"><button type="button" data-action="edit-map" data-block-id="' + escapeHtml(block.id) + '">展开编辑</button><button type="button" data-action="remove-block" data-block-id="' + escapeHtml(block.id) + '">移除</button></div></div>' +
+        '<div class="map-preview"><div class="map-tree"><ul>' + renderMapTree(mapRootForDisplay(block.root)) + '</ul></div><button class="map-edit-button" type="button" data-action="edit-map" data-block-id="' + escapeHtml(block.id) + '">展开并编辑导图</button></div></article>';
+    }
+    return "";
+  }
+  function renderBlocks(note) { return note.blocks.map(function (block) { return renderBlock(block, note); }).join(""); }
+  function renderA(note) {
+    return '<div class="variant-a-shell' + (state.focusMode.navigationOpen ? " nav-open" : "") + '">' +
+      renderNoteNav(note, "a-sidebar", true) +
+      '<section class="a-paper" aria-label="康奈尔笔记编辑器"><div class="note-topline"><div class="note-topline-left"><button class="mobile-nav-trigger" type="button" data-action="toggle-nav">☰ 笔记</button><span>' + escapeHtml(note.notebook) + '　/　康奈尔笔记</span></div><span>布局 A · 纸面</span></div>' +
+      renderTitle(note) + '<div class="editor-hint">顶部标题　·　线索区约 28%　·　内容区约 72%</div>' + renderToolbar() +
+      '<div class="cornell-a"><section class="cue-panel"><div class="panel-kicker"><span>线索区</span><span class="rule"></span></div>' + renderedEditable(note.cue,"cue",note.id,"写下关键词、问题与回顾提示") +
+      '</section><section class="content-panel" data-content-area="true" data-note-id="' + escapeHtml(note.id) + '"><div class="panel-kicker"><span>内容区</span><span class="rule"></span></div><div class="content-block-list">' + renderBlocks(note) + '</div></section></div>' +
+      '<section class="summary-panel"><div class="panel-kicker"><span>总结区</span><span class="rule"></span></div>' + renderedEditable(note.summary,"summary",note.id,"用几句话归纳本篇记录") + '</section></section></div>';
+  }
+  function renderB(note) {
+    var cueOpen = state.focusMode.cueOpen, summaryOpen = state.focusMode.summaryOpen;
+    return '<div class="variant-b-shell">' + renderNoteNav(note,"b-drawer",state.focusMode.navigationOpen) +
+      '<div class="b-toolbar-row"><div><button type="button" data-action="toggle-nav">☰ 导航与笔记</button> <span class="focus-label">布局 B · 专注写作</span></div><span class="focus-label">内容区居中展开</span></div>' +
+      '<section class="b-paper" aria-label="专注写作康奈尔笔记"><div class="b-title-wrap"><div class="note-topline"><span>' + escapeHtml(note.notebook) + '　/　康奈尔笔记</span><span>草稿在本页内存</span></div>' +
+      renderTitle(note) + '<div class="editor-hint">标题在上；线索和总结可折叠，内容区保持主焦点。</div>' + renderToolbar() + '</div><div class="b-writing-area"><div class="b-cornell' + (cueOpen ? "" : " cue-folded") + '">' +
+      '<section class="b-cue-panel' + (cueOpen ? "" : " folded") + '"><div class="panel-kicker"><span>线索区</span><button type="button" class="collapse-toggle" data-action="toggle-cue" aria-expanded="' + cueOpen + '">' + (cueOpen ? "收起" : "展开") + '</button></div>' +
+      renderedEditable(note.cue,"cue",note.id,"写下关键词、问题与回顾提示") + '</section>' +
+      '<section class="b-content-panel" data-content-area="true" data-note-id="' + escapeHtml(note.id) + '"><div class="panel-kicker"><span>内容区</span><span class="rule"></span></div><div class="content-block-list">' + renderBlocks(note) + '</div></section></div>' +
+      '<section class="b-summary' + (summaryOpen ? "" : " folded") + '"><div class="panel-kicker"><span>总结区</span><button type="button" class="collapse-toggle" data-action="toggle-summary" aria-expanded="' + summaryOpen + '">' + (summaryOpen ? "收起" : "展开") + '</button></div>' +
+      renderedEditable(note.summary,"summary",note.id,"用几句话归纳本篇记录") + '</section></div></section></div>';
+  }
+  function renderC(note) {
+    var visibleNotes = state.notes.filter(function (item) { return item.notebook === state.activeNotebook; });
+    var tabs = visibleNotes.map(function (item) { return '<button type="button" class="note-tab ' + (item.id === note.id ? "active" : "") + '" data-action="choose-note" data-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.title) + '</button>'; }).join("");
+    return '<div class="variant-c-shell"><div class="c-top-row"><button type="button" data-action="toggle-nav">☰ 导航</button><span class="focus-label">布局 C · 分栏工作台</span><button type="button" class="primary" data-action="new-note">＋ 新建笔记</button></div>' +
+      '<div class="note-tabs" role="tablist" aria-label="当前笔记本的笔记">' + tabs + '</div>' + renderNoteNav(note,"c-drawer",state.focusMode.navigationOpen) +
+      '<section class="c-title-paper" aria-label="笔记标题"><div class="note-topline"><span>' + escapeHtml(note.notebook) + '　/　康奈尔笔记</span><span>草稿在本页内存</span></div>' + renderTitle(note) + '</section>' + renderToolbar() +
+      '<div class="c-workbench">' +
+      '<section class="c-pane"><div class="c-pane-head">线索区 <span class="rule"></span></div><div class="c-pane-scroll">' + renderedEditable(note.cue,"cue",note.id,"写下关键词、问题与回顾提示") + '</div></section>' +
+      '<section class="c-pane" data-content-area="true" data-note-id="' + escapeHtml(note.id) + '"><div class="c-pane-head">内容区 <span class="rule"></span></div><div class="c-pane-scroll"><div class="content-block-list">' + renderBlocks(note) + '</div></div></section></div>' +
+      '<section class="c-summary-dock"><div class="panel-kicker"><span>总结区 · 固定可见</span><span class="rule"></span></div>' + renderedEditable(note.summary,"summary",note.id,"用几句话归纳本篇记录") + '</section></div>';
+  }
+  function updateCWorkspaceHeight() {
+    var workbench = document.querySelector(".variant-c-shell .c-workbench");
+    var summary = document.querySelector(".variant-c-shell .c-summary-dock");
+    if (!workbench || !summary) return;
+    if (window.matchMedia("(max-width: 620px)").matches) {
+      workbench.style.height = "";
+      summary.classList.remove("in-flow");
+      return;
+    }
+    summary.classList.remove("in-flow");
+    workbench.style.height = "";
+    var summaryStyle = window.getComputedStyle(summary);
+    var summaryBottom = parseFloat(summaryStyle.bottom) || 0;
+    var summaryTop = window.innerHeight - summaryBottom - summary.getBoundingClientRect().height;
+    var workbenchTop = workbench.getBoundingClientRect().top + window.scrollY;
+    var available = summaryTop - workbenchTop - 12;
+    if (available < 190) {
+      summary.classList.add("in-flow");
+      return;
+    }
+    workbench.style.height = Math.min(560, available) + "px";
+  }
+  function scheduleCWorkspaceHeight() {
+    window.requestAnimationFrame(updateCWorkspaceHeight);
+  }
+  function renderApp() {
+    var note = getCurrentNote();
+    document.getElementById("app").innerHTML = state.variant === "B" ? renderB(note) : state.variant === "C" ? renderC(note) : renderA(note);
+    document.getElementById("variantLabel").textContent = state.variant;
+    document.getElementById("variantName").textContent = variantNames[state.variant];
+    document.querySelectorAll("[data-variant]").forEach(function (button) {
+      var active = button.getAttribute("data-variant") === state.variant;
+      button.classList.toggle("variant-active",active);
+      button.setAttribute("aria-pressed",active ? "true" : "false");
+    });
+    updateStatePanel();
+    updateInsertHint();
+    scheduleCWorkspaceHeight();
+  }
+  function updateInsertHint() {
+    var hint = document.getElementById("insertHint");
+    if (hint) hint.textContent = selectedBlockId ? "新内容插在当前块后" : "新内容会添加在末尾";
+  }
+  function cloneForState(note) {
+    return {
+      id:note.id, notebook:note.notebook, title:note.title, cue:cleanHtml(note.cue), summary:cleanHtml(note.summary),
+      blocks:note.blocks.map(function (block) {
+        if (block.type === "image") return { id:block.id, type:"image", name:block.name || "", width:block.width || 72, hasImage:!!block.url };
+        if (block.type === "mindmap") return { id:block.id, type:"mindmap", nodes:JSON.parse(JSON.stringify(block.root)) };
+        return { id:block.id, type:"text", html:cleanHtml(block.html) };
+      })
+    };
+  }
+  function getPublicState() {
+    var current = getCurrentNote(), currentState = cloneForState(current);
+    return {
+      variant:state.variant, currentNoteId:state.currentNoteId,
+      currentNote:{ id:current.id, title:current.title, notebook:current.notebook },
+      activeNotebook:state.activeNotebook, focusMode:JSON.parse(JSON.stringify(state.focusMode)),
+      currentBlocks:currentState.blocks,
+      mindmapNodes:currentState.blocks.filter(function (block) { return block.type === "mindmap"; }).map(function (block) { return { blockId:block.id, root:block.nodes }; }),
+      notes:state.notes.map(cloneForState)
+    };
+  }
+  function updateStatePanel() {
+    var output = document.getElementById("stateJson");
+    if (output && state) output.textContent = JSON.stringify(getPublicState(),null,2);
+  }
+  function updateUrl(variant) {
+    var url = new URL(window.location.href);
+    url.searchParams.set("variant",variant);
+    window.history.replaceState({},"",url.toString());
+  }
+  function setVariant(variant) {
+    if (variant !== "A" && variant !== "B" && variant !== "C") return;
+    state.variant = variant; updateUrl(variant); selectedBlockId = null; activeEditable = null; renderApp();
+  }
+  function stepVariant(amount) {
+    var variants = ["A","B","C"], index = variants.indexOf(state.variant);
+    setVariant(variants[(index + amount + variants.length) % variants.length]);
+  }
+  function addBlock(noteId, block, afterId) {
+    var note = noteById(noteId);
+    if (!note) return;
+    var index = afterId ? note.blocks.findIndex(function (item) { return item.id === afterId; }) : -1;
+    note.blocks.splice(index >= 0 ? index + 1 : note.blocks.length,0,block);
+    selectedBlockId = block.id; renderApp();
+  }
+  function removeBlock(noteId, blockId) {
+    var note = noteById(noteId);
+    if (!note) return;
+    var index = note.blocks.findIndex(function (block) { return block.id === blockId; });
+    if (index < 0) return;
+    var block = note.blocks[index];
+    if (block.type === "image" && block.url && block.url.indexOf("blob:") === 0) URL.revokeObjectURL(block.url);
+    note.blocks.splice(index,1);
+    if (selectedBlockId === blockId) selectedBlockId = null;
+    renderApp();
+  }
+  function insertImageFile(file, noteId, afterId) {
+    if (!file || !file.type || file.type.indexOf("image/") !== 0) return;
+    if (!noteById(noteId)) return;
+    addBlock(noteId,{ id:"block-" + (nextId++), type:"image", name:file.name || "剪贴板图片", width:72, url:URL.createObjectURL(file) },afterId);
+  }
+  function newNote() {
+    var noteId = "note-" + (nextId++), notebook = state.activeNotebook || "默认笔记本";
+    state.notes.unshift({ id:noteId, notebook:notebook, title:"未命名笔记", cue:"", summary:"", blocks:[{ id:"block-" + (nextId++), type:"text", html:"<p>在这里记录新的想法。</p>" }] });
+    state.currentNoteId = noteId; selectedBlockId = null; state.focusMode.navigationOpen = false; renderApp();
+    var title = document.querySelector('[data-edit-kind="title"][data-note-id="' + noteId + '"]');
+    if (title) { title.focus(); title.select(); }
+  }
+  function getMapContext() {
+    if (!mapTarget) return null;
+    var note = noteById(mapTarget.noteId);
+    if (!note) return null;
+    var block = note.blocks.find(function (item) { return item.id === mapTarget.blockId && item.type === "mindmap"; });
+    return block ? { note:note, block:block } : null;
+  }
+  function findMapNode(root, nodeId, parent, index) {
+    if (!root) return null;
+    if (root.id === nodeId) return { node:root, parent:parent || null, index:index == null ? -1 : index };
+    for (var i=0;i<(root.children || []).length;i++) {
+      var found = findMapNode(root.children[i],nodeId,root,i);
+      if (found) return found;
+    }
+    return null;
+  }
+  function renderDialogTreeNode(node, selectedId, isRoot) {
+    var label = '<button type="button" class="map-node' + (isRoot ? " root" : "") + (node.id === selectedId ? " selected" : "") + '" data-action="select-map-node" data-node-id="' + escapeHtml(node.id) + '">' + escapeHtml(node.text) + '</button>';
+    return '<li>' + label + ((node.children && node.children.length) ? '<ul>' + node.children.map(function (child) { return renderDialogTreeNode(child,selectedId,false); }).join("") + '</ul>' : "") + '</li>';
+  }
+  function renderDialogTreeOnly() {
+    var host = document.getElementById("dialogMapTree"), context = getMapContext();
+    if (host && context) host.innerHTML = '<div class="map-tree"><ul>' + renderDialogTreeNode(context.block.root,mapSelectedNodeId,true) + '</ul></div>';
+  }
+  function renderMapDialog() {
+    var context = getMapContext();
+    if (!context) return;
+    var selected = findMapNode(context.block.root,mapSelectedNodeId);
+    if (!selected) { mapSelectedNodeId = context.block.root.id; selected = findMapNode(context.block.root,mapSelectedNodeId); }
+    renderDialogTreeOnly();
+    var input = document.getElementById("mapNodeText");
+    input.value = selected.node.text;
+    var parentInfo = selected.parent ? findMapNode(context.block.root,selected.parent.id) : null;
+    document.querySelector('[data-action="map-add-sibling"]').disabled = !selected.parent;
+    document.querySelector('[data-action="map-delete"]').disabled = !selected.parent;
+    document.querySelector('[data-action="map-indent"]').disabled = !(selected.parent && selected.index > 0);
+    document.querySelector('[data-action="map-outdent"]').disabled = !(parentInfo && parentInfo.parent);
+    input.setAttribute("aria-label","编辑节点：" + selected.node.text);
+    updateStatePanel();
+  }
+  function openMap(blockId) {
+    var note = getCurrentNote(), block = note.blocks.find(function (item) { return item.id === blockId && item.type === "mindmap"; });
+    if (!block) return;
+    mapTarget = { noteId:note.id, blockId:blockId }; mapSelectedNodeId = block.root.id; mapOriginBlockId = blockId;
+    var dialog = document.getElementById("mapDialog");
+    renderMapDialog();
+    if (!dialog.open) dialog.showModal();
+    document.getElementById("mapNodeText").focus();
+  }
+  function closeMapDialog() {
+    var dialog = document.getElementById("mapDialog");
+    if (dialog.open) dialog.close();
+  }
+  function mutateMap(action) {
+    var context = getMapContext();
+    if (!context) return;
+    var root = context.block.root, selectedInfo = findMapNode(root,mapSelectedNodeId);
+    if (!selectedInfo) return;
+    if (action === "map-add-child") {
+      var child = makeNode("新子节点"); selectedInfo.node.children.push(child); mapSelectedNodeId = child.id;
+    } else if (action === "map-add-sibling" && selectedInfo.parent) {
+      var sibling = makeNode("新同级节点"); selectedInfo.parent.children.splice(selectedInfo.index + 1,0,sibling); mapSelectedNodeId = sibling.id;
+    } else if (action === "map-delete" && selectedInfo.parent) {
+      selectedInfo.parent.children.splice(selectedInfo.index,1); mapSelectedNodeId = selectedInfo.parent.id;
+    } else if (action === "map-indent" && selectedInfo.parent && selectedInfo.index > 0) {
+      var previous = selectedInfo.parent.children[selectedInfo.index - 1];
+      selectedInfo.parent.children.splice(selectedInfo.index,1); previous.children.push(selectedInfo.node);
+    } else if (action === "map-outdent" && selectedInfo.parent) {
+      var parentInfo = findMapNode(root,selectedInfo.parent.id);
+      if (parentInfo && parentInfo.parent) {
+        parentInfo.node.children.splice(selectedInfo.index,1);
+        parentInfo.parent.children.splice(parentInfo.index + 1,0,selectedInfo.node);
+      }
+    }
+    renderApp(); renderMapDialog(); document.getElementById("mapNodeText").focus();
+  }
+
+  document.addEventListener("click",function (event) {
+    var variantButton = event.target.closest("[data-variant]");
+    if (variantButton) { setVariant(variantButton.getAttribute("data-variant")); return; }
+    var stepButton = event.target.closest("[data-variant-step]");
+    if (stepButton) { stepVariant(Number(stepButton.getAttribute("data-variant-step"))); return; }
+    var shellAction = event.target.closest("[data-shell-action]");
+    if (shellAction) {
+      var shellName = shellAction.getAttribute("data-shell-action");
+      if (shellName === "toggle-state") {
+        var drawer = document.getElementById("stateDrawer"); drawer.open = !drawer.open;
+      }
+      if (shellName === "reset") {
+        var currentVariant = state.variant; state = makeSampleState(); state.variant = currentVariant;
+        state.activeNotebook = "学习笔记"; selectedBlockId = null; renderApp();
+      }
+      return;
+    }
+    var formatButton = event.target.closest("[data-format]");
+    if (formatButton) {
+      var command = formatButton.getAttribute("data-format"), value = formatButton.getAttribute("data-format-value") || null;
+      if (activeEditable && document.contains(activeEditable)) {
+        activeEditable.focus(); document.execCommand(command,false,value);
+        activeEditable.dispatchEvent(new Event("input",{ bubbles:true }));
+      }
+      return;
+    }
+    var control = event.target.closest("[data-action]");
+    if (!control) return;
+    var actionName = control.getAttribute("data-action");
+    if (actionName === "toggle-nav") { state.focusMode.navigationOpen = !state.focusMode.navigationOpen; renderApp(); }
+    else if (actionName === "toggle-cue") { state.focusMode.cueOpen = !state.focusMode.cueOpen; renderApp(); }
+    else if (actionName === "toggle-summary") { state.focusMode.summaryOpen = !state.focusMode.summaryOpen; renderApp(); }
+    else if (actionName === "choose-notebook") {
+      state.activeNotebook = control.getAttribute("data-name");
+      var first = state.notes.find(function (note) { return note.notebook === state.activeNotebook; });
+      if (first) state.currentNoteId = first.id;
+      state.focusMode.navigationOpen = false; selectedBlockId = null; renderApp();
+    } else if (actionName === "choose-note") {
+      var selectedNote = noteById(control.getAttribute("data-id"));
+      if (selectedNote) { state.currentNoteId = selectedNote.id; state.activeNotebook = selectedNote.notebook; state.focusMode.navigationOpen = false; selectedBlockId = null; renderApp(); }
+    } else if (actionName === "new-note") newNote();
+    else if (actionName === "add-text") {
+      var note = getCurrentNote(); addBlock(note.id,{ id:"block-" + (nextId++), type:"text", html:"<p></p>" },selectedBlockId);
+    } else if (actionName === "add-map") {
+      var noteForMap = getCurrentNote(), mapBlock = { id:"block-" + (nextId++), type:"mindmap", root:makeNode("新思路",[makeNode("分支一"),makeNode("分支二")]) };
+      addBlock(noteForMap.id,mapBlock,selectedBlockId); openMap(mapBlock.id);
+    } else if (actionName === "choose-image") {
+      var current = getCurrentNote(); pendingImageTarget = { noteId:current.id, afterId:selectedBlockId }; document.getElementById("imageFileInput").click();
+    } else if (actionName === "remove-block") removeBlock(getCurrentNote().id,control.getAttribute("data-block-id"));
+    else if (actionName === "edit-map") { selectedBlockId = control.getAttribute("data-block-id"); openMap(selectedBlockId); }
+    else if (actionName === "close-map") closeMapDialog();
+    else if (actionName === "select-map-node") { mapSelectedNodeId = control.getAttribute("data-node-id"); renderMapDialog(); document.getElementById("mapNodeText").focus(); }
+    else if (actionName.indexOf("map-") === 0) mutateMap(actionName);
+  });
+  document.addEventListener("mousedown",function (event) { if (event.target.closest("[data-format]")) event.preventDefault(); });
+  document.addEventListener("focusin",function (event) {
+    var editable = event.target.closest('[contenteditable="true"]');
+    if (editable) {
+      activeEditable = editable;
+      if (editable.getAttribute("data-edit-kind") === "block") { selectedBlockId = editable.getAttribute("data-block-id"); updateInsertHint(); }
+    }
+  });
+  document.addEventListener("input",function (event) {
+    var target = event.target;
+    if (target.matches('[data-action="set-image-width"]')) {
+      var noteWithImage = getCurrentNote(), imageBlock = noteWithImage.blocks.find(function (item) { return item.id === target.getAttribute("data-block-id"); });
+      if (imageBlock) {
+        imageBlock.width = Number(target.value);
+        var label = document.querySelector('[data-width-label="' + imageBlock.id + '"]');
+        if (label) label.textContent = imageBlock.width + "%";
+        var image = target.closest(".content-block").querySelector("img");
+        if (image) image.style.width = imageBlock.width + "%";
+        updateStatePanel();
+      }
+      return;
+    }
+    var kind = target.getAttribute("data-edit-kind"), note = noteById(target.getAttribute("data-note-id"));
+    if (!note) return;
+    if (kind === "title") {
+      note.title = target.value;
+      document.querySelectorAll('[data-action="choose-note"][data-id="' + note.id + '"] .note-list-title').forEach(function (label) { label.textContent = note.title; });
+      document.querySelectorAll('.note-tab[data-id="' + note.id + '"]').forEach(function (tab) { tab.textContent = note.title; });
+    } else if (kind === "cue") note.cue = cleanHtml(target.innerHTML);
+    else if (kind === "summary") note.summary = cleanHtml(target.innerHTML);
+    else if (kind === "block") {
+      var block = note.blocks.find(function (item) { return item.id === target.getAttribute("data-block-id") && item.type === "text"; });
+      if (block) block.html = cleanHtml(target.innerHTML);
+    }
+    updateStatePanel();
+  });
+  document.getElementById("mapNodeText").addEventListener("input",function (event) {
+    var context = getMapContext();
+    if (!context) return;
+    var selected = findMapNode(context.block.root,mapSelectedNodeId);
+    if (!selected) return;
+    selected.node.text = event.target.value; renderApp(); renderDialogTreeOnly(); updateStatePanel();
+  });
+  document.getElementById("imageFileInput").addEventListener("change",function (event) {
+    var file = event.target.files && event.target.files[0];
+    if (pendingImageTarget && file) insertImageFile(file,pendingImageTarget.noteId,pendingImageTarget.afterId);
+    event.target.value = ""; pendingImageTarget = null;
+  });
+  document.addEventListener("paste",function (event) {
+    var target = event.target, area = target.closest("[data-content-area]"), editable = target.closest('[contenteditable="true"]');
+    var items = event.clipboardData && event.clipboardData.items;
+    if (area && items) {
+      for (var i=0;i<items.length;i++) {
+        if (items[i].type && items[i].type.indexOf("image/") === 0) {
+          var file = items[i].getAsFile();
+          if (file) {
+            event.preventDefault();
+            var blockElement = target.closest("[data-block-id]");
+            var afterId = blockElement ? blockElement.getAttribute("data-block-id") : selectedBlockId;
+            insertImageFile(file,area.getAttribute("data-note-id"),afterId); return;
+          }
+        }
+      }
+    }
+    if (editable && event.clipboardData) {
+      event.preventDefault(); document.execCommand("insertText",false,event.clipboardData.getData("text/plain"));
+    }
+  });
+  document.addEventListener("keydown",function (event) {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    if (document.getElementById("mapDialog").open) return;
+    if (event.target.closest("input,textarea,select,button,dialog,[contenteditable='true'],[role='button']")) return;
+    event.preventDefault(); stepVariant(event.key === "ArrowRight" ? 1 : -1);
+  });
+  document.getElementById("mapDialog").addEventListener("close",function () {
+    var blockId = mapOriginBlockId; mapTarget = null; mapSelectedNodeId = null;
+    window.requestAnimationFrame(function () {
+      if (!blockId) return;
+      var button = Array.from(document.querySelectorAll('[data-action="edit-map"]')).find(function (item) { return item.getAttribute("data-block-id") === blockId; });
+      if (button) button.focus();
+    });
+  });
+  window.addEventListener("popstate",function () { state.variant = getUrlVariant(); renderApp(); });
+  window.addEventListener("resize",scheduleCWorkspaceHeight);
+  document.querySelectorAll(".prototype-help,.prototype-state").forEach(function (details) {
+    details.addEventListener("toggle",scheduleCWorkspaceHeight);
+  });
+  state = makeSampleState();
+  if (new URLSearchParams(window.location.search).get("variant") !== state.variant) updateUrl(state.variant);
+  renderApp();
+  window.CueNotePrototype = { getState:getPublicState };
+}());
+</script>
+</body>
+</html>
