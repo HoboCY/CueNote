@@ -1,0 +1,13 @@
+{
+  "name": "cuenote-technical-prototype",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Throwaway CueNote editor and file integration prototype",
+  "scripts": {
+    "setup": "npm --prefix prototype ci",
+    "prototype": "npm --prefix prototype run dev",
+    "build": "npm --prefix prototype run build",
+    "desktop": "node prototype/node_modules/@tauri-apps/cli/tauri.js dev",
+    "build:desktop": "node prototype/node_modules/@tauri-apps/cli/tauri.js build --no-bundle"
+  }
+}

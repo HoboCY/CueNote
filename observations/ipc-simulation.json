@@ -1,0 +1,36 @@
+{
+  "scope": "Browser-only mocked IPC. Not native file acceptance.",
+  "rows": [
+    {
+      "name": "SIMULATION: explicit missing-file response permits first save with null baseline",
+      "verdict": "PASS",
+      "detail": {
+        "first": {
+          "saveEnabled": true,
+          "text": "当前区域 笔记标题\n·\n尚无本机临时笔记文件；已载入样例，首次保存将创建文件。"
+        },
+        "expectedRevision": null,
+        "text": "当前区域 笔记标题\n·\n保存完成。\n文件 0 B\n耗时 0 ms"
+      }
+    },
+    {
+      "name": "SIMULATION: conflict response leaves draft visible and baseline unchanged",
+      "verdict": "PASS",
+      "detail": {
+        "text": "当前区域 内容区\n·\n保存冲突：桌面文件已被外部修改，本地草稿仍保留在当前页面。请重开后比较内容。\n文件 0 B\n耗时 0 ms",
+        "draft": true,
+        "lastExpected": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "remoteTitle": "MOCK external change"
+      }
+    },
+    {
+      "name": "SIMULATION: corrupt-file response is not treated as a new blank file",
+      "verdict": "PASS",
+      "detail": {
+        "saveDisabled": true,
+        "text": "当前区域 笔记标题\n·\n无法打开桌面笔记文件：CORRUPT: mock corrupt ZIP",
+        "saves": 0
+      }
+    }
+  ]
+}

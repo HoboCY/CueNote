@@ -1,0 +1,102 @@
+{
+  "observations": [
+    {
+      "name": "Browser has three real editors and cannot claim native save",
+      "verdict": "PASS",
+      "detail": {
+        "editors": 3,
+        "saveDisabled": true,
+        "footer": "浏览器预览只保留当前页面内存\n单篇编辑技术样机"
+      }
+    },
+    {
+      "name": "Undo affects only the chosen Cornell section",
+      "verdict": "PASS",
+      "detail": {
+        "cueUndone": true,
+        "bodyRetained": true,
+        "summaryRetained": true
+      }
+    },
+    {
+      "name": "Sidebar collapse expands content without replacing draft",
+      "verdict": "PASS",
+      "detail": {
+        "beforeWidth": 1123,
+        "afterWidth": 1393
+      }
+    },
+    {
+      "name": "Synthetic PNG paste creates a body image with original ratio",
+      "verdict": "PASS",
+      "detail": {
+        "paste": {
+          "fixtureBytes": 6012
+        },
+        "image": {
+          "source": "data:image/png;base64,iVB",
+          "naturalWidth": 320,
+          "naturalHeight": 180,
+          "width": 535.625,
+          "height": 302.15625
+        }
+      }
+    },
+    {
+      "name": "Frontend asset conversion preserves document and deduplicates images",
+      "verdict": "PASS",
+      "detail": {
+        "roundTrip": true,
+        "sourceUnchanged": true,
+        "assets": 1,
+        "usesAssetRef": true,
+        "rejectsMissing": true
+      }
+    },
+    {
+      "name": "Real map node edits return to inline preview and editor focus",
+      "verdict": "PASS",
+      "detail": {
+        "dialog": false,
+        "preview": "导图修改验证\n先理解问题\n明确目标\n整理证据\n记录线索\n回顾并行动\n新增子节点验证",
+        "focused": "tiptap ProseMirror rich-text body-editor ProseMirror-focused ProseMirror-hideselection"
+      }
+    },
+    {
+      "name": "Mind Elixir adds an editable child node",
+      "verdict": "PASS",
+      "detail": {
+        "childEditing": true,
+        "nodeCount": 7
+      }
+    },
+    {
+      "name": "Closing map forms one undoable body change",
+      "verdict": "PASS",
+      "detail": {
+        "preview": "学习方法的核心结构\n先理解问题\n明确目标\n整理证据\n记录线索\n回顾并行动",
+        "images": 1
+      }
+    },
+    {
+      "name": "Narrow desktop width retains editors without page overflow",
+      "verdict": "PASS",
+      "detail": {
+        "viewport": 760,
+        "documentWidth": 745,
+        "editors": 3
+      }
+    },
+    {
+      "name": "No uncaught browser exception during observations",
+      "verdict": "PASS",
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "Chinese text insertion is not a real OS IME test.",
+    "ClipboardEvent uses a synthetic PNG, not the OS clipboard.",
+    "No native Rust file operations in browser mode."
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "prototype-default",
+  "description": "Minimal capabilities for the disposable CueNote prototype window.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

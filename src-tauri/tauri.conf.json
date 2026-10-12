@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CueNote 技术样机",
+  "version": "0.1.0",
+  "identifier": "com.cuenote.prototype",
+  "build": {
+    "beforeDevCommand": "npm --prefix prototype run dev",
+    "devUrl": "http://127.0.0.1:4174",
+    "beforeBuildCommand": "npm --prefix prototype run build",
+    "frontendDist": "../prototype/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "CueNote — 技术样机（数据仅用于本机验证）",
+        "width": 1120,
+        "height": 780,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": ["icons/icon.ico"]
+  }
+}
