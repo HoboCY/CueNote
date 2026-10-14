@@ -42,6 +42,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "{}",
         serde_json::to_string_pretty(&serde_json::json!({
             "noteId": opened.package.document.note_id,
+            "organization": opened.package.document.organization,
+            "timestamps": opened.package.document.timestamps,
             "revision": opened.revision,
             "text": opened.package.text_projection(),
             "plainEditable": opened.package.plain_text().is_some(),

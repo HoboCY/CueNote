@@ -6,7 +6,8 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::note_format::PlainText;
 use crate::workspace::{
-    NoteSession, RecoveryList, SaveReceipt, SavedCopy, Workspace, WorkspaceError, WorkspaceView,
+    LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy, Workspace, WorkspaceError,
+    WorkspaceView,
 };
 
 pub type WorkspaceState = Arc<Mutex<Workspace>>;
@@ -85,8 +86,73 @@ pub async fn open_library_folder(state: State<'_, WorkspaceState>) -> Result<(),
 }
 
 #[tauri::command]
-pub async fn new_note(state: State<'_, WorkspaceState>) -> Result<NoteSession, WorkspaceError> {
-    work(state.inner().clone(), Workspace::new_note).await
+pub async fn new_note(
+    state: State<'_, WorkspaceState>,
+    notebook_id: Option<String>,
+) -> Result<NoteSession, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.new_note_in(notebook_id.as_deref())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn create_notebook(
+    state: State<'_, WorkspaceState>,
+    name: String,
+) -> Result<LibraryView, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.create_notebook(&name)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn rename_notebook(
+    state: State<'_, WorkspaceState>,
+    notebook_id: String,
+    name: String,
+) -> Result<LibraryView, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.rename_notebook(&notebook_id, &name)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn delete_notebook(
+    state: State<'_, WorkspaceState>,
+    notebook_id: String,
+) -> Result<LibraryView, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.delete_notebook(&notebook_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn update_note_organization(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    notebook_id: String,
+    pinned: bool,
+) -> Result<SaveReceipt, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.update_note_organization(&session_id, &notebook_id, pinned)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn set_view_preferences(
+    state: State<'_, WorkspaceState>,
+    sidebar_collapsed: bool,
+    selected_notebook_id: Option<String>,
+) -> Result<(), WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.set_view_preferences(sidebar_collapsed, selected_notebook_id)
+    })
+    .await
 }
 
 #[tauri::command]

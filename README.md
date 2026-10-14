@@ -4,6 +4,8 @@ CueNote 是面向 Windows x64 与 Apple Silicon macOS 的个人康奈尔笔记�
 
 当前开发版本已接入选择笔记库、标题与康奈尔三分区纯文字编辑，以及原生文件保存和重开。停止输入约一秒后自动保存，切换和关闭会等待待保存内容，也可取消离开；保存失败会保留草稿并提供安全另存，重启后可找回已持久化的恢复草稿。侧栏可展开/收起。包含富内容的有效 v1 笔记暂以只读方式打开，后续任务逐步接入完整编辑能力。完整日用验收尚未完成，技术样机保留在独立原型分支。
 
+笔记本支持新建、重命名和删除空本，默认笔记本不可删除。可在全部笔记或单本中浏览、创建笔记，通过摘要和时间区分同名笔记；移动和置顶不改变内容修改时间。重启定位到上次编辑的笔记，侧栏与列表范围偏好只保存在本机。
+
 ## 开发环境
 
 需要 Node.js/npm、Rust，以及目标平台的 Tauri 构建依赖。Windows 需要 C++ 构建工具、Windows SDK 和 WebView2；macOS 桌面开发需要 Xcode 或其命令行工具。安装步骤以 [Tauri 官方前置条件](https://v2.tauri.app/start/prerequisites/)为准。
@@ -67,6 +69,8 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 
 自动保存、可取消的关闭等待与安全另存见[自动保存和恢复契约](docs/autosave-recovery-contract.md)。另存成功只表示独立副本已保存，不会把原位置的失败状态改成成功；尚未落盘的最后输入不承诺在断电或强制结束时零丢失。
 
+笔记本归属、置顶、排序和重启定位见[笔记本与列表契约](docs/notebook-management-contract.md)。这些组织信息属于原生事实文件；本项的本机验证不代表 OneDrive 组织信息同步验收已经完成。
+
 ## 规格与计划
 
 - [首版最终规格与验收标准](https://github.com/HoboCY/CueNote/issues/8#issuecomment-6165724793)
@@ -76,6 +80,7 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 - [正式工程本机验证记录](docs/foundation-validation.md)
 - [首篇笔记保存与重开验证](docs/note-storage-validation.md)
 - [自动保存与恢复验证](docs/autosave-recovery-validation.md)
+- [笔记本与列表验证](docs/notebook-management-validation.md)
 
 Mac、真实 OneDrive 双端、完整编辑能力、容量与性能验收仍需后续实现与测试；当前版本不代表已达到日用标准。
 

@@ -7,11 +7,27 @@ export interface NoteSummary {
   noteId: string;
   title: string;
   modifiedAt: string;
+  notebookId: string | null;
+  pinned: boolean;
+  excerpt: string;
+}
+
+export interface NotebookSummary {
+  notebookId: string;
+  name: string;
+  isDefault: boolean;
+}
+
+export interface ViewPreferences {
+  sidebarCollapsed: boolean;
+  selectedNotebookId: string | null;
 }
 
 export interface LibraryView {
   path: string;
   defaultNotebookName: string;
+  defaultNotebookId: string;
+  notebooks: NotebookSummary[];
   notes: NoteSummary[];
   warnings: string[];
 }
@@ -22,6 +38,8 @@ export interface NoteSession {
   text: PlainNoteText;
   revision: string | null;
   readOnlyReason: string | null;
+  notebookId: string | null;
+  pinned: boolean;
 }
 
 export interface WorkspaceView {
@@ -30,6 +48,7 @@ export interface WorkspaceView {
   library: LibraryView | null;
   session: NoteSession | null;
   notice: string | null;
+  preferences: ViewPreferences;
 }
 
 export interface SaveReceipt {
@@ -67,8 +86,16 @@ export const workspaceApi = {
   useDefault: () => invoke<WorkspaceView>('use_default_library'),
   choose: () => invoke<WorkspaceView | null>('choose_library'),
   openFolder: () => invoke<void>('open_library_folder'),
-  newNote: () => invoke<NoteSession>('new_note'),
+  newNote: (notebookId: string | null = null) => invoke<NoteSession>('new_note', { notebookId }),
   openNote: (noteId: string) => invoke<NoteSession>('open_note', { noteId }),
+  createNotebook: (name: string) => invoke<LibraryView>('create_notebook', { name }),
+  renameNotebook: (notebookId: string, name: string) =>
+    invoke<LibraryView>('rename_notebook', { notebookId, name }),
+  deleteNotebook: (notebookId: string) => invoke<LibraryView>('delete_notebook', { notebookId }),
+  updateNoteOrganization: (sessionId: string, notebookId: string, pinned: boolean) =>
+    invoke<SaveReceipt>('update_note_organization', { sessionId, notebookId, pinned }),
+  setViewPreferences: (sidebarCollapsed: boolean, selectedNotebookId: string | null) =>
+    invoke<void>('set_view_preferences', { sidebarCollapsed, selectedNotebookId }),
   save: (sessionId: string, text: PlainNoteText) =>
     invoke<SaveReceipt>('save_note_text', { sessionId, text }),
   listRecoveryDrafts: () => invoke<RecoveryList>('list_recovery_drafts'),

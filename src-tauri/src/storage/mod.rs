@@ -17,6 +17,7 @@ pub(crate) use recovery::{
 };
 
 const HISTORY_LIMIT: usize = 30;
+const MAX_METADATA_REPLACEMENT_BYTES: u64 = 64 * 1024;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -81,6 +82,80 @@ pub fn open_note(path: &Path) -> Result<OpenedNote, StorageError> {
     inspect_note(&target)?.ok_or_else(|| {
         StorageError::new("io", format!("笔记文件不存在：{}", target.path.display()))
     })
+}
+
+/// Atomically replaces a small library metadata file after confirming its current bytes.
+/// The old bytes remain at the destination on a failed publish or in the reported
+/// same-directory backup when the platform has already completed the replacement.
+pub(crate) fn replace_metadata_file(
+    target: &Path,
+    expected_bytes: &[u8],
+    replacement_bytes: &[u8],
+) -> Result<(), StorageError> {
+    if expected_bytes.len() as u64 > MAX_METADATA_REPLACEMENT_BYTES
+        || replacement_bytes.len() as u64 > MAX_METADATA_REPLACEMENT_BYTES
+    {
+        return Err(StorageError::new(
+            "libraryMetadata",
+            "笔记本元数据超过大小上限。",
+        ));
+    }
+    let parent = target
+        .parent()
+        .ok_or_else(|| StorageError::new("unsafePath", "元数据文件缺少父目录。"))?;
+    let current = read_metadata_file(target)?;
+    if current != expected_bytes {
+        return Err(StorageError::new(
+            "conflict",
+            "笔记本元数据已发生变化；原文件已保留。",
+        ));
+    }
+
+    let candidate = parent.join(format!(
+        ".workspace-metadata-candidate-{}.tmp",
+        Uuid::new_v4().simple()
+    ));
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&candidate)
+        .map_err(|error| StorageError::io("无法创建笔记本元数据候选", error))?;
+    let write_result = file
+        .write_all(replacement_bytes)
+        .and_then(|_| file.flush())
+        .and_then(|_| file.sync_all());
+    drop(file);
+    if let Err(error) = write_result {
+        let _ = fs::remove_file(&candidate);
+        return Err(StorageError::io("无法同步笔记本元数据候选", error));
+    }
+
+    let latest = match read_metadata_file(target) {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            let _ = fs::remove_file(&candidate);
+            return Err(error);
+        }
+    };
+    if latest != expected_bytes {
+        let _ = fs::remove_file(&candidate);
+        return Err(StorageError::new(
+            "conflict",
+            "笔记本元数据在发布前发生变化；原文件已保留。",
+        ));
+    }
+
+    let result = replace_metadata_candidate(
+        target,
+        &candidate,
+        parent,
+        expected_bytes,
+        replacement_bytes,
+    );
+    if result.is_err() {
+        let _ = fs::remove_file(&candidate);
+    }
+    result
 }
 
 pub fn save_note(
@@ -1423,6 +1498,235 @@ fn replace_path(candidate: &Path, target: &Path, backup: &Path) -> io::Result<()
             io::ErrorKind::Unsupported,
             "atomic replacement is unsupported on this platform",
         ))
+    }
+}
+
+fn read_metadata_file(path: &Path) -> Result<Vec<u8>, StorageError> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| StorageError::io("无法检查笔记本元数据", error))?;
+    if is_link_or_reparse(&metadata) || !metadata.is_file() {
+        return Err(StorageError::new(
+            "unsafePath",
+            "笔记本元数据必须是普通文件。",
+        ));
+    }
+    if metadata.len() > MAX_METADATA_REPLACEMENT_BYTES {
+        return Err(StorageError::new(
+            "libraryMetadata",
+            "笔记本元数据超过大小上限。",
+        ));
+    }
+    let file = open_read_nofollow(path)
+        .map_err(|error| StorageError::io("无法读取笔记本元数据", error))?;
+    let mut bytes = Vec::with_capacity(metadata.len() as usize);
+    file.take(MAX_METADATA_REPLACEMENT_BYTES + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| StorageError::io("无法读取笔记本元数据", error))?;
+    if bytes.len() as u64 > MAX_METADATA_REPLACEMENT_BYTES {
+        return Err(StorageError::new(
+            "libraryMetadata",
+            "笔记本元数据超过大小上限。",
+        ));
+    }
+    Ok(bytes)
+}
+
+fn replace_metadata_candidate(
+    target: &Path,
+    candidate: &Path,
+    parent: &Path,
+    expected_bytes: &[u8],
+    replacement_bytes: &[u8],
+) -> Result<(), StorageError> {
+    let backup = parent.join(format!(
+        ".workspace-metadata-backup-{}.tmp",
+        Uuid::new_v4().simple()
+    ));
+
+    #[cfg(windows)]
+    {
+        if let Err(error) = replace_windows(target, candidate, &backup) {
+            let restoration =
+                restore_metadata_backup_if_target_missing(&backup, target, expected_bytes);
+            return Err(StorageError::new(
+                "publish",
+                format!(
+                    "无法原子替换笔记本元数据：{error}；{restoration}；备份路径为 {}。",
+                    backup.display()
+                ),
+            ));
+        }
+        let backup_bytes = read_metadata_file(&backup).map_err(|error| {
+            StorageError::new(
+                "publish",
+                format!(
+                    "元数据已替换，但无法校验旧版备份：{}；备份保留于 {}。",
+                    error.message,
+                    backup.display()
+                ),
+            )
+        })?;
+        if backup_bytes != expected_bytes {
+            return Err(StorageError::new(
+                "conflict",
+                format!(
+                    "元数据已替换，但旧版备份与发布基线不一致；备份保留于 {}。",
+                    backup.display()
+                ),
+            ));
+        }
+        let published_bytes = read_metadata_file(target).map_err(|error| {
+            StorageError::new(
+                "publish",
+                format!(
+                    "元数据已替换，但无法验证新文件：{}；旧版备份保留于 {}。",
+                    error.message,
+                    backup.display()
+                ),
+            )
+        })?;
+        if published_bytes != replacement_bytes {
+            return Err(StorageError::new(
+                "publish",
+                format!(
+                    "元数据已替换，但新文件与候选不一致；旧版备份保留于 {}。",
+                    backup.display()
+                ),
+            ));
+        }
+        let _ = fs::remove_file(backup);
+        let _ = sync_parent_directory(parent);
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    {
+        fs::hard_link(target, &backup)
+            .map_err(|error| StorageError::io("无法保留笔记本元数据旧版", error))?;
+        let backup_bytes = read_metadata_file(&backup)?;
+        if backup_bytes != expected_bytes {
+            let _ = fs::remove_file(&backup);
+            return Err(StorageError::new(
+                "conflict",
+                "笔记本元数据在备份期间发生变化；原文件已保留。",
+            ));
+        }
+        if let Err(error) = fs::rename(candidate, target) {
+            let recovery = match fs::symlink_metadata(target) {
+                Err(status) if status.kind() == io::ErrorKind::NotFound => {
+                    match fs::hard_link(&backup, target) {
+                        Ok(()) => "已使用旧版备份恢复原路径".to_owned(),
+                        Err(restore_error) => format!(
+                            "无法恢复原路径；旧版字节仍保留于 {}：{restore_error}",
+                            backup.display()
+                        ),
+                    }
+                }
+                Ok(_) => "目标路径仍存在，未覆盖原文件".to_owned(),
+                Err(status) => format!("无法检查目标路径，旧版备份保留：{status}"),
+            };
+            if read_metadata_file(target).is_ok_and(|bytes| bytes == expected_bytes) {
+                let _ = fs::remove_file(&backup);
+            }
+            return Err(StorageError::new(
+                "publish",
+                format!("无法原子替换笔记本元数据：{error}；{recovery}。"),
+            ));
+        }
+        if let Err(error) = sync_parent_directory(parent) {
+            let restoration = match fs::rename(&backup, target) {
+                Ok(()) => {
+                    let _ = sync_parent_directory(parent);
+                    "已恢复原元数据字节".to_owned()
+                }
+                Err(restore_error) => format!(
+                    "无法恢复目标路径；旧版字节仍保留于 {}：{restore_error}",
+                    backup.display()
+                ),
+            };
+            return Err(StorageError::new(
+                "publish",
+                format!("无法同步笔记本元数据目录：{error}；{restoration}。"),
+            ));
+        }
+        let backup_bytes = read_metadata_file(&backup).map_err(|error| {
+            StorageError::new(
+                "publish",
+                format!(
+                    "元数据已替换，但无法校验旧版备份：{}；备份保留于 {}。",
+                    error.message,
+                    backup.display()
+                ),
+            )
+        })?;
+        if backup_bytes != expected_bytes {
+            return Err(StorageError::new(
+                "conflict",
+                format!(
+                    "元数据已替换，但旧版备份与发布基线不一致；备份保留于 {}。",
+                    backup.display()
+                ),
+            ));
+        }
+        let published_bytes = read_metadata_file(target).map_err(|error| {
+            StorageError::new(
+                "publish",
+                format!(
+                    "元数据已替换，但无法验证新文件：{}；旧版备份保留于 {}。",
+                    error.message,
+                    backup.display()
+                ),
+            )
+        })?;
+        if published_bytes != replacement_bytes {
+            return Err(StorageError::new(
+                "publish",
+                format!(
+                    "元数据已替换，但新文件与候选不一致；旧版备份保留于 {}。",
+                    backup.display()
+                ),
+            ));
+        }
+        let _ = fs::remove_file(backup);
+        let _ = sync_parent_directory(parent);
+        Ok(())
+    }
+
+    #[cfg(not(any(windows, unix)))]
+    {
+        let _ = (target, candidate, parent, expected_bytes, replacement_bytes);
+        Err(StorageError::new(
+            "publish",
+            "当前平台没有实现安全原子替换笔记本元数据。",
+        ))
+    }
+}
+
+#[cfg(windows)]
+fn restore_metadata_backup_if_target_missing(
+    backup: &Path,
+    target: &Path,
+    expected_bytes: &[u8],
+) -> String {
+    match fs::symlink_metadata(target) {
+        Ok(_) => return "目标路径仍存在，未移动备份".to_owned(),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return format!("无法检查目标路径，备份保留：{error}"),
+    }
+    match read_metadata_file(backup) {
+        Ok(bytes) if bytes == expected_bytes => match move_file_no_replace(backup, target) {
+            Ok(()) => "目标缺失时已恢复校验过的原元数据".to_owned(),
+            Err(error) => format!(
+                "无法恢复目标路径；原元数据备份保留于 {}：{error}",
+                backup.display()
+            ),
+        },
+        Ok(_) => format!("备份与发布基线不一致，未移动：{}", backup.display()),
+        Err(error) => format!(
+            "无法读取元数据备份：{}；路径为 {}",
+            error.message,
+            backup.display()
+        ),
     }
 }
 
