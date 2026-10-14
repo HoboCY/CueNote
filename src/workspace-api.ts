@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { NoteContent, PlainText } from './generated/note-format';
+import type { AssetManifestEntry, NoteContent, PlainText } from './generated/note-format';
 
 export type { NoteContent } from './generated/note-format';
 
@@ -46,6 +46,7 @@ export interface NoteSession {
   notebookId: string | null;
   pinned: boolean;
   trashedAt: string | null;
+  assets: AssetManifestEntry[];
 }
 
 export interface WorkspaceView {
@@ -109,6 +110,18 @@ export const workspaceApi = {
     invoke<void>('set_view_preferences', { sidebarCollapsed, selectedNotebookId }),
   save: (sessionId: string, content: NoteContent) =>
     invoke<SaveReceipt>('save_note_content', { sessionId, content }),
+  stageImage: (sessionId: string, bytes: Uint8Array) =>
+    invoke<AssetManifestEntry>('stage_image_raw', bytes, {
+      headers: { 'x-cuenote-session-id': sessionId },
+    }),
+  preflightImageInsert: (sessionId: string, content: NoteContent) =>
+    invoke<void>('preflight_image_insert', { sessionId, content }),
+  readImage: async (sessionId: string, assetId: string) => {
+    const bytes = await invoke<ArrayBuffer>('read_image_asset', { sessionId, assetId });
+    // The host only returns already validated PNG/JPEG assets from this session.
+    const type = new Uint8Array(bytes)[0] === 0x89 ? 'image/png' : 'image/jpeg';
+    return new Blob([bytes], { type });
+  },
   listRecoveryDrafts: () => invoke<RecoveryList>('list_recovery_drafts'),
   restoreRecoveryAsCopy: (recoveryId: string) =>
     invoke<SaveReceipt>('restore_recovery_as_copy', { recoveryId }),

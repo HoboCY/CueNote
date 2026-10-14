@@ -46,6 +46,14 @@ function stringAt(value: unknown, path: string): string {
   return value;
 }
 
+function lowercaseUuidV4At(value: unknown, path: string): string {
+  const uuid = stringAt(value, path);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(uuid)) {
+    return fail(path, 'expected a lowercase UUIDv4');
+  }
+  return uuid;
+}
+
 function positiveIntegerAt(value: unknown, path: string): number {
   if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 0xffff_ffff) {
     return fail(path, 'expected a positive 32-bit integer');
@@ -164,7 +172,7 @@ function validateTableRows(rowsValue: unknown, path: string): TableRow[] {
   return rows;
 }
 
-function toBlock(block: Block, simple: boolean, path: string): JSONContent {
+function toBlock(block: Block, simple: boolean, path: string, topLevel = false): JSONContent {
   const value = objectAt(block, path);
   switch (value.type) {
     case 'paragraph':
@@ -240,7 +248,16 @@ function toBlock(block: Block, simple: boolean, path: string): JSONContent {
       return { type: 'blockMath', attrs: { latex: stringAt(value.latex, `${path}.latex`) } };
     }
     case 'image':
-      return fail(path, 'images are not supported by this editor');
+      exactKeys(value, ['type', 'assetId', 'displayWidthPx'], path);
+      if (simple) return fail(path, 'images are not supported in this section');
+      if (!topLevel) return fail(path, 'images must be top-level blocks');
+      return {
+        type: 'image',
+        attrs: {
+          assetId: lowercaseUuidV4At(value.assetId, `${path}.assetId`),
+          displayWidthPx: positiveIntegerAt(value.displayWidthPx, `${path}.displayWidthPx`),
+        },
+      };
     case 'mindMap':
       return fail(path, 'mind maps are not supported by this editor');
     default:
@@ -249,7 +266,7 @@ function toBlock(block: Block, simple: boolean, path: string): JSONContent {
 }
 
 export function toEditorDocument(blocks: Block[], simple: boolean): JSONContent {
-  const content = arrayAt(blocks, 'blocks').map((block, index) => toBlock(block as Block, simple, `blocks[${index}]`));
+  const content = arrayAt(blocks, 'blocks').map((block, index) => toBlock(block as Block, simple, `blocks[${index}]`, true));
   // ProseMirror's document schema requires a text block. The UI must suppress the
   // initial editor update so opening an empty canonical section does not save it.
   if (content.length === 0) content.push({ type: 'paragraph' });
@@ -390,7 +407,7 @@ function fromTable(value: JsonObject, simple: boolean, path: string): Block {
   return { type: 'table', rows: canonicalRows };
 }
 
-function fromBlock(value: unknown, simple: boolean, path: string): Block {
+function fromBlock(value: unknown, simple: boolean, path: string, topLevel = false): Block {
   const node = objectAt(value, path);
   switch (node.type) {
     case 'paragraph': {
@@ -430,6 +447,17 @@ function fromBlock(value: unknown, simple: boolean, path: string): Block {
       const attrs = optionalAttrs(node, ['latex'], path);
       return { type: 'mathBlock', latex: stringAt(attrs.latex, `${path}.attrs.latex`) };
     }
+    case 'image': {
+      exactKeys(node, ['type', 'attrs'], path);
+      if (simple) return fail(path, 'images are not supported in this section');
+      if (!topLevel) return fail(path, 'images must be top-level blocks');
+      const attrs = optionalAttrs(node, ['assetId', 'displayWidthPx'], path);
+      return {
+        type: 'image',
+        assetId: lowercaseUuidV4At(attrs.assetId, `${path}.attrs.assetId`),
+        displayWidthPx: positiveIntegerAt(attrs.displayWidthPx, `${path}.attrs.displayWidthPx`),
+      };
+    }
     case 'orderedList': {
       exactKeys(node, ['type', 'attrs', 'content'], path);
       const attrs = optionalAttrs(node, ['start', 'type'], path);
@@ -466,14 +494,14 @@ function fromBlock(value: unknown, simple: boolean, path: string): Block {
   }
 }
 
-function fromBlocks(value: unknown, simple: boolean, path: string): Block[] {
+function fromBlocks(value: unknown, simple: boolean, path: string, topLevel = false): Block[] {
   if (value === undefined) return [];
-  return arrayAt(value, path).map((block, index) => fromBlock(block, simple, `${path}[${index}]`));
+  return arrayAt(value, path).map((block, index) => fromBlock(block, simple, `${path}[${index}]`, topLevel));
 }
 
 export function fromEditorDocument(doc: JSONContent, simple: boolean): Block[] {
   const value = objectAt(doc, 'doc');
   exactKeys(value, ['type', 'content'], 'doc');
   if (value.type !== 'doc') fail('doc.type', 'expected a ProseMirror document');
-  return fromBlocks(value.content, simple, 'doc.content');
+  return fromBlocks(value.content, simple, 'doc.content', true);
 }

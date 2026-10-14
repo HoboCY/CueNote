@@ -3,6 +3,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { createSaveCoordinator, type SaveCoordinatorState } from './save-coordinator';
 import { RichTextEditor, type RichTextSection } from './RichTextEditor';
+import type { ImageEditorBridge } from './image-session';
 import {
   workspaceApi,
   type NoteSession,
@@ -104,6 +105,7 @@ function App() {
   const [recoveryCopyPaths, setRecoveryCopyPaths] = useState<Record<string, string>>({});
   const [closeGuardReady, setCloseGuardReady] = useState(!desktopRuntime);
   const [isComposing, setIsComposing] = useState(false);
+  const [pendingImageCount, setPendingImageCount] = useState(0);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
   const [isTransitionSaving, setIsTransitionSaving] = useState(false);
@@ -129,6 +131,7 @@ function App() {
   const lastSaveErrorRef = useRef<unknown | null>(null);
   const isComposingRef = useRef(false);
   const compositionWaitersRef = useRef<Array<() => void>>([]);
+  const pendingImagesRef = useRef(new Map<Promise<void>, Promise<WorkspaceError | null>>());
   const savingPauseRef = useRef<Promise<void>>(Promise.resolve());
   const closeRequestHandlerRef = useRef<() => void>(() => undefined);
   const flushCurrentRef = useRef<() => void>(() => undefined);
@@ -336,6 +339,14 @@ function App() {
     return new Promise<void>((resolve) => compositionWaitersRef.current.push(resolve));
   };
 
+  const waitForImages = async () => {
+    while (pendingImagesRef.current.size > 0) {
+      const results = await Promise.all([...pendingImagesRef.current.values()]);
+      const failure = results.find((result) => result !== null);
+      if (failure) throw failure;
+    }
+  };
+
   const attemptTransitionAfterSave = async (transition: PendingTransition) => {
     if (transitionAttemptRef.current) return;
     transitionAttemptRef.current = transition;
@@ -343,6 +354,7 @@ function App() {
     setDialogMessage(`正在保存最新修改，完成后继续${transition.label}。可以取消此次操作。`);
     try {
       await waitForComposition();
+      await waitForImages();
       if (pendingTransitionRef.current !== transition || transitionAttemptRef.current !== transition) return;
       if (hasBlockingEditorIssue()) {
         setDialogMessage('编辑器内容尚无法转换为安全的保存快照。请撤销或修复该操作后再继续。');
@@ -362,6 +374,11 @@ function App() {
       setDialogMessage(state.phase === 'conflict'
         ? '原文件已发生变化，草稿仍留在当前页。请检查冲突、重试或另存草稿后再继续。'
         : '自动保存没有完成，草稿仍留在当前页。可以重试、另存草稿，或取消此次操作。');
+    } catch (cause) {
+      if (pendingTransitionRef.current === transition) {
+        setError(toWorkspaceError(cause));
+        setDialogMessage('图片粘贴未完成，当前草稿仍留在本页。请检查提示后重试保存或取消此次操作。');
+      }
     } finally {
       if (transitionAttemptRef.current === transition) {
         transitionAttemptRef.current = null;
@@ -377,7 +394,7 @@ function App() {
     }
     if (transitionAttemptRef.current || operationInProgressRef.current) return;
     const state = saveCoordinator.getState();
-    if (isComposingRef.current || state.isDirty || state.phase === 'saving') {
+    if (isComposingRef.current || pendingImagesRef.current.size > 0 || state.isDirty || state.phase === 'saving') {
       void attemptTransitionAfterSave(transition);
       return;
     }
@@ -403,7 +420,7 @@ function App() {
       return;
     }
     const state = saveCoordinator.getState();
-    if (isComposingRef.current || state.isDirty || state.phase === 'saving') {
+    if (isComposingRef.current || pendingImagesRef.current.size > 0 || state.isDirty || state.phase === 'saving') {
       pendingTransitionRef.current = transition;
       setPendingTransition(transition);
       void attemptTransitionAfterSave(transition);
@@ -423,13 +440,25 @@ function App() {
   const saveCurrent = async () => {
     const currentSession = sessionRef.current;
     if (!desktopRuntime || isInitializing || operationInProgressRef.current || hasEditorIssue() || !currentSession || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
-    await waitForComposition();
-    await saveCoordinator.flush();
+    try {
+      await waitForComposition();
+      await waitForImages();
+      if (sessionRef.current?.sessionId !== currentSession.sessionId || operationInProgressRef.current) return;
+      await saveCoordinator.flush();
+    } catch (cause) {
+      setError(toWorkspaceError(cause));
+    }
   };
   flushCurrentRef.current = () => { void saveCurrent(); };
 
   const saveCurrentAs = async () => {
-    await waitForComposition();
+    try {
+      await waitForComposition();
+      await waitForImages();
+    } catch (cause) {
+      setSafeCopyError(toWorkspaceError(cause));
+      return;
+    }
     const currentSession = sessionRef.current;
     const snapshot = draftRef.current;
     const unchangedReadOnlyCopy = Boolean(currentSession && (currentSession.readOnlyReason || hasInitialEditorIssue()));
@@ -672,6 +701,71 @@ function App() {
     draftRef.current = next;
     setDraft(next);
     if (!isComposingRef.current && !hasEditorIssue()) saveCoordinator.edit(currentSession.sessionId, cloneNoteContent(next));
+  };
+
+  const imageBridgeForSession = (sessionId: string): ImageEditorBridge => {
+    const assertSession = () => {
+      const current = sessionRef.current;
+      if (!current || current.sessionId !== sessionId) throw new Error('笔记已切换，请在当前笔记重新粘贴图片。');
+      return current;
+    };
+    const assertEditable = () => {
+      const current = assertSession();
+      if (current.readOnlyReason || current.trashedAt !== null || isTrashViewRef.current
+        || operationInProgressRef.current || isAbandoningRef.current || hasEditorIssue()) {
+        throw new Error('当前笔记暂时无法插入图片。已有内容保持不变。');
+      }
+    };
+    return {
+      canStart: () => {
+        try {
+          assertEditable();
+          return desktopRuntime && !pendingTransitionRef.current;
+        } catch {
+          return false;
+        }
+      },
+      stage: async (file) => {
+        assertEditable();
+        if (file.size > 512 * 1024 * 1024) throw new Error('图片超过笔记文件的展开大小上限，未插入图片。');
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        assertEditable();
+        const asset = await workspaceApi.stageImage(sessionId, bytes);
+        assertEditable();
+        return asset;
+      },
+      read: async (assetId) => {
+        assertSession();
+        const image = await workspaceApi.readImage(sessionId, assetId);
+        assertSession();
+        return image;
+      },
+      preflight: async (contentBlocks) => {
+        assertEditable();
+        const basis = draftRef.current;
+        if (!basis) throw new Error('当前笔记草稿不可用。');
+        const candidate = cloneNoteContent({ ...basis, sections: { ...basis.sections, content: contentBlocks } });
+        try {
+          await workspaceApi.preflightImageInsert(sessionId, candidate);
+        } catch (cause) {
+          // A rejected old draft says nothing about a newer one, for example
+          // when the user removed another image while the size check ran.
+          if (sessionRef.current?.sessionId === sessionId && draftRef.current !== basis) return () => false;
+          throw cause;
+        }
+        return () => sessionRef.current?.sessionId === sessionId && draftRef.current === basis
+          && !operationInProgressRef.current && !isAbandoningRef.current && !hasEditorIssue();
+      },
+      track: (operation) => {
+        const settled = operation.then(() => null, (cause: unknown) => toWorkspaceError(cause));
+        pendingImagesRef.current.set(operation, settled);
+        setPendingImageCount(pendingImagesRef.current.size);
+        void settled.then(() => {
+          pendingImagesRef.current.delete(operation);
+          setPendingImageCount(pendingImagesRef.current.size);
+        });
+      },
+    };
   };
 
   const handleCompositionStart = () => {
@@ -1072,6 +1166,8 @@ function App() {
     ? '只读文字投影，原件保持不变'
     : editorIssue
       ? '内容无法安全转换，保存已暂停'
+    : pendingImageCount > 0
+      ? '正在处理图片，完成后自动保存'
     : isSaving
     ? '正在保存…'
     : isComposing
@@ -1107,7 +1203,7 @@ function App() {
 
   const renderSectionEditor = (section: RichTextSection) => {
     if (!session || !draft) return null;
-    if (session.readOnlyReason) {
+    if (session.readOnlyReason && !isTrashSession) {
       const projection = session.text[section];
       return (
         <textarea
@@ -1130,6 +1226,7 @@ function App() {
         editable={sectionCanEdit(section)}
         readOnly={isReadOnly || hasInitialIssue}
         projectionText={session.text[section]}
+        imageBridge={section === 'content' ? imageBridgeForSession(session.sessionId) : undefined}
         onChange={(blocks) => updateSectionDraft(section, blocks)}
         onError={(message, initial) => updateEditorIssue(section, message, initial)}
         onCompositionStart={handleCompositionStart}

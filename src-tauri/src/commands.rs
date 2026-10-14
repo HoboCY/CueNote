@@ -1,10 +1,13 @@
 //! Desktop commands accept session/note identities, never frontend filesystem paths.
 use std::sync::{Arc, Mutex};
 
-use tauri::{AppHandle, Manager, State};
+use tauri::{
+    ipc::{InvokeBody, Request, Response},
+    AppHandle, Manager, State,
+};
 use tauri_plugin_dialog::DialogExt;
 
-use crate::note_format::{NoteContent, PlainText};
+use crate::note_format::{AssetManifestEntry, NoteContent, PlainText};
 use crate::workspace::{
     LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy, Workspace, WorkspaceError,
     WorkspaceView,
@@ -226,6 +229,56 @@ pub async fn save_note_content(
 }
 
 #[tauri::command]
+pub async fn stage_image_raw(
+    state: State<'_, WorkspaceState>,
+    request: Request<'_>,
+) -> Result<AssetManifestEntry, WorkspaceError> {
+    let session_id = request
+        .headers()
+        .get("x-cuenote-session-id")
+        .and_then(|value| value.to_str().ok())
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .ok_or_else(|| command_error("图片请求缺少有效的笔记会话身份。"))?;
+    let bytes = match request.body() {
+        InvokeBody::Raw(bytes) => bytes.clone(),
+        InvokeBody::Json(_) => {
+            return Err(command_error("图片请求必须使用原始字节数据。"));
+        }
+    };
+    work(state.inner().clone(), move |workspace| {
+        workspace.stage_image_bytes(&session_id, &bytes)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn preflight_image_insert(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    content: NoteContent,
+) -> Result<(), WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.preflight_image_insert(&session_id, content)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn read_image_asset(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    asset_id: String,
+) -> Result<Response, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace
+            .read_image_asset(&session_id, &asset_id)
+            .map(Response::new)
+    })
+    .await
+}
+
+#[tauri::command]
 pub fn activate_close_guard(gate: State<'_, crate::CloseGate>) {
     gate.armed.store(true, std::sync::atomic::Ordering::Release);
 }
@@ -237,7 +290,7 @@ pub async fn complete_close(
 ) -> Result<(), WorkspaceError> {
     // The frontend freezes new transitions and flushes its latest text before
     // requesting this. Wait for any existing host operation to release its lock.
-    work(state.inner().clone(), |_| Ok(())).await?;
+    work(state.inner().clone(), Workspace::close).await?;
     app.state::<crate::CloseGate>()
         .approved
         .store(true, std::sync::atomic::Ordering::Release);

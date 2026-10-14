@@ -3,10 +3,14 @@
 //! The frontend receives only DTOs and opaque session identifiers. Paths,
 //! package contents, organization fields, and revision baselines stay here.
 
-use crate::note_format::{Block, Inline, Mark, NoteContent, NotePackage, PlainText, TableRow};
+use crate::note_format::{
+    AssetManifestEntry, Block, Inline, Mark, NoteContent, NotePackage, PlainText, TableRow,
+    MAX_EXPANDED_BYTES,
+};
 use crate::storage::{self, OpenedNote, StorageError};
 use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
+use sha2::Digest;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{self, File, Metadata, OpenOptions};
 use std::io::{self, Read, Write};
@@ -68,6 +72,7 @@ pub struct NoteSession {
     pub trashed_at: Option<String>,
     pub text: PlainText,
     pub content: NoteContent,
+    pub assets: Vec<AssetManifestEntry>,
     pub revision: Option<String>,
     pub read_only_reason: Option<String>,
 }
@@ -165,6 +170,7 @@ struct ActiveNoteSession {
     view: NoteSession,
     path: PathBuf,
     package: NotePackage,
+    asset_stash: Option<AssetStash>,
     baseline_revision: Option<String>,
     notebook_id: Option<String>,
 }
@@ -180,6 +186,7 @@ pub struct Workspace {
     last_note_id: Option<String>,
     preferences: ViewPreferences,
     initialized: bool,
+    asset_run: AssetRun,
 }
 
 impl Workspace {
@@ -198,6 +205,7 @@ impl Workspace {
             last_note_id: None,
             preferences: ViewPreferences::default(),
             initialized: false,
+            asset_run: AssetRun::new(),
         }
     }
 
@@ -411,6 +419,7 @@ impl Workspace {
             trashed_at: None,
             text: package.text_projection(),
             content: package.content(),
+            assets: package.manifest.assets.clone(),
             revision: None,
             read_only_reason: None,
         };
@@ -419,6 +428,7 @@ impl Workspace {
             view: view.clone(),
             path,
             package,
+            asset_stash: None,
             baseline_revision: None,
             notebook_id: Some(assigned_notebook_id),
         });
@@ -467,10 +477,111 @@ impl Workspace {
             view: view.clone(),
             path,
             package: opened.package,
+            asset_stash: None,
             baseline_revision: Some(opened.revision),
             notebook_id,
         });
         Ok(view)
+    }
+
+    pub fn stage_image(
+        &mut self,
+        session_id: &str,
+        bytes: Vec<u8>,
+    ) -> Result<AssetManifestEntry, WorkspaceError> {
+        self.stage_image_bytes(session_id, &bytes)
+    }
+
+    pub(crate) fn stage_image_bytes(
+        &mut self,
+        session_id: &str,
+        bytes: &[u8],
+    ) -> Result<AssetManifestEntry, WorkspaceError> {
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| StorageError::new("noSession", "当前没有可插入图片的笔记会话。"))?;
+        if session.view.session_id != session_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话已切换；请重新打开笔记后再插入图片。",
+            ));
+        }
+        if let Some(reason) = session.view.read_only_reason.as_ref() {
+            return Err(StorageError::new("readOnly", reason.clone()));
+        }
+        if bytes.len() as u64 > MAX_EXPANDED_BYTES {
+            return Err(StorageError::new(
+                "resourceLimit",
+                "图片原始数据超过 512 MiB 展开预算。",
+            ));
+        }
+
+        let (media_type, width, height) = crate::note_format::inspect_image(bytes)
+            .map_err(|error| StorageError::new(error.kind, error.message))?;
+        let entry = AssetManifestEntry {
+            id: Uuid::new_v4().to_string(),
+            media_type,
+            byte_length: bytes.len() as u64,
+            sha256: format!("{:x}", sha2::Sha256::digest(bytes)),
+            width,
+            height,
+        };
+        let stash_path = self
+            .asset_run
+            .session_path(&self.recovery_root, session_id)?;
+        let session = self
+            .session
+            .as_mut()
+            .ok_or_else(|| StorageError::new("noSession", "图片暂存期间笔记会话已关闭。"))?;
+        if session.view.session_id != session_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "图片暂存期间笔记会话已切换。",
+            ));
+        }
+        let stash = session
+            .asset_stash
+            .get_or_insert_with(|| AssetStash::new(stash_path));
+        stash.put(&entry, bytes)?;
+        Ok(entry)
+    }
+
+    pub fn read_image_asset(
+        &self,
+        session_id: &str,
+        asset_id: &str,
+    ) -> Result<Vec<u8>, WorkspaceError> {
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| StorageError::new("noSession", "当前没有可读取图片的笔记会话。"))?;
+        if session.view.session_id != session_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话已切换；请重新打开笔记后读取图片。",
+            ));
+        }
+        if !is_canonical_uuid_v4(asset_id) {
+            return Err(StorageError::new(
+                "invalidAssetId",
+                "图片资产身份格式无效。",
+            ));
+        }
+        if let Some(bytes) = session.package.assets.get(asset_id) {
+            return Ok(bytes.clone());
+        }
+        if let Some(stash) = session.asset_stash.as_ref() {
+            if let Some((entry, bytes)) = stash.read(asset_id)? {
+                if entry.id == asset_id {
+                    return Ok(bytes);
+                }
+            }
+        }
+        Err(StorageError::new(
+            "missingAsset",
+            "当前笔记会话中找不到该图片资产。",
+        ))
     }
 
     pub fn trash_note(&mut self, session_id: &str) -> Result<SaveReceipt, WorkspaceError> {
@@ -604,6 +715,16 @@ impl Workspace {
             session: saved_session,
             library: receipt_library,
         })
+    }
+
+    /// Release this process's image staging directories before the app exits.
+    /// The persisted last-note preference intentionally remains unchanged.
+    pub fn close(&mut self) -> Result<(), WorkspaceError> {
+        if let Some(session) = self.session.as_mut() {
+            session.release_asset_stash()?;
+        }
+        drop(self.session.take());
+        self.asset_run.release()
     }
 
     pub fn restore_trashed_note(
@@ -838,6 +959,90 @@ impl Workspace {
         })
     }
 
+    pub fn preflight_image_insert(
+        &mut self,
+        session_id: &str,
+        content: NoteContent,
+    ) -> Result<(), WorkspaceError> {
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| StorageError::new("noSession", "当前没有可插入图片的笔记会话。"))?;
+        if session.view.session_id != session_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话已切换；请重新打开笔记后再插入图片。",
+            ));
+        }
+        if let Some(reason) = session.view.read_only_reason.as_ref() {
+            return Err(StorageError::new("readOnly", reason.clone()));
+        }
+        candidate_for_content(session, &content).map(|_| ())
+    }
+
+    fn preserve_removed_assets(
+        &mut self,
+        session_id: &str,
+        candidate: &NotePackage,
+    ) -> Result<(), WorkspaceError> {
+        let removed = {
+            let session = self
+                .session
+                .as_ref()
+                .ok_or_else(|| StorageError::new("noSession", "当前没有可保存的笔记会话。"))?;
+            if session.view.session_id != session_id {
+                return Err(StorageError::new(
+                    "staleSession",
+                    "笔记会话已切换；请重新打开笔记后再保存。",
+                ));
+            }
+            let candidate_ids = candidate
+                .manifest
+                .assets
+                .iter()
+                .map(|entry| entry.id.as_str())
+                .collect::<HashSet<_>>();
+            session
+                .package
+                .manifest
+                .assets
+                .iter()
+                .filter(|entry| !candidate_ids.contains(entry.id.as_str()))
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        if removed.is_empty() {
+            return Ok(());
+        }
+
+        let stash_path = self
+            .asset_run
+            .session_path(&self.recovery_root, session_id)?;
+        let session = self
+            .session
+            .as_mut()
+            .ok_or_else(|| StorageError::new("noSession", "保存期间笔记会话已关闭。"))?;
+        if session.view.session_id != session_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话已切换；请重新打开笔记后再保存。",
+            ));
+        }
+        let ActiveNoteSession {
+            package,
+            asset_stash,
+            ..
+        } = session;
+        let stash = asset_stash.get_or_insert_with(|| AssetStash::new(stash_path));
+        for entry in removed {
+            let bytes = package.assets.get(&entry.id).ok_or_else(|| {
+                StorageError::new("assetIntegrity", "要保留的图片文件在笔记包中缺失。")
+            })?;
+            stash.put(&entry, bytes)?;
+        }
+        Ok(())
+    }
+
     pub fn save_note_content(
         &mut self,
         session_id: &str,
@@ -862,18 +1067,7 @@ impl Workspace {
             if let Some(reason) = session.view.read_only_reason.as_ref() {
                 return Err(StorageError::new("readOnly", reason.clone()));
             }
-            if !supports_editable_content(&content) {
-                return Err(StorageError::new(
-                    "readOnly",
-                    "笔记包含当前编辑器尚不支持的内容，未保存任何更改。",
-                ));
-            }
-
-            let mut candidate = session.package.clone();
-            candidate.replace_content(content.clone());
-            candidate
-                .validate()
-                .map_err(|error| StorageError::new("format", error.to_string()))?;
+            let candidate = candidate_for_content(session, &content)?;
             if candidate.document.note_id != session.view.note_id
                 || candidate.document.organization != session.package.document.organization
                 || candidate.document.organization.notebook_id != session.notebook_id
@@ -890,6 +1084,8 @@ impl Workspace {
                 session.view.note_id.clone(),
             )
         };
+
+        self.preserve_removed_assets(session_id, &candidate)?;
 
         let (revision, publish_warning) = match storage::save_note(
             &note_path,
@@ -923,6 +1119,7 @@ impl Workspace {
         active.package = candidate.clone();
         active.baseline_revision = Some(revision.clone());
         active.view.content = content;
+        active.view.assets = candidate.manifest.assets.clone();
         active.view.text = candidate.text_projection();
         active.view.revision = Some(revision);
         let saved_session = active.view.clone();
@@ -1512,6 +1709,7 @@ impl Workspace {
             view: session.clone(),
             path,
             package: restored.package,
+            asset_stash: None,
             baseline_revision: Some(restored.revision),
             notebook_id: Some(default_notebook_id.clone()),
         });
@@ -1603,23 +1801,20 @@ impl Workspace {
                     "笔记会话已切换；请重新打开笔记后再另存。",
                 ));
             }
-            (session.package.clone(), library.default_notebook_id.clone())
+            let original_content = session.package.content();
+            let package = if content == original_content {
+                session.package.clone()
+            } else {
+                if !supports_editable_content(&original_content) {
+                    return Err(StorageError::new(
+                        "readOnly",
+                        "当前笔记包含编辑器尚不支持的结构；未创建副本。",
+                    ));
+                }
+                candidate_for_content(session, &content)?
+            };
+            (package, library.default_notebook_id.clone())
         };
-
-        let original_content = package.content();
-        if content != original_content {
-            if !supports_editable_content(&original_content) || !supports_editable_content(&content)
-            {
-                return Err(StorageError::new(
-                    "readOnly",
-                    "当前笔记或另存内容包含编辑器尚不支持的结构；未创建副本。",
-                ));
-            }
-            package.replace_content(content);
-            package
-                .validate()
-                .map_err(|error| StorageError::new("format", error.to_string()))?;
-        }
         assign_copy_identity(&mut package, &default_notebook_id);
         let destination = self.resolve_copy_destination(&path)?;
         let (saved_path, revision) = storage::save_copy(&destination, &package)?;
@@ -1902,6 +2097,523 @@ impl Workspace {
     }
 }
 
+struct AssetRun {
+    directory: Option<PathBuf>,
+    lock: Option<File>,
+}
+
+impl AssetRun {
+    fn new() -> Self {
+        Self {
+            directory: None,
+            lock: None,
+        }
+    }
+
+    fn session_path(
+        &mut self,
+        recovery_root: &Path,
+        session_id: &str,
+    ) -> Result<PathBuf, WorkspaceError> {
+        if !is_canonical_uuid_v4(session_id) {
+            return Err(StorageError::new(
+                "invalidSession",
+                "笔记会话身份格式无效。",
+            ));
+        }
+        Ok(self.ensure(recovery_root)?.join(session_id))
+    }
+
+    fn ensure(&mut self, recovery_root: &Path) -> Result<PathBuf, WorkspaceError> {
+        if let Some(directory) = &self.directory {
+            return Ok(directory.clone());
+        }
+
+        let recovery_root = resolve_future_path(recovery_root)?;
+        fs::create_dir_all(&recovery_root).map_err(|error| {
+            StorageError::new("assetStaging", format!("无法准备图片暂存目录：{error}"))
+        })?;
+        ensure_asset_directory(&recovery_root)?;
+
+        let staging_root = recovery_root.join("asset-staging");
+        ensure_asset_directory(&staging_root)?;
+        let lock_root = staging_root.join(".locks");
+        ensure_asset_directory(&lock_root)?;
+        cleanup_stale_asset_runs(&staging_root, &lock_root)?;
+
+        for _ in 0..8 {
+            let run_id = Uuid::new_v4().to_string();
+            let lock_path = lock_root.join(format!("{run_id}.lock"));
+            let lock = open_asset_run_lock(&lock_path)?;
+            match lock.try_lock() {
+                Ok(()) => {
+                    let directory = staging_root.join(&run_id);
+                    match fs::create_dir(&directory) {
+                        Ok(()) => {
+                            self.directory = Some(directory.clone());
+                            self.lock = Some(lock);
+                            return Ok(directory);
+                        }
+                        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {
+                            let _ = lock.unlock();
+                        }
+                        Err(error) => {
+                            let _ = lock.unlock();
+                            return Err(StorageError::new(
+                                "assetStaging",
+                                format!("无法创建本次图片暂存目录：{error}"),
+                            ));
+                        }
+                    }
+                }
+                Err(std::fs::TryLockError::WouldBlock) => continue,
+                Err(std::fs::TryLockError::Error(error)) => {
+                    return Err(StorageError::new(
+                        "assetStaging",
+                        format!("无法锁定本次图片暂存目录：{error}"),
+                    ));
+                }
+            }
+        }
+        Err(StorageError::new(
+            "assetStaging",
+            "多次尝试后仍无法创建独立的图片暂存目录。",
+        ))
+    }
+
+    fn release(&mut self) -> Result<(), WorkspaceError> {
+        if let Some(directory) = self.directory.as_ref() {
+            match fs::symlink_metadata(directory) {
+                Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_dir() => {
+                    return Err(StorageError::new(
+                        "unsafePath",
+                        "本次图片暂存运行目录必须是实际目录。",
+                    ));
+                }
+                Ok(_) => fs::remove_dir_all(directory).map_err(|error| {
+                    StorageError::new("assetStaging", format!("无法释放本次图片暂存目录：{error}"))
+                })?,
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+                Err(error) => {
+                    return Err(StorageError::new(
+                        "assetStaging",
+                        format!("无法检查本次图片暂存目录：{error}"),
+                    ));
+                }
+            }
+            self.directory.take();
+        }
+        if let Some(lock) = self.lock.take() {
+            lock.unlock().map_err(|error| {
+                StorageError::new(
+                    "assetStaging",
+                    format!("无法释放本次图片暂存运行锁：{error}"),
+                )
+            })?;
+        }
+        Ok(())
+    }
+}
+
+impl Drop for AssetRun {
+    fn drop(&mut self) {
+        let _ = self.release();
+    }
+}
+
+struct AssetStash {
+    directory: PathBuf,
+}
+
+impl AssetStash {
+    fn new(directory: PathBuf) -> Self {
+        Self { directory }
+    }
+
+    fn put(&self, entry: &AssetManifestEntry, bytes: &[u8]) -> Result<(), WorkspaceError> {
+        validate_staged_asset(entry, bytes)?;
+        ensure_asset_directory(&self.directory)?;
+        match self.existing_matches(entry, bytes)? {
+            Some(true) => return Ok(()),
+            Some(false) => {
+                return Err(StorageError::new(
+                    "assetIntegrity",
+                    "图片暂存身份已对应其他数据，拒绝覆盖。",
+                ));
+            }
+            None => {}
+        }
+
+        let asset_path = self.directory.join(&entry.id);
+        let metadata_path = self.directory.join(format!("{}.json", entry.id));
+        let result = (|| {
+            write_immutable_file(&asset_path, bytes, "图片资产")?;
+            let metadata = serde_json::to_vec(entry).map_err(|error| {
+                StorageError::new("assetStaging", format!("无法编码图片资产信息：{error}"))
+            })?;
+            write_immutable_file(&metadata_path, &metadata, "图片资产信息")?;
+            sync_directory(&self.directory).map_err(|error| {
+                StorageError::new("assetStaging", format!("无法同步图片暂存目录：{error}"))
+            })?;
+            Ok(())
+        })();
+        if result.is_err() {
+            let _ = fs::remove_file(&asset_path);
+            let _ = fs::remove_file(&metadata_path);
+        }
+        result
+    }
+
+    fn existing_matches(
+        &self,
+        entry: &AssetManifestEntry,
+        bytes: &[u8],
+    ) -> Result<Option<bool>, WorkspaceError> {
+        let asset_path = self.directory.join(&entry.id);
+        let metadata_path = self.directory.join(format!("{}.json", entry.id));
+        let metadata = match fs::symlink_metadata(&metadata_path) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                match fs::symlink_metadata(&asset_path) {
+                    Ok(_) => {
+                        return Err(StorageError::new(
+                            "assetIntegrity",
+                            "图片暂存文件缺少对应的资产信息。",
+                        ));
+                    }
+                    Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+                    Err(error) => {
+                        return Err(StorageError::new(
+                            "assetStaging",
+                            format!("无法检查图片暂存文件：{error}"),
+                        ));
+                    }
+                }
+            }
+            Err(error) => {
+                return Err(StorageError::new(
+                    "assetStaging",
+                    format!("无法检查图片资产信息：{error}"),
+                ));
+            }
+        };
+        if is_link_or_reparse(&metadata) || !metadata.is_file() {
+            return Err(StorageError::new(
+                "unsafePath",
+                "图片资产信息必须是普通文件。",
+            ));
+        }
+        if metadata.len() > MAX_METADATA_BYTES {
+            return Err(StorageError::new(
+                "assetIntegrity",
+                "图片资产信息超过大小上限。",
+            ));
+        }
+        let metadata_bytes = read_regular_file(&metadata_path, MAX_METADATA_BYTES)?;
+        let existing_entry: AssetManifestEntry =
+            serde_json::from_slice(&metadata_bytes).map_err(|error| {
+                StorageError::new("assetIntegrity", format!("图片资产信息损坏：{error}"))
+            })?;
+        if existing_entry != *entry {
+            return Ok(Some(false));
+        }
+
+        let asset_metadata = fs::symlink_metadata(&asset_path).map_err(|error| {
+            StorageError::new("assetStaging", format!("无法检查图片暂存文件：{error}"))
+        })?;
+        if is_link_or_reparse(&asset_metadata) || !asset_metadata.is_file() {
+            return Err(StorageError::new(
+                "unsafePath",
+                "图片暂存文件必须是普通文件。",
+            ));
+        }
+        if asset_metadata.len() != bytes.len() as u64 {
+            return Ok(Some(false));
+        }
+        let mut file = File::open(&asset_path).map_err(|error| {
+            StorageError::new("assetStaging", format!("无法打开图片暂存文件：{error}"))
+        })?;
+        let mut buffer = [0u8; 64 * 1024];
+        for expected in bytes.chunks(buffer.len()) {
+            file.read_exact(&mut buffer[..expected.len()])
+                .map_err(|error| {
+                    StorageError::new("assetStaging", format!("无法读取图片暂存文件：{error}"))
+                })?;
+            if buffer[..expected.len()] != *expected {
+                return Ok(Some(false));
+            }
+        }
+        Ok(Some(true))
+    }
+
+    fn read(
+        &self,
+        asset_id: &str,
+    ) -> Result<Option<(AssetManifestEntry, Vec<u8>)>, WorkspaceError> {
+        if !is_canonical_uuid_v4(asset_id) {
+            return Err(StorageError::new(
+                "invalidAssetId",
+                "图片资产身份格式无效。",
+            ));
+        }
+        let asset_path = self.directory.join(asset_id);
+        let metadata_path = self.directory.join(format!("{asset_id}.json"));
+        let metadata = match fs::symlink_metadata(&metadata_path) {
+            Ok(metadata) => metadata,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                match fs::symlink_metadata(&asset_path) {
+                    Ok(_) => {
+                        return Err(StorageError::new(
+                            "assetIntegrity",
+                            "图片暂存文件缺少对应的资产信息。",
+                        ));
+                    }
+                    Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+                    Err(error) => {
+                        return Err(StorageError::new(
+                            "assetStaging",
+                            format!("无法检查图片暂存文件：{error}"),
+                        ));
+                    }
+                }
+            }
+            Err(error) => {
+                return Err(StorageError::new(
+                    "assetStaging",
+                    format!("无法检查图片资产信息：{error}"),
+                ));
+            }
+        };
+        if is_link_or_reparse(&metadata) || !metadata.is_file() {
+            return Err(StorageError::new(
+                "unsafePath",
+                "图片资产信息必须是普通文件。",
+            ));
+        }
+        if metadata.len() > MAX_METADATA_BYTES {
+            return Err(StorageError::new(
+                "assetIntegrity",
+                "图片资产信息超过大小上限。",
+            ));
+        }
+        let metadata_bytes = read_regular_file(&metadata_path, MAX_METADATA_BYTES)?;
+        let entry: AssetManifestEntry =
+            serde_json::from_slice(&metadata_bytes).map_err(|error| {
+                StorageError::new("assetIntegrity", format!("图片资产信息损坏：{error}"))
+            })?;
+        if entry.id != asset_id {
+            return Err(StorageError::new(
+                "assetIntegrity",
+                "图片资产信息身份与文件名不一致。",
+            ));
+        }
+        let bytes = read_regular_file(&asset_path, MAX_EXPANDED_BYTES)?;
+        validate_staged_asset(&entry, &bytes)?;
+        Ok(Some((entry, bytes)))
+    }
+}
+
+impl Drop for ActiveNoteSession {
+    fn drop(&mut self) {
+        let _ = self.release_asset_stash();
+    }
+}
+
+impl ActiveNoteSession {
+    fn release_asset_stash(&mut self) -> Result<(), WorkspaceError> {
+        let Some(stash) = self.asset_stash.as_ref() else {
+            return Ok(());
+        };
+        match fs::symlink_metadata(&stash.directory) {
+            Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_dir() => {
+                return Err(StorageError::new(
+                    "unsafePath",
+                    "本笔记会话的图片暂存目录必须是实际目录。",
+                ));
+            }
+            Ok(_) => fs::remove_dir_all(&stash.directory).map_err(|error| {
+                StorageError::new(
+                    "assetStaging",
+                    format!("无法释放本笔记会话的图片暂存目录：{error}"),
+                )
+            })?,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => {
+                return Err(StorageError::new(
+                    "assetStaging",
+                    format!("无法检查本笔记会话的图片暂存目录：{error}"),
+                ));
+            }
+        }
+        self.asset_stash.take();
+        Ok(())
+    }
+}
+
+impl Drop for Workspace {
+    fn drop(&mut self) {
+        drop(self.session.take());
+    }
+}
+
+fn cleanup_stale_asset_runs(staging_root: &Path, lock_root: &Path) -> Result<(), WorkspaceError> {
+    let entries = fs::read_dir(staging_root).map_err(|error| {
+        StorageError::new("assetStaging", format!("无法读取图片暂存目录：{error}"))
+    })?;
+    for entry in entries {
+        let entry = entry.map_err(|error| {
+            StorageError::new("assetStaging", format!("无法读取图片暂存项目：{error}"))
+        })?;
+        let name = entry.file_name();
+        let Some(run_id) = name.to_str() else {
+            continue;
+        };
+        if !is_canonical_uuid_v4(run_id) {
+            continue;
+        }
+        let directory = entry.path();
+        let metadata = fs::symlink_metadata(&directory).map_err(|error| {
+            StorageError::new("assetStaging", format!("无法检查旧暂存目录：{error}"))
+        })?;
+        if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+            return Err(StorageError::new(
+                "unsafePath",
+                "旧图片暂存路径必须是实际目录。",
+            ));
+        }
+
+        let lock_path = lock_root.join(format!("{run_id}.lock"));
+        let lock = open_asset_run_lock(&lock_path)?;
+        match lock.try_lock() {
+            Ok(()) => {
+                fs::remove_dir_all(&directory).map_err(|error| {
+                    StorageError::new("assetStaging", format!("无法清理旧图片暂存：{error}"))
+                })?;
+                lock.unlock().map_err(|error| {
+                    StorageError::new("assetStaging", format!("无法释放暂存清理锁：{error}"))
+                })?;
+            }
+            Err(std::fs::TryLockError::WouldBlock) => {}
+            Err(std::fs::TryLockError::Error(error)) => {
+                return Err(StorageError::new(
+                    "assetStaging",
+                    format!("无法检查旧图片暂存锁：{error}"),
+                ));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn open_asset_run_lock(path: &Path) -> Result<File, WorkspaceError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_file() => {
+            return Err(StorageError::new(
+                "unsafePath",
+                "图片暂存运行锁必须是普通文件。",
+            ));
+        }
+        Ok(_) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(StorageError::new(
+                "assetStaging",
+                format!("无法检查图片暂存运行锁：{error}"),
+            ));
+        }
+    }
+    OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(path)
+        .map_err(|error| StorageError::new("assetStaging", format!("无法打开暂存运行锁：{error}")))
+}
+
+fn ensure_asset_directory(path: &Path) -> Result<(), WorkspaceError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_dir() => Err(
+            StorageError::new("unsafePath", "图片暂存路径必须是实际目录。"),
+        ),
+        Ok(_) => Ok(()),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            fs::create_dir(path).map_err(|error| {
+                StorageError::new("assetStaging", format!("无法创建图片暂存目录：{error}"))
+            })
+        }
+        Err(error) => Err(StorageError::new(
+            "assetStaging",
+            format!("无法检查图片暂存目录：{error}"),
+        )),
+    }
+}
+
+fn write_immutable_file(path: &Path, bytes: &[u8], label: &str) -> Result<(), WorkspaceError> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|error| StorageError::new("assetStaging", format!("无法创建{label}：{error}")))?;
+    let result = (|| {
+        file.write_all(bytes).map_err(|error| {
+            StorageError::new("assetStaging", format!("无法写入{label}：{error}"))
+        })?;
+        file.flush().map_err(|error| {
+            StorageError::new("assetStaging", format!("无法刷新{label}：{error}"))
+        })?;
+        file.sync_all()
+            .map_err(|error| StorageError::new("assetStaging", format!("无法同步{label}：{error}")))
+    })();
+    if result.is_err() {
+        let _ = fs::remove_file(path);
+    }
+    result
+}
+
+fn read_regular_file(path: &Path, limit: u64) -> Result<Vec<u8>, WorkspaceError> {
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| StorageError::new("assetStaging", format!("无法检查暂存文件：{error}")))?;
+    if is_link_or_reparse(&metadata) || !metadata.is_file() {
+        return Err(StorageError::new(
+            "unsafePath",
+            "图片暂存文件必须是普通文件。",
+        ));
+    }
+    if metadata.len() > limit {
+        return Err(StorageError::new(
+            "resourceLimit",
+            "图片暂存文件超过大小上限。",
+        ));
+    }
+    let file = File::open(path)
+        .map_err(|error| StorageError::new("assetStaging", format!("无法打开暂存文件：{error}")))?;
+    let mut bytes = Vec::with_capacity(metadata.len() as usize);
+    file.take(limit.saturating_add(1))
+        .read_to_end(&mut bytes)
+        .map_err(|error| StorageError::new("assetStaging", format!("无法读取暂存文件：{error}")))?;
+    if bytes.len() as u64 > limit {
+        return Err(StorageError::new(
+            "resourceLimit",
+            "图片暂存文件超过大小上限。",
+        ));
+    }
+    Ok(bytes)
+}
+
+fn validate_staged_asset(entry: &AssetManifestEntry, bytes: &[u8]) -> Result<(), WorkspaceError> {
+    if !is_canonical_uuid_v4(&entry.id)
+        || entry.byte_length != bytes.len() as u64
+        || entry.sha256 != format!("{:x}", sha2::Sha256::digest(bytes))
+    {
+        return Err(StorageError::new(
+            "assetIntegrity",
+            "图片资产与暂存信息不匹配。",
+        ));
+    }
+    Ok(())
+}
+
 fn read_only_reason(
     package: &NotePackage,
     notebook_id: Option<&str>,
@@ -1923,12 +2635,87 @@ fn read_only_reason(
 }
 
 fn supports_editable_content(content: &NoteContent) -> bool {
-    supports_editable_blocks(&content.sections.cue, true)
-        && supports_editable_blocks(&content.sections.content, false)
-        && supports_editable_blocks(&content.sections.summary, true)
+    supports_editable_blocks(&content.sections.cue, true, false)
+        && supports_editable_blocks(&content.sections.content, false, true)
+        && supports_editable_blocks(&content.sections.summary, true, false)
 }
 
-fn supports_editable_blocks(blocks: &[Block], side_section: bool) -> bool {
+fn candidate_for_content(
+    session: &ActiveNoteSession,
+    content: &NoteContent,
+) -> Result<NotePackage, WorkspaceError> {
+    if !supports_editable_content(content) {
+        return Err(StorageError::new(
+            "readOnly",
+            "笔记包含当前编辑器尚不支持的内容，未接受任何更改。",
+        ));
+    }
+
+    let mut candidate = NotePackage {
+        document: session.package.document.clone(),
+        manifest: session.package.manifest.clone(),
+        assets: BTreeMap::new(),
+    };
+    candidate.assets.clear();
+    candidate.manifest.assets.clear();
+    candidate.replace_content(content.clone());
+
+    let mut referenced = HashSet::new();
+    let mut manifest = Vec::new();
+    let mut assets = BTreeMap::new();
+    for block in &content.sections.content {
+        let Block::Image { asset_id, .. } = block else {
+            continue;
+        };
+        if !referenced.insert(asset_id.clone()) {
+            continue;
+        }
+
+        let current_entry = session
+            .package
+            .manifest
+            .assets
+            .iter()
+            .find(|entry| entry.id == *asset_id);
+        let (entry, bytes) = if let Some(entry) = current_entry {
+            let bytes =
+                session.package.assets.get(asset_id).ok_or_else(|| {
+                    StorageError::new("assetIntegrity", "笔记包中的图片文件缺失。")
+                })?;
+            (entry.clone(), bytes.clone())
+        } else if let Some(stash) = session.asset_stash.as_ref() {
+            stash.read(asset_id)?.ok_or_else(|| {
+                StorageError::new("missingAsset", "插入的图片未暂存在当前笔记会话中。")
+            })?
+        } else {
+            return Err(StorageError::new(
+                "missingAsset",
+                "插入的图片未暂存在当前笔记会话中。",
+            ));
+        };
+        if entry.id != *asset_id {
+            return Err(StorageError::new(
+                "assetIntegrity",
+                "图片引用与资产身份不一致。",
+            ));
+        }
+        manifest.push(entry);
+        assets.insert(asset_id.clone(), bytes);
+    }
+
+    candidate.manifest.assets = manifest;
+    candidate.assets = assets;
+    candidate.check_encoded_size().map_err(|error| {
+        let kind = match error.kind.as_str() {
+            "budget_exceeded" | "resource_limit" => error.kind,
+            _ => "format".to_owned(),
+        };
+        StorageError::new(kind, error.message)
+    })?;
+    Ok(candidate)
+}
+
+fn supports_editable_blocks(blocks: &[Block], side_section: bool, top_level_content: bool) -> bool {
     blocks.iter().all(|block| match block {
         Block::Paragraph { children }
         | Block::Heading1 { children }
@@ -1936,14 +2723,17 @@ fn supports_editable_blocks(blocks: &[Block], side_section: bool) -> bool {
         | Block::Heading3 { children } => supports_editable_inlines(children, side_section),
         Block::OrderedList { items, .. } | Block::BulletList { items } => items
             .iter()
-            .all(|item| supports_editable_blocks(&item.blocks, side_section)),
+            .all(|item| supports_editable_blocks(&item.blocks, side_section, false)),
         Block::TaskList { items } => items
             .iter()
-            .all(|item| supports_editable_blocks(&item.blocks, side_section)),
-        Block::Blockquote { blocks } if !side_section => supports_editable_blocks(blocks, false),
+            .all(|item| supports_editable_blocks(&item.blocks, side_section, false)),
+        Block::Blockquote { blocks } if !side_section => {
+            supports_editable_blocks(blocks, false, false)
+        }
         Block::CodeBlock { .. } if !side_section => true,
         Block::HorizontalRule if !side_section => true,
         Block::MathBlock { .. } if !side_section => true,
+        Block::Image { .. } if !side_section && top_level_content => true,
         Block::Table { rows } if !side_section => rows.iter().all(|row| {
             let cells = match row {
                 TableRow::Header { cells } | TableRow::Body { cells } => cells,
@@ -1981,6 +2771,7 @@ fn note_session_from_opened(
         trashed_at: opened.package.document.organization.trashed_at.clone(),
         text: opened.package.text_projection(),
         content: opened.package.content(),
+        assets: opened.package.manifest.assets.clone(),
         revision: Some(opened.revision.clone()),
         read_only_reason,
     }

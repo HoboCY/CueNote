@@ -36,8 +36,8 @@ impl NotePackage {
             next_modified_at(&self.document.timestamps.content_modified_at);
     }
 
-    pub(crate) fn validate(&self) -> Result<(), FormatError> {
-        super::validation::validate_package(self)
+    pub(crate) fn check_encoded_size(&self) -> Result<(), FormatError> {
+        super::archive::check_encoded_size(self)
     }
 
     pub fn new_plain(notebook_id: String, text: PlainText) -> Self {

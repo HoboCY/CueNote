@@ -602,6 +602,21 @@ fn decode_asset(bytes: &[u8], media_type: MediaType) -> Result<(u32, u32), Forma
     Ok(dimensions)
 }
 
+pub(crate) fn inspect_image(bytes: &[u8]) -> Result<(MediaType, u32, u32), FormatError> {
+    let format = ImageReader::new(Cursor::new(bytes))
+        .with_guessed_format()
+        .map_err(|error| FormatError::new("invalid_asset", error.to_string()))?
+        .format()
+        .ok_or_else(|| invalid_asset("Image format could not be identified."))?;
+    let media_type = match format {
+        ImageFormat::Png => MediaType::Png,
+        ImageFormat::Jpeg => MediaType::Jpeg,
+        _ => return Err(invalid_asset("Only PNG and JPEG images are supported.")),
+    };
+    let (width, height) = decode_asset(bytes, media_type)?;
+    Ok((media_type, width, height))
+}
+
 fn validate_uuid(value: &str, field: &str) -> Result<(), FormatError> {
     let parsed = Uuid::parse_str(value)
         .map_err(|_| invalid_document(&format!("{field} must be a lowercase UUID v4.")))?;

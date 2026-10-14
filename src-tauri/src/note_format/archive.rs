@@ -222,6 +222,10 @@ pub(crate) fn write<W: Write + Seek>(
     Ok(())
 }
 
+pub(crate) fn check_encoded_size(package: &NotePackage) -> Result<(), FormatError> {
+    write(CountingWriter::default(), package)
+}
+
 fn write_entry<W: Write + Seek>(
     zip: &mut ZipWriter<W>,
     name: &str,
@@ -236,6 +240,52 @@ struct BoundedWriter<W> {
     inner: W,
     position: u64,
     length: u64,
+}
+
+#[derive(Default)]
+struct CountingWriter {
+    position: u64,
+    length: u64,
+}
+
+impl Write for CountingWriter {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        let end = self
+            .position
+            .checked_add(bytes.len() as u64)
+            .ok_or_else(|| io::Error::other("package exceeds 256 MiB"))?;
+        if end > MAX_PACKAGE_BYTES {
+            return Err(io::Error::other("package exceeds 256 MiB"));
+        }
+        self.position = end;
+        self.length = self.length.max(end);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl Seek for CountingWriter {
+    fn seek(&mut self, position: SeekFrom) -> io::Result<u64> {
+        let next = match position {
+            SeekFrom::Start(offset) => offset,
+            SeekFrom::End(offset) => self
+                .length
+                .checked_add_signed(offset)
+                .ok_or_else(|| io::Error::other("invalid package seek"))?,
+            SeekFrom::Current(offset) => self
+                .position
+                .checked_add_signed(offset)
+                .ok_or_else(|| io::Error::other("invalid package seek"))?,
+        };
+        if next > MAX_PACKAGE_BYTES {
+            return Err(io::Error::other("package exceeds 256 MiB"));
+        }
+        self.position = next;
+        Ok(next)
+    }
 }
 
 impl<W: Write + Seek> Write for BoundedWriter<W> {

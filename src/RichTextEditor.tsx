@@ -9,6 +9,8 @@ import type { Block } from './generated/note-format';
 import { CODE_LANGUAGES } from './code-languages';
 import { fromEditorDocument, toEditorDocument } from './editor-model';
 import { createEditorExtensions, TABLE_HEADER_NORMALIZATION_META } from './editor-extensions';
+import type { ImageEditorBridge } from './image-session';
+import { refreshImageNodeViews, type ImageEditorRuntime } from './image-extensions';
 
 export type RichTextSection = 'cue' | 'content' | 'summary';
 
@@ -19,6 +21,7 @@ interface RichTextEditorProps {
   editable: boolean;
   readOnly: boolean;
   projectionText: string;
+  imageBridge?: ImageEditorBridge;
   onChange: (blocks: Block[]) => void;
   onError: (message: string | null, initial: boolean) => void;
   onCompositionStart: () => void;
@@ -158,6 +161,7 @@ export function RichTextEditor({
   editable,
   readOnly,
   projectionText,
+  imageBridge,
   onChange,
   onError,
   onCompositionStart,
@@ -175,17 +179,33 @@ export function RichTextEditor({
   const [mathSource, setMathSource] = useState('');
   const [mathTargetError, setMathTargetError] = useState<string | null>(null);
   const [mathTargetInvalid, setMathTargetInvalid] = useState(false);
+  const [imageNotice, setImageNotice] = useState<{ kind: 'error' | 'status'; message: string } | null>(null);
   const linkInputRef = useRef<HTMLInputElement | null>(null);
   const mathDialogRef = useRef<HTMLDialogElement | null>(null);
   const mathInputRef = useRef<HTMLTextAreaElement | null>(null);
   const mathTargetRef = useRef<MathFormTarget | null>(null);
   const mathApplyingRef = useRef(false);
   const currentEditorRef = useRef<Editor | null>(null);
+  const imageBridgeRef = useRef(imageBridge);
+  imageBridgeRef.current = imageBridge;
   const mathPermissionsRef = useRef({ editable, readOnly, simple, conversionError });
   mathPermissionsRef.current = { editable, readOnly, simple, conversionError };
+  const imagePermissionsRef = useRef({ editable, readOnly, simple, conversionError });
+  imagePermissionsRef.current = { editable, readOnly, simple, conversionError };
   const savedSelectionRef = useRef<{ from: number; to: number } | null>(null);
   const lastReportedErrorRef = useRef<string | null | undefined>(undefined);
   const compositionSequenceRef = useRef(0);
+
+  const imageRuntime = useMemo<ImageEditorRuntime>(() => ({
+    getBridge: () => imageBridgeRef.current,
+    canEdit: () => {
+      const permissions = imagePermissionsRef.current;
+      return permissions.editable && !permissions.readOnly && !permissions.simple && !permissions.conversionError;
+    },
+    isCurrent: current => currentEditorRef.current === current,
+    reportError: message => setImageNotice({ kind: 'error', message }),
+    reportStatus: message => setImageNotice({ kind: 'status', message }),
+  }), []);
 
   const openMathFromNode = useCallback((node: ProseMirrorNode, position: number) => {
     const currentEditor = currentEditorRef.current;
@@ -202,7 +222,10 @@ export function RichTextEditor({
     setMathFormOpen(true);
   }, []);
 
-  const extensions = useMemo(() => createEditorExtensions(simple, openMathFromNode), [simple, openMathFromNode]);
+  const extensions = useMemo(
+    () => createEditorExtensions(simple, openMathFromNode, undefined, imageRuntime),
+    [simple, openMathFromNode, imageRuntime],
+  );
   const notifyError = useCallback((message: string | null, isInitial: boolean) => {
     setConversionError(message);
     if (lastReportedErrorRef.current === message) return;
@@ -314,7 +337,9 @@ export function RichTextEditor({
   }, [selectionState?.codeBlock, selectionState?.codeLanguage]);
 
   useEffect(() => {
-    if (editor) editor.setEditable(editable && initial.document !== null, false);
+    if (!editor) return;
+    editor.setEditable(editable && initial.document !== null, false);
+    refreshImageNodeViews(editor);
   }, [editor, editable, initial.document]);
 
   useEffect(() => {
@@ -827,6 +852,18 @@ export function RichTextEditor({
             </div>
           </form>
         </dialog>
+      )}
+
+      {imageNotice && (
+        <div
+          className={`rich-image-operation-notice is-${imageNotice.kind}`}
+          role={imageNotice.kind === 'error' ? 'alert' : 'status'}
+          aria-live={imageNotice.kind === 'error' ? 'assertive' : 'polite'}
+          data-testid={`rich-image-operation-${imageNotice.kind}`}
+        >
+          <span>{imageNotice.message}</span>
+          <button type="button" aria-label="关闭图片提示" onClick={() => setImageNotice(null)}>关闭</button>
+        </div>
       )}
 
       <div className="rich-editor-surface" onCompositionStart={onCompositionStartFromEditor} onCompositionEnd={onCompositionEndDeferred}>

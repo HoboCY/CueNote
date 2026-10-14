@@ -353,9 +353,14 @@ fn malformed_or_unsupported_content_does_not_replace_the_saved_note() {
     assert_eq!(malformed_error.kind, "format");
 
     let mut unsupported = session.content.clone();
-    unsupported.sections.content.push(Block::Image {
-        asset_id: "55ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
-        display_width_px: 1,
+    unsupported.sections.content.push(Block::MindMap {
+        map_id: "85ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
+        root_id: "65ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
+        nodes: vec![MindMapNode {
+            id: "65ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
+            text: "仍不可编辑的导图".into(),
+            children: Vec::new(),
+        }],
     });
     let unsupported_error = workspace
         .save_note_content(&session.session_id, unsupported)

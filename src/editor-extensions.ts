@@ -7,6 +7,8 @@ import { StarterKit } from '@tiptap/starter-kit';
 import { Plugin } from '@tiptap/pm/state';
 import { createLowlight } from 'lowlight';
 import { createMathExtensions, type MathEditHandler } from './math-extensions.ts';
+import { createImageExtensions, type ImageEditorRuntime } from './image-extensions.ts';
+import type { ImageEditorBridge } from './image-session.ts';
 import csharp from 'highlight.js/lib/languages/csharp';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
@@ -200,7 +202,12 @@ function createCodeBlockExtension(): Extensions[number] {
   });
 }
 
-export function createEditorExtensions(simple: boolean, onEditMath?: MathEditHandler): Extensions {
+export function createEditorExtensions(
+  simple: boolean,
+  onEditMath?: MathEditHandler,
+  imageBridge?: ImageEditorBridge,
+  imageRuntime?: ImageEditorRuntime,
+): Extensions {
   return [
     StarterKit.configure({
       blockquote: simple ? false : {},
@@ -225,6 +232,7 @@ export function createEditorExtensions(simple: boolean, onEditMath?: MathEditHan
     ...(!simple ? [Code.extend({ excludes: '' })] : []),
     ...(!simple ? [createCodeBlockExtension(), createCodeBlockPlainTextPaste()] : []),
     ...(!simple ? createMathExtensions(onEditMath) : []),
+    ...(!simple ? createImageExtensions(imageBridge, imageRuntime) : []),
     ListItem.extend({ content: 'block*' }),
     BulletList.extend({ content() { return `${this.options.itemTypeName}*`; } }),
     OrderedList.extend({ content() { return `${this.options.itemTypeName}*`; } }),

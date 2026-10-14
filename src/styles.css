@@ -551,6 +551,20 @@ button:focus-visible {
 .content-panel .rich-editor-prose .hljs-title, .content-panel .rich-editor-prose .hljs-function, .content-panel .rich-editor-prose .hljs-class { color: #456f87; }
 .content-panel .rich-editor-prose .hljs-operator, .content-panel .rich-editor-prose .hljs-punctuation { color: #667b70; }
 .content-panel .rich-editor-prose .hljs-deletion { color: #985e57; background: #f7e9e3; }
+.rich-image-block { display: grid; width: fit-content; max-width: 100%; justify-items: start; gap: 6px; margin: .75em 0; }
+.rich-image-preview { display: block; max-width: 100%; border: 1px solid #e1e6dd; border-radius: 7px; object-fit: contain; }
+.rich-image-controls { display: flex; max-width: 100%; flex-wrap: wrap; align-items: center; gap: 6px; color: #718078; font-size: 9px; }
+.rich-image-controls[hidden], .rich-editor-prose[contenteditable="false"] .rich-image-controls { display: none; }
+.rich-image-width-control { display: inline-flex; align-items: center; gap: 4px; }
+.rich-image-width-control input { width: 74px; min-height: 25px; padding: 0 5px; border: 1px solid #d6dfd6; border-radius: 5px; color: #42564f; font: inherit; }
+.rich-image-controls input[type="range"] { width: min(160px, 35vw); accent-color: var(--teal); }
+.rich-image-action, .rich-image-retry { min-height: 25px; padding: 2px 7px; border: 1px solid #d6dfd6; border-radius: 5px; background: #f8f8f1; color: #60766d; cursor: pointer; font: inherit; }
+.rich-image-action:hover:not(:disabled), .rich-image-retry:hover { background: #edf2e9; }
+.rich-image-action:disabled { cursor: not-allowed; opacity: .5; }
+.rich-image-error { max-width: 100%; color: #8a5547; font-size: 9px; line-height: 1.5; overflow-wrap: anywhere; }
+.rich-image-operation-notice { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 8px 0; padding: 8px 10px; border: 1px solid #d8e2d7; border-radius: 7px; background: #f2f6ef; color: #5d7167; font-size: 9px; line-height: 1.5; }
+.rich-image-operation-notice.is-error { border-color: #e4c8be; background: #fbf2ee; color: #77564e; }
+.rich-image-operation-notice button { flex: none; padding: 2px 5px; border: 0; background: transparent; color: inherit; cursor: pointer; font: inherit; text-decoration: underline; }
 .rich-editor-code-controls { display: flex; min-width: 0; flex-wrap: wrap; align-items: end; gap: 5px; padding-left: 4px; }
 .code-language-control { display: grid; min-width: 0; gap: 3px; color: #75867c; font-size: 8px; line-height: 1.2; }
 .code-language-control select, .code-language-control input { min-height: 27px; max-width: 190px; padding: 3px 7px; border: 1px solid #d6dfd6; border-radius: 6px; background: #fffdf7; color: #50665c; font: 9px "Segoe UI", "Microsoft YaHei UI", sans-serif; }

@@ -7,6 +7,120 @@ import { createEditorExtensions, TABLE_HEADER_NORMALIZATION_META } from '../src/
 import { CODE_LANGUAGES } from '../src/code-languages.ts';
 import { fromEditorDocument, toEditorDocument } from '../src/editor-model.ts';
 
+test('round-trips top-level image blocks with their asset ids and display widths', () => {
+  const blocks: Block[] = [
+    { type: 'paragraph', children: [{ type: 'text', text: 'Before', marks: [] }] },
+    { type: 'image', assetId: '11111111-1111-4111-8111-111111111111', displayWidthPx: 320 },
+    { type: 'image', assetId: '22222222-2222-4222-8222-222222222222', displayWidthPx: 4294967295 },
+    { type: 'paragraph', children: [{ type: 'text', text: 'After', marks: [] }] },
+  ];
+  const editorDocument = {
+    type: 'doc',
+    content: [
+      { type: 'paragraph', content: [{ type: 'text', text: 'Before' }] },
+      { type: 'image', attrs: { assetId: '11111111-1111-4111-8111-111111111111', displayWidthPx: 320 } },
+      { type: 'image', attrs: { assetId: '22222222-2222-4222-8222-222222222222', displayWidthPx: 4294967295 } },
+      { type: 'paragraph', content: [{ type: 'text', text: 'After' }] },
+    ],
+  };
+
+  assert.deepEqual(toEditorDocument(blocks, false), editorDocument);
+  assert.deepEqual(fromEditorDocument(editorDocument, false), blocks);
+});
+
+test('rejects malformed UUIDv4 image asset ids in native blocks and editor JSON', () => {
+  const invalidAssetIds = [
+    'AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA',
+    '11111111-1111-1111-8111-111111111111',
+  ];
+
+  for (const assetId of invalidAssetIds) {
+    assert.throws(() => toEditorDocument([
+      { type: 'image', assetId, displayWidthPx: 320 },
+    ], false), /expected a lowercase UUIDv4/);
+    assert.throws(() => fromEditorDocument({
+      type: 'doc',
+      content: [{ type: 'image', attrs: { assetId, displayWidthPx: 320 } }],
+    }, false), /expected a lowercase UUIDv4/);
+  }
+});
+
+test('rejects image widths outside the positive 32-bit integer range', () => {
+  for (const displayWidthPx of [0, 1.5, 4294967296]) {
+    assert.throws(() => toEditorDocument([
+      { type: 'image', assetId: '11111111-1111-4111-8111-111111111111', displayWidthPx },
+    ], false), /expected a positive 32-bit integer/);
+    assert.throws(() => fromEditorDocument({
+      type: 'doc',
+      content: [{
+        type: 'image',
+        attrs: { assetId: '11111111-1111-4111-8111-111111111111', displayWidthPx },
+      }],
+    }, false), /expected a positive 32-bit integer/);
+  }
+});
+
+test('rejects extra native and editor image fields instead of dropping them', () => {
+  const assetId = '11111111-1111-4111-8111-111111111111';
+  const forbiddenFields = ['src', 'blob', 'path', 'alt', 'title', 'transientURL', 'marks', 'children'];
+
+  for (const field of forbiddenFields) {
+    assert.throws(() => toEditorDocument([{
+      type: 'image',
+      assetId,
+      displayWidthPx: 320,
+      [field]: 'unexpected',
+    } as unknown as Block], false), new RegExp(`unsupported field: ${field}`));
+    assert.throws(() => fromEditorDocument({
+      type: 'doc',
+      content: [{
+        type: 'image',
+        attrs: { assetId, displayWidthPx: 320, [field]: 'unexpected' },
+      }],
+    }, false), new RegExp(`unsupported field: ${field}`));
+    assert.throws(() => fromEditorDocument({
+      type: 'doc',
+      content: [{
+        type: 'image',
+        attrs: { assetId, displayWidthPx: 320 },
+        [field]: 'unexpected',
+      }],
+    }, false), new RegExp(`unsupported field: ${field}`));
+  }
+});
+
+test('rejects image blocks in simple sections in both document forms', () => {
+  assert.throws(() => toEditorDocument([
+    { type: 'image', assetId: '11111111-1111-4111-8111-111111111111', displayWidthPx: 320 },
+  ], true), /images are not supported in this section/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'image', attrs: { assetId: '11111111-1111-4111-8111-111111111111', displayWidthPx: 320 } }],
+  }, true), /images are not supported in this section/);
+});
+
+test('rejects images nested in lists and block quotes in both document forms', () => {
+  const imageBlock: Block = {
+    type: 'image',
+    assetId: '11111111-1111-4111-8111-111111111111',
+    displayWidthPx: 320,
+  };
+  const listBlock: Block = { type: 'bulletList', items: [{ blocks: [imageBlock] }] };
+  const quoteBlock: Block = { type: 'blockquote', blocks: [imageBlock] };
+  const imageNode = { type: 'image', attrs: { assetId: imageBlock.assetId, displayWidthPx: 320 } };
+
+  assert.throws(() => toEditorDocument([listBlock], false), /images must be top-level blocks/);
+  assert.throws(() => toEditorDocument([quoteBlock], false), /images must be top-level blocks/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'bulletList', content: [{ type: 'listItem', content: [imageNode] }] }],
+  }, false), /images must be top-level blocks/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'blockquote', content: [imageNode] }],
+  }, false), /images must be top-level blocks/);
+});
+
 test('round-trips paragraphs, headings, inline marks, links, and hard breaks through the editor schema', () => {
   const blocks: Block[] = [
     {
@@ -308,8 +422,8 @@ test('rejects unsupported v1 content and ProseMirror semantics instead of droppi
     { type: 'paragraph', children: [{ type: 'text', text: 'inline', marks: [{ type: 'code' }] }] },
   ], true), /code is not supported in this section/);
   assert.throws(() => toEditorDocument([
-    { type: 'image', assetId: '11111111-1111-4111-8111-111111111111', displayWidthPx: 320 },
-  ], false), /images are not supported by this editor/);
+    { type: 'image', assetId: '11111111-1111-1111-8111-111111111111', displayWidthPx: 320 },
+  ], false), /expected a lowercase UUIDv4/);
   assert.throws(() => toEditorDocument([
     { type: 'mindMap', mapId: '22222222-2222-4222-8222-222222222222', rootId: '33333333-3333-4333-8333-333333333333', nodes: [] },
   ], false), /mind maps are not supported by this editor/);
