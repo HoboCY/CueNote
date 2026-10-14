@@ -1,10 +1,12 @@
 # 技术样机观察记录
 
-日期：2026-10-12。问题：[Tauri 技术样机能否满足 CueNote 的编辑与文件保存规则？](https://github.com/HoboCY/CueNote/issues/11)
+浏览器观察日期：2026-10-12；Windows 桌面补充：2026-10-14。问题：[Tauri 技术样机能否满足 CueNote 的编辑与文件保存规则？](https://github.com/HoboCY/CueNote/issues/11)
 
 ## 当前结论
 
-真实编辑组件可以在浏览器中组合运行，足以进入用户试用。Tauri/Rust 文件层源码已备好，但本机没有可用 Rust 工具链和 Visual Studio C++ 编译组件；安装开发工具的授权仍待用户回复，因此未编译、未运行桌面文件层。不能据此前端结果关闭整体技术决策。
+用户自行安装开发工具后，Windows Tauri 调试版已编译并运行。在仓库的专用样机目录中，真实编辑器、Rust IPC、ZIP 文件保存/重开、进程重启恢复、图片/可编辑导图和外部冲突保留均已通过程序驱动观察，可以进行 Windows 人工试用。
+
+发现本机默认 AppData 目录的原子文件操作失败；启动器显式使用 `.scratch/PROTOTYPE-wipe-me` 继续验证，未更改系统设置或弱化保存操作。默认目录兼容性仍未解决。真实输入法、系统剪贴板、macOS、OneDrive 和用户体验反馈尚未通过，整体技术决策继续开放。
 
 ## 已执行的观察
 
@@ -35,19 +37,45 @@
 
 对应记录：[浏览器观察](observations/browser.json)、[IPC 模拟观察](observations/ipc-simulation.json)。
 
+## Windows 桌面实际观察（2026-10-14）
+
+使用内嵌前端资源的 `debug` 可执行文件，页面来自 `http://tauri.localhost/`，没有使用 Vite 开发服务器。通过该应用自己的 WebView2 调试端口操作真实界面，没有替换 Tauri IPC。运行目录为启动器指定的 `.scratch/PROTOTYPE-wipe-me`。
+
+| 场景 | 实际结果 |
+| --- | --- |
+| 初次保存 | 保存标题、三分区、320×180 PNG 和编辑后的导图；真实 ZIP 为 8,887 字节，Rust 报告 9 ms |
+| 分区撤销 | 撤销线索新增文字不影响正文和总结 |
+| 文件重开 | 三分区、标题、图片 data URL 字节和导图预览均与保存前一致 |
+| 可编辑导图 | 重开后展开真实 Mind Elixir，7 个节点及修改后的中文文字仍在 |
+| 大图片 | 2048×1536 生成 PNG 为 10,823,527 字节；保存后 ZIP 为 10,835,903 字节；Rust 1,694 ms，点击到观察完成约 2,065 ms |
+| 大图片重开 | ZIP 中资产字节数相符，重开后图片解码尺寸正确 |
+| 外部更新冲突 | 外部改动通过真实 Rust 保存到磁盘；旧基线保存被拒绝，界面草稿保留，磁盘当前文件字节未变，CURRENT/DRAFT 两份副本存在 |
+| 新 WebView 及完整退出重启 | 保存的标题、三个编辑器、320×180 图片及结构化导图恢复 |
+| 独立 Rust 探针 | 首次往返、第二次正常替换和准确旧版字节、冲突 CURRENT 字节及 DRAFT 文档/资产、损坏文件拒绝打开/覆盖，均通过 |
+| 路径保护 | `PROTOTYPE-wipe-me/../forbidden-probe` 被拒绝，未创建越界目录 |
+| 异常 | 上述桌面界面观察未捕获未处理的 WebView 异常 |
+
+大图片耗时仅为这台机器上一次未优化调试构建观察，且同期有编译进程；端到端值包含约 100 ms 的观察轮询粒度。不是性能基准、正式版指标或 Electron 对比。程序插入文字、合成 ClipboardEvent 仍不能替代真实输入法和系统剪贴板。
+
+证据：[桌面观察 JSON](observations/windows-desktop.json)、[重启观察](observations/windows-restart.json)、[文件探针](observations/windows-storage-probe.txt)、[桌面截图](observations/windows-desktop.png)。[桌面观察脚本](observations/observe-windows-desktop.mjs) 需要新建空白样机目录、端口 9232 的该应用及一个输出目录参数；它操作测试草稿，不应用于已有用户内容。
+
+默认 AppData 反例与最小 Windows API 探针见 [目录兼容问题记录](observations/windows-appdata.md)。保存失败时界面没有显示“已保存”，草稿保持。没有通过改变系统加密/权限消除反例，不能声称任意本地目录都已通过。
+
 ## 构建与依赖
 
 - Node.js 24.21.0、npm 11.19.0；`npm run build` 通过 TypeScript 检查与 Vite 构建。
 - Tiptap 3.31.4、Mind Elixir 5.15.1、React 19.1.1；Tauri JS API 2.12.3、CLI 2.12.1，各自独立锁定。
 - `prototype/package-lock.json` 锁定前端依赖。185 个包记录（含平台可选包）的许可元数据无缺项：MIT 163、Apache-2.0 OR MIT 13、Apache-2.0 2、CC-BY-4.0 1、ISC 5、BSD-3-Clause 1。此处是安装清单元数据核对，未重新逐行审计所有依赖源码。
 - Vite 提示单个 JS chunk 超过 500 kB；Mind Elixir 暂随主包加载。构建文件大小不是安装包体积、内存占用或响应性能测量。
-- Rust 工程的 JSON 配置与图标结构已检查，尚未生成 Cargo.lock、编译或运行 `storage_probe`。Rust 依赖版本还未完成实际解析。
+- Rust/cargo 1.99.0，`stable-x86_64-pc-windows-msvc`；Visual Studio 2026 C++ x64/x86 工具、Windows SDK 10.0.26100.0、WebView2 均可用。使用用户自行安装的工具，没有代为安装系统组件。
+- 已生成并保留 `src-tauri/Cargo.lock`，Tauri Rust 2.12.3、tauri-build 2.7.2、zip 6.0.0。`tauri build --debug --no-bundle -- --locked` 通过；此处只是本机调试版，不是安装包或正式发行。Cargo.toml 的最低 Rust 版本尚未做独立验证。
+- 首次真实编译发现根模块公开的 Tauri 命令触发重复宏定义，改为模块私有后编译通过；同时处理编译警告。复核发现的临时文件失败清理和探针 `..` 路径保护已修正；没有注入磁盘写满或 sync 失败来验证该清理分支。
 
 ## 后续必须验证
 
-- Windows 真正编译及运行 Tauri：首次保存、图片/文字/导图 ZIP 往返、旧版留存、外部更新冲突、损坏文件保护，以及较大图片笔记保存。
+- 本机默认 AppData 目录原子操作失败的进一步归因，以及正式保存模块如何处理不支持原子操作的目标目录；磁盘写满、权限变化、异常退出、并发写入等尚未完整验证。
 - 在用户 M1 Pro Mac 上验证相同文件可打开和编辑；真实输入法、系统剪贴板与 OneDrive 双端同步分别验收。
 - 导图更多层级调整/拖动、图片块移动和其他 Markdown 输入组合，继续由实际试用覆盖。
-- 在相同内容和明确构建模式下测启动、整组进程内存、输入延迟与保存耗时；当前没有这些性能数字，也未构建 Electron 对照组。
+- 在相同内容和明确构建模式下测启动、整组进程内存、输入延迟与保存耗时；目前仅有上述一次调试保存数字，没有正式性能基准，也未构建 Electron 对照组。
 
 Rust 样机只校验容器、外层文档结构和图片元数据等基础边界，未完整校验编辑器内部 schema 与图片引用闭合。保存前版本比对不能提供跨进程/跨设备锁；恢复副本尚不轮换。大小限制仅用于限制样机资源消耗，不是已确认的产品上限。

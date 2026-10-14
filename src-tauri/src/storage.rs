@@ -309,20 +309,20 @@ fn archive_snapshot(snapshot: &Snapshot) -> Result<Vec<u8>, StorageError> {
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
 
     writer
-        .start_file("document.json", SimpleFileOptions::default().compression_method(CompressionMethod::Deflated))
+        .start_file("document.json", options)
         .map_err(|error| StorageError::new(StorageErrorKind::Io, error.to_string()))?;
     writer
         .write_all(&validated.document_bytes)
         .map_err(|error| io_error("write document.json into ZIP", error))?;
     writer
-        .start_file("assets/manifest.json", SimpleFileOptions::default().compression_method(CompressionMethod::Deflated))
+        .start_file("assets/manifest.json", options)
         .map_err(|error| StorageError::new(StorageErrorKind::Io, error.to_string()))?;
     writer
         .write_all(&validated.manifest_bytes)
         .map_err(|error| io_error("write assets manifest into ZIP", error))?;
     for asset in &validated.assets {
         writer
-            .start_file(format!("assets/{}", asset.metadata.id), SimpleFileOptions::default().compression_method(CompressionMethod::Deflated))
+            .start_file(format!("assets/{}", asset.metadata.id), options)
             .map_err(|error| StorageError::new(StorageErrorKind::Io, error.to_string()))?;
         writer
             .write_all(&asset.bytes)
@@ -356,7 +356,7 @@ fn read_zip_entry(
     name: &str,
     limit: usize,
 ) -> Result<Vec<u8>, StorageError> {
-    let mut entry = archive
+    let entry = archive
         .by_name(name)
         .map_err(|error| StorageError::new(StorageErrorKind::Corrupt, error.to_string()))?;
     if entry.size() > limit as u64 {
@@ -588,11 +588,14 @@ fn create_temp_file(directory: &Path, bytes: &[u8]) -> Result<TempFile, StorageE
         let path = directory.join(format!(".note-{}.tmp", unique_token()));
         match OpenOptions::new().write(true).create_new(true).open(&path) {
             Ok(mut file) => {
-                file.write_all(bytes)
-                    .map_err(|error| io_error("write prepared note ZIP", error))?;
-                file.sync_all()
-                    .map_err(|error| io_error("sync prepared note ZIP", error))?;
-                return Ok(TempFile(path));
+                let temp = TempFile(path);
+                let result = file.write_all(bytes)
+                    .map_err(|error| io_error("write prepared note ZIP", error))
+                    .and_then(|()| file.sync_all()
+                        .map_err(|error| io_error("sync prepared note ZIP", error)));
+                drop(file);
+                result?;
+                return Ok(temp);
             }
             Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
             Err(error) => return Err(io_error("create prepared note ZIP", error)),

@@ -21,6 +21,15 @@ npm run prototype
 npm run desktop
 ```
 
+无需开发服务器的本机调试版：
+
+```text
+npm run build:desktop -- --debug
+npm run desktop:preview
+```
+
+启动器只为子进程设置样机路径：仓库下 `.scratch/PROTOTYPE-wipe-me`。不修改系统环境变量，不写入正式笔记库。不要同时运行多个样机实例。
+
 Windows 需要 C++ 构建工具和 Windows SDK；macOS 需要 Xcode 命令行工具。参见 [Tauri 开发前置条件](https://v2.tauri.app/start/prerequisites/)。
 
 ## 试用顺序
@@ -35,7 +44,9 @@ Windows 需要 C++ 构建工具和 Windows SDK；macOS 需要 Xcode 命令行工
 
 ## 保存边界
 
-桌面模式只读写应用本地数据目录中明确命名的 `PROTOTYPE-wipe-me` 样机区域。不要把真实笔记交给样机。
+通过上述启动器运行时，桌面模式只读写仓库下 `.scratch/PROTOTYPE-wipe-me` 样机区域。不要把真实笔记交给样机。它采用手动保存，关闭前需点击“保存笔记”。
+
+直接运行可执行文件且未设置 `CUENOTE_PROTOTYPE_SCRATCH_DIR` 时，才使用应用本地数据目录。此机器的 AppData 目录带加密属性，实际同目录原子更名/替换失败；该兼容问题尚未解决。请使用上述启动器。本次未更改系统加密/权限，也没有降级为非原子的覆盖写入。覆盖路径必须是绝对路径、最后一层为 `PROTOTYPE-wipe-me`，且不含 `..`。
 
 `.cuenote` 使用 ZIP 包保存结构化内容与图片；图片在包内使用稳定引用。这个包结构是验证用草案，尚未成为首版文件格式规范。样机记录本机版本指纹以发现外部变化；这不能提供跨设备锁，也不能替代 OneDrive 双端验收。
 

@@ -1,0 +1,17 @@
+Date: 2026-10-14
+Build: Rust 1.99.0, x86_64-pc-windows-msvc, debug
+Command: cargo run --locked --manifest-path src-tauri/Cargo.toml --bin storage_probe -- <absolute-path>/PROTOTYPE-wipe-me
+first_save_and_open: PASS bytes=667 save_elapsed_ms=7 total_elapsed_ms=7
+second_save_preserves_exact_previous_bytes: PASS
+external_conflict_preserves_current_and_draft: PASS
+corrupt_read_does_not_overwrite: PASS
+storage_probe: PASS total_elapsed_ms=42
+
+Path guard negative observation:
+Command: storage_probe.exe <absolute-path>/PROTOTYPE-wipe-me/../forbidden-probe
+Exit code: 1
+storage_probe: FAIL: scratch path must not contain parent-directory traversal
+No forbidden-probe directory was created.
+
+Asset bytes in this small probe are a storage fixture, not a decodable PNG.
+Real decodable PNG and editable map observations are in windows-desktop.json.

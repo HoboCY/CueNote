@@ -1,6 +1,6 @@
 pub mod storage;
 
-use std::path::PathBuf;
+use std::path::{Component, PathBuf};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State};
 
@@ -23,6 +23,16 @@ where
 }
 
 fn prototype_root(app: &AppHandle) -> Result<PathBuf, String> {
+    if let Some(configured) = std::env::var_os("CUENOTE_PROTOTYPE_SCRATCH_DIR") {
+        let root = PathBuf::from(configured);
+        if !root.is_absolute()
+            || root.file_name().and_then(|name| name.to_str()) != Some("PROTOTYPE-wipe-me")
+            || root.components().any(|component| component == Component::ParentDir)
+        {
+            return Err("prototype scratch override must be an absolute path ending in PROTOTYPE-wipe-me without '..'".to_owned());
+        }
+        return Ok(root);
+    }
     let local_data = app
         .path()
         .app_local_data_dir()
@@ -35,7 +45,7 @@ fn lock_error() -> String {
 }
 
 #[tauri::command]
-pub async fn prototype_info(app: AppHandle) -> Result<PrototypeInfo, String> {
+async fn prototype_info(app: AppHandle) -> Result<PrototypeInfo, String> {
     run_blocking(move || {
         let root = prototype_root(&app)?;
         info_at(&root).map_err(|error| error.to_string())
@@ -44,7 +54,7 @@ pub async fn prototype_info(app: AppHandle) -> Result<PrototypeInfo, String> {
 }
 
 #[tauri::command]
-pub async fn prototype_open(
+async fn prototype_open(
     app: AppHandle,
     storage_lock: State<'_, StorageLock>,
 ) -> Result<OpenResult, String> {
@@ -58,7 +68,7 @@ pub async fn prototype_open(
 }
 
 #[tauri::command(rename_all = "camelCase")]
-pub async fn prototype_save(
+async fn prototype_save(
     app: AppHandle,
     storage_lock: State<'_, StorageLock>,
     snapshot: Snapshot,
@@ -74,7 +84,7 @@ pub async fn prototype_save(
 }
 
 #[tauri::command]
-pub async fn prototype_simulate_external_update(
+async fn prototype_simulate_external_update(
     app: AppHandle,
     storage_lock: State<'_, StorageLock>,
 ) -> Result<RevisionResult, String> {

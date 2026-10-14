@@ -7,7 +7,8 @@
     "setup": "npm --prefix prototype ci",
     "prototype": "npm --prefix prototype run dev",
     "build": "npm --prefix prototype run build",
-    "desktop": "node prototype/node_modules/@tauri-apps/cli/tauri.js dev",
+    "desktop": "node scripts/desktop.mjs",
+    "desktop:preview": "node scripts/desktop.mjs --built",
     "build:desktop": "node prototype/node_modules/@tauri-apps/cli/tauri.js build --no-bundle"
   }
 }

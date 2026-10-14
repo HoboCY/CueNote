@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-14",
+  "build": "Tauri debug with bundled production frontend",
+  "observations": [
+    {
+      "name": "Bundled Windows app starts in real desktop mode",
+      "verdict": "PASS",
+      "detail": {
+        "mode": "康奈尔笔记\n桌面文件 · 手动保存",
+        "saveEnabled": true,
+        "status": "当前区域 笔记标题\n·\n尚无本机临时笔记文件；已载入样例，首次保存将创建文件。",
+        "path": "<prototype-worktree>/.scratch/PROTOTYPE-wipe-me/note.cuenote"
+      }
+    },
+    {
+      "name": "Desktop section undo leaves other sections intact",
+      "verdict": "PASS",
+      "detail": {
+        "cueUndone": true,
+        "bodyRetained": true,
+        "summaryRetained": true
+      }
+    },
+    {
+      "name": "UI first save writes native ZIP with text, PNG and editable map",
+      "verdict": "PASS",
+      "detail": {
+        "endToEndMs": 104,
+        "status": "当前区域 内容区\n·\n保存完成。",
+        "metrics": "文件 8.7 KiB\n耗时 9 ms",
+        "fixture": {
+          "bytes": 7008
+        },
+        "onDiskBytes": 8887
+      }
+    },
+    {
+      "name": "Native reopen returns structured note and real image asset",
+      "verdict": "PASS",
+      "detail": {
+        "revision": "9eff6dd1998c629f70ba1896407ea1721055a85a9d1e9191601bcfa821e16068",
+        "title": "CueNote 桌面保存验证",
+        "assetCount": 1,
+        "assetReferences": true,
+        "mapData": true
+      }
+    },
+    {
+      "name": "Three sections, title, image bytes and map preview survive UI reopen",
+      "verdict": "PASS",
+      "detail": {
+        "title": "CueNote 桌面保存验证",
+        "images": 1,
+        "mapRestored": true
+      }
+    },
+    {
+      "name": "Reopened map expands as seven editable nodes",
+      "verdict": "PASS",
+      "detail": {
+        "nodes": 7
+      }
+    },
+    {
+      "name": "Large generated PNG saves through actual UI and Rust service",
+      "verdict": "PASS",
+      "detail": {
+        "fixture": {
+          "width": 2048,
+          "height": 1536,
+          "bytes": 10823527
+        },
+        "endToEndMs": 2065,
+        "status": "当前区域 内容区\n·\n保存完成。",
+        "metrics": "文件 10581.9 KiB\n耗时 1694 ms",
+        "onDiskBytes": 10835903,
+        "build": "debug, unoptimized; one observation, not a benchmark"
+      }
+    },
+    {
+      "name": "Large PNG reopens and decodes from saved ZIP",
+      "verdict": "PASS",
+      "detail": {
+        "revision": "b30226d4c56cbf8d975adde8d3486e1a725859eec1e8151cf85ba4631d38bf53",
+        "assets": 2,
+        "largeImageBytes": 10823527
+      }
+    },
+    {
+      "name": "Real stale save preserves external file, local draft and both conflict copies",
+      "verdict": "PASS",
+      "detail": {
+        "status": "当前区域 内容区\n·\n保存冲突：桌面文件已被外部修改，本地草稿仍保留在当前页面。请重开后比较内容。",
+        "conflictCopies": 2,
+        "currentSha256": "0516a4cd833a4a92e7be85291ecbdbb3d887310fbf8f286902f8fa1cf9bbf8da",
+        "draftBytes": 10835934
+      }
+    },
+    {
+      "name": "Fresh WebView loads the saved small sample without Vite",
+      "verdict": "PASS",
+      "detail": {
+        "title": "CueNote 桌面保存验证",
+        "status": "当前区域 笔记标题\n·\n已从桌面笔记文件打开；编辑后可手动保存。",
+        "url": "http://tauri.localhost/"
+      }
+    },
+    {
+      "name": "No uncaught WebView errors during desktop observations",
+      "verdict": "PASS",
+      "detail": {
+        "count": 0
+      }
+    }
+  ],
+  "errors": [],
+  "limitations": [
+    "Programmatic text input is not a real Chinese IME test.",
+    "Synthetic ClipboardEvent is not the Windows clipboard.",
+    "No macOS or OneDrive sync executed.",
+    "Single debug run is not a release benchmark."
+  ]
+}
