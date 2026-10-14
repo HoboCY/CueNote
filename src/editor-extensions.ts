@@ -6,6 +6,7 @@ import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table
 import { StarterKit } from '@tiptap/starter-kit';
 import { Plugin } from '@tiptap/pm/state';
 import { createLowlight } from 'lowlight';
+import { createMathExtensions, type MathEditHandler } from './math-extensions.ts';
 import csharp from 'highlight.js/lib/languages/csharp';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
@@ -199,7 +200,7 @@ function createCodeBlockExtension(): Extensions[number] {
   });
 }
 
-export function createEditorExtensions(simple: boolean): Extensions {
+export function createEditorExtensions(simple: boolean, onEditMath?: MathEditHandler): Extensions {
   return [
     StarterKit.configure({
       blockquote: simple ? false : {},
@@ -223,6 +224,7 @@ export function createEditorExtensions(simple: boolean): Extensions {
     }),
     ...(!simple ? [Code.extend({ excludes: '' })] : []),
     ...(!simple ? [createCodeBlockExtension(), createCodeBlockPlainTextPaste()] : []),
+    ...(!simple ? createMathExtensions(onEditMath) : []),
     ListItem.extend({ content: 'block*' }),
     BulletList.extend({ content() { return `${this.options.itemTypeName}*`; } }),
     OrderedList.extend({ content() { return `${this.options.itemTypeName}*`; } }),

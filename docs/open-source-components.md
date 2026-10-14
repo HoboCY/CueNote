@@ -10,6 +10,8 @@
 | Tiptap core / react / pm / starter-kit | 3.31.4 | MIT | 三分区富文本编辑、选区与独立撤销 |
 | Tiptap extension-table / extension-list | 3.31.4 | MIT | 基础表格与任务列表 |
 | Tiptap extension-code-block-lowlight | 3.31.4 | MIT | 保留源码的代码块与高亮装饰 |
+| Tiptap extension-mathematics | 3.31.4 | MIT | 行内和块级公式节点；应用替换输入规则与异步显示 |
+| KaTeX | 0.18.10 | MIT | 本地线程中的公式排版及离线字体 |
 | lowlight | 3.3.0 | MIT | 语法高亮树生成 |
 | highlight.js | 11.11.1 | BSD-3-Clause | 七种代码语言的离线语法定义 |
 | @tauri-apps/api | 2.12.3 | Apache-2.0 OR MIT | 受限宿主调用 |
@@ -36,4 +38,4 @@
 | ts-rs | 12.0.1 | MIT | 从 Rust 契约生成 TypeScript 声明 |
 | tempfile | 3.27.0 | MIT OR Apache-2.0 | 隔离文件系统测试 |
 
-许可信息从当前安装包的 `package.json`、npm 锁文件与 `cargo metadata --offline` 获取。完整间接依赖以锁文件为准；安装包任务会生成随包许可清单及所需声明。后续编辑器、公式与导图组件在实际接入时更新此表，未接入的选型不计为已交付功能。
+许可信息从当前安装包的 `package.json`、npm 锁文件与 `cargo metadata --offline` 获取。完整间接依赖以锁文件为准；安装包任务会生成随包许可清单及所需声明。后续新增组件在实际接入时更新此表，未接入的选型不计为已交付功能。

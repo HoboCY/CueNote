@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react';
-import type { JSONContent } from '@tiptap/core';
+import type { Editor, JSONContent } from '@tiptap/core';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
 import { closeHistory } from '@tiptap/pm/history';
-import { TextSelection } from '@tiptap/pm/state';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { NodeSelection, TextSelection, type Selection, type SelectionBookmark, type Transaction } from '@tiptap/pm/state';
+import 'katex/dist/katex.min.css';
 import type { Block } from './generated/note-format';
 import { CODE_LANGUAGES } from './code-languages';
 import { fromEditorDocument, toEditorDocument } from './editor-model';
@@ -35,6 +37,95 @@ function errorMessage(cause: unknown) {
 const initialConversionMessage = '无法安全转换当前内容，已停止编辑并显示只读文字投影。';
 const editConversionMessage = '暂时无法保存此编辑内容，请撤销刚才的操作或修复后再继续。';
 const customCodeLanguageOption = '__cuenote_custom_language__';
+type MathNodeName = 'inlineMath' | 'blockMath';
+
+type MathFormTarget =
+  | { mode: 'insert'; nodeName: MathNodeName; editor: Editor; bookmark: SelectionBookmark }
+  | { mode: 'edit'; nodeName: MathNodeName; editor: Editor; position: number; node: ProseMirrorNode };
+
+function isMathNodeName(value: string): value is MathNodeName {
+  return value === 'inlineMath' || value === 'blockMath';
+}
+
+function canInsertMath(editor: Editor, selection: Selection, nodeName: MathNodeName) {
+  if (selectionTouchesNode(selection, new Set(['codeBlock']))) return false;
+  if (selectionTouchesMark(selection, 'code')) return false;
+  if (nodeName === 'blockMath' && selectionTouchesNode(selection, new Set(['tableCell', 'tableHeader']))) return false;
+  try {
+    const nodeType = editor.schema.nodes[nodeName];
+    if (!nodeType) return false;
+    const formula = nodeType.create({ latex: '' });
+    const transaction = editor.state.tr.setSelection(selection);
+    transaction.replaceSelectionWith(formula, false);
+    return transaction.docChanged && transactionContainsNode(transaction, formula);
+  } catch {
+    return false;
+  }
+}
+
+function selectionTouchesNode(selection: Selection, names: ReadonlySet<string>) {
+  for (const range of selection.ranges) {
+    for (const position of [range.$from, range.$to]) {
+      for (let depth = position.depth; depth > 0; depth -= 1) {
+        if (names.has(position.node(depth).type.name)) return true;
+      }
+    }
+    if (range.$from.pos < range.$to.pos) {
+      let found = false;
+      range.$from.doc.nodesBetween(range.$from.pos, range.$to.pos, node => {
+        if (names.has(node.type.name)) {
+          found = true;
+          return false;
+        }
+        return !found;
+      });
+      if (found) return true;
+    }
+  }
+  return false;
+}
+
+function selectionTouchesMark(selection: Selection, markName: string) {
+  for (const range of selection.ranges) {
+    for (const position of [range.$from, range.$to]) {
+      if (position.marks().some(mark => mark.type.name === markName)) return true;
+    }
+    if (range.$from.pos < range.$to.pos) {
+      let found = false;
+      range.$from.doc.nodesBetween(range.$from.pos, range.$to.pos, node => {
+        if (node.marks.some(mark => mark.type.name === markName)) {
+          found = true;
+          return false;
+        }
+        return !found;
+      });
+      if (found) return true;
+    }
+  }
+  return false;
+}
+
+function transactionContainsNode(transaction: Transaction, expected: ProseMirrorNode) {
+  let found = false;
+  transaction.doc.descendants(node => {
+    if (node === expected) {
+      found = true;
+      return false;
+    }
+    return !found;
+  });
+  return found;
+}
+
+function insertMathNode(editor: Editor, selection: Selection, nodeName: MathNodeName, latex: string) {
+  const nodeType = editor.schema.nodes[nodeName];
+  if (!nodeType) throw new Error('公式节点不可用。');
+  const formula = nodeType.create({ latex });
+  const transaction = editor.state.tr.setSelection(selection);
+  transaction.replaceSelectionWith(formula, false);
+  if (!transaction.docChanged || !transactionContainsNode(transaction, formula)) throw new Error('当前位置无法插入此类公式。');
+  return transaction;
+}
 
 function makeInitialDocument(blocks: Block[], simple: boolean): ConversionResult {
   try {
@@ -80,12 +171,38 @@ export function RichTextEditor({
   const [linkHref, setLinkHref] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
   const [codeLanguageDraft, setCodeLanguageDraft] = useState('');
+  const [mathFormOpen, setMathFormOpen] = useState(false);
+  const [mathSource, setMathSource] = useState('');
+  const [mathTargetError, setMathTargetError] = useState<string | null>(null);
+  const [mathTargetInvalid, setMathTargetInvalid] = useState(false);
   const linkInputRef = useRef<HTMLInputElement | null>(null);
+  const mathDialogRef = useRef<HTMLDialogElement | null>(null);
+  const mathInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const mathTargetRef = useRef<MathFormTarget | null>(null);
+  const mathApplyingRef = useRef(false);
+  const currentEditorRef = useRef<Editor | null>(null);
+  const mathPermissionsRef = useRef({ editable, readOnly, simple, conversionError });
+  mathPermissionsRef.current = { editable, readOnly, simple, conversionError };
   const savedSelectionRef = useRef<{ from: number; to: number } | null>(null);
   const lastReportedErrorRef = useRef<string | null | undefined>(undefined);
   const compositionSequenceRef = useRef(0);
 
-  const extensions = useMemo(() => createEditorExtensions(simple), [simple]);
+  const openMathFromNode = useCallback((node: ProseMirrorNode, position: number) => {
+    const currentEditor = currentEditorRef.current;
+    const permissions = mathPermissionsRef.current;
+    if (!currentEditor || !currentEditor.view.dom.isConnected || !permissions.editable
+      || permissions.readOnly || permissions.simple || permissions.conversionError) return;
+    const currentNode = currentEditor.state.doc.nodeAt(position);
+    if (!isMathNodeName(node.type.name) || currentNode !== node) return;
+
+    mathTargetRef.current = { mode: 'edit', nodeName: node.type.name, editor: currentEditor, position, node };
+    setMathSource(typeof node.attrs.latex === 'string' ? node.attrs.latex : String(node.attrs.latex ?? ''));
+    setMathTargetError(null);
+    setMathTargetInvalid(false);
+    setMathFormOpen(true);
+  }, []);
+
+  const extensions = useMemo(() => createEditorExtensions(simple, openMathFromNode), [simple, openMathFromNode]);
   const notifyError = useCallback((message: string | null, isInitial: boolean) => {
     setConversionError(message);
     if (lastReportedErrorRef.current === message) return;
@@ -122,11 +239,49 @@ export function RichTextEditor({
     },
   }, []);
 
+  useEffect(() => {
+    if (!editor) return;
+    currentEditorRef.current = editor;
+    return () => {
+      if (currentEditorRef.current === editor) currentEditorRef.current = null;
+    };
+  }, [editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    const mapMathTarget = ({ transaction }: { transaction: Transaction }) => {
+      if (mathApplyingRef.current) return;
+      const target = mathTargetRef.current;
+      if (!target || target.editor !== editor) return;
+      if (target.mode === 'insert') {
+        target.bookmark = target.bookmark.map(transaction.mapping);
+        return;
+      }
+      if (!transaction.docChanged) return;
+      const mapped = transaction.mapping.mapResult(target.position, 1);
+      const currentNode = editor.state.doc.nodeAt(mapped.pos);
+      if (mapped.deleted || currentNode !== target.node) {
+        setMathTargetInvalid(true);
+        setMathTargetError('此公式在源码窗口打开期间发生了变化。请取消后重新打开，避免覆盖其他内容。');
+        return;
+      }
+      target.position = mapped.pos;
+    };
+    editor.on('transaction', mapMathTarget);
+    return () => {
+      editor.off('transaction', mapMathTarget);
+    };
+  }, [editor]);
+
   const selectionState = useEditorState({
     editor,
     selector: ({ editor: current }) => {
       if (!current) return null;
       const hasTable = !simple && current.extensionManager.extensions.some((extension) => extension.name === 'table');
+      const selection = current.state.selection;
+      const selectedMath = selection instanceof NodeSelection && isMathNodeName(selection.node.type.name)
+        ? selection.node.type.name
+        : null;
       return {
         bold: current.isActive('bold'),
         italic: current.isActive('italic'),
@@ -143,6 +298,7 @@ export function RichTextEditor({
         taskList: current.isActive('taskList'),
         blockquote: current.isActive('blockquote'),
         link: current.isActive('link'),
+        selectedMath,
         table: hasTable && current.isActive('table'),
         canAddRow: hasTable && current.can().addRowAfter(),
         canDeleteRow: hasTable && current.can().deleteRow(),
@@ -217,6 +373,104 @@ export function RichTextEditor({
     const { from, to } = savedSelectionRef.current;
     editor.chain().setTextSelection({ from, to }).focus().run();
   };
+  const openMathInsert = (nodeName: MathNodeName) => {
+    if (!editor || !editable || readOnly || conversionError || simple) return;
+    synchronizeTextSelection();
+    const selection = editor.state.selection;
+    if (!canInsertMath(editor, selection, nodeName)) return;
+    mathTargetRef.current = { mode: 'insert', nodeName, editor, bookmark: selection.getBookmark() };
+    setMathSource('');
+    setMathTargetError(null);
+    setMathTargetInvalid(false);
+    setMathFormOpen(true);
+  };
+  const openSelectedMath = () => {
+    if (!editor || !editable || readOnly || conversionError || simple) return;
+    const selection = editor.state.selection;
+    if (!(selection instanceof NodeSelection) || !isMathNodeName(selection.node.type.name)) return;
+    openMathFromNode(selection.node, selection.from);
+  };
+  const closeMathForm = (restoreSelection: boolean) => {
+    const target = mathTargetRef.current;
+    mathTargetRef.current = null;
+    setMathFormOpen(false);
+    setMathTargetError(null);
+    setMathTargetInvalid(false);
+    if (mathDialogRef.current?.open) mathDialogRef.current.close();
+    requestAnimationFrame(() => {
+      const currentEditor = currentEditorRef.current;
+      if (!currentEditor || !currentEditor.view.dom.isConnected) return;
+      if (restoreSelection && target && target.editor === currentEditor) {
+        try {
+          if (target.mode === 'insert') {
+            currentEditor.view.dispatch(currentEditor.state.tr.setSelection(target.bookmark.resolve(currentEditor.state.doc)));
+          } else if (currentEditor.state.doc.nodeAt(target.position) === target.node) {
+            const selection = NodeSelection.create(currentEditor.state.doc, target.position);
+            currentEditor.view.dispatch(currentEditor.state.tr.setSelection(selection));
+          }
+        } catch {
+          // A canceled form never changes the document; focus still returns if its selection cannot be restored.
+        }
+      }
+      currentEditor.view.focus();
+    });
+  };
+  const applyMathSource = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const currentEditor = currentEditorRef.current;
+    const target = mathTargetRef.current;
+    if (!editor || currentEditor !== editor || !editor.view.dom.isConnected || !target || target.editor !== editor
+      || !editable || readOnly || conversionError || simple || mathTargetInvalid) return;
+
+    try {
+      let transaction;
+      if (target.mode === 'insert') {
+        const selection = target.bookmark.resolve(editor.state.doc);
+        if (!canInsertMath(editor, selection, target.nodeName)) throw new Error('当前位置无法插入此类公式。');
+        transaction = insertMathNode(editor, selection, target.nodeName, mathSource);
+      } else {
+        const currentNode = editor.state.doc.nodeAt(target.position);
+        if (currentNode !== target.node || currentNode.type.name !== target.nodeName) {
+          setMathTargetInvalid(true);
+          setMathTargetError('此公式在源码窗口打开期间发生了变化。请取消后重新打开，避免覆盖其他内容。');
+          return;
+        }
+        if (currentNode.attrs.latex === mathSource) {
+          closeMathForm(false);
+          return;
+        }
+        transaction = editor.state.tr;
+        transaction.setNodeMarkup(target.position, currentNode.type, { ...currentNode.attrs, latex: mathSource }, currentNode.marks);
+        transaction.setSelection(NodeSelection.create(transaction.doc, target.position));
+      }
+
+      if (!transaction.docChanged) {
+        if (transaction.selectionSet) editor.view.dispatch(transaction);
+        closeMathForm(false);
+        return;
+      }
+      closeHistory(transaction);
+      mathApplyingRef.current = true;
+      try {
+        editor.view.dispatch(transaction);
+        editor.view.dispatch(closeHistory(editor.state.tr));
+      } finally {
+        mathApplyingRef.current = false;
+      }
+      closeMathForm(false);
+    } catch (cause) {
+      setMathTargetError(errorMessage(cause));
+    }
+  };
+
+  useEffect(() => {
+    if (!mathFormOpen) return;
+    const dialog = mathDialogRef.current;
+    if (!dialog) return;
+    if (!dialog.open) dialog.showModal();
+    mathInputRef.current?.focus();
+  }, [mathFormOpen]);
+
   const openLinkForm = () => {
     if (!editor || !editable || conversionError) return;
     synchronizeTextSelection();
@@ -311,15 +565,18 @@ export function RichTextEditor({
     bold: false, italic: false, strike: false, inlineCode: false, codeBlock: false, codeLanguage: null, paragraph: false,
     heading1: false, heading2: false, heading3: false,
     bulletList: false, orderedList: false, taskList: false,
-    blockquote: false, link: false, table: false,
+    blockquote: false, link: false, selectedMath: null, table: false,
     canAddRow: false, canDeleteRow: false, canAddColumn: false,
     canDeleteColumn: false, canDeleteTable: false,
   };
-  const formattingDisabled = active.inlineCode || active.codeBlock;
+  const formattingDisabled = active.inlineCode || active.codeBlock || Boolean(active.selectedMath);
   const knownCodeLanguage = CODE_LANGUAGES.some(language => language.value === active.codeLanguage);
   const codeLanguageSelectValue = active.codeLanguage === null
     ? ''
     : knownCodeLanguage ? active.codeLanguage : customCodeLanguageOption;
+  const canAddInlineMath = Boolean(editor && canInsertMath(editor, editor.state.selection, 'inlineMath'));
+  const canAddBlockMath = Boolean(editor && canInsertMath(editor, editor.state.selection, 'blockMath'));
+  const currentMathTarget = mathTargetRef.current;
 
   return (
     <div
@@ -355,6 +612,41 @@ export function RichTextEditor({
               onMouseDown={preventToolbarFocus}
               onClick={openLinkForm}
             >插入链接</button>
+          )}
+          {!simple && (
+            <>
+              <button
+                type="button"
+                className="rich-editor-tool"
+                data-testid="rich-toolbar-math-inline-content"
+                aria-label="插入行内公式"
+                title="插入行内公式"
+                disabled={!editable || Boolean(conversionError) || !canAddInlineMath}
+                onMouseDown={preventToolbarFocus}
+                onClick={() => openMathInsert('inlineMath')}
+              >插入行内公式</button>
+              <button
+                type="button"
+                className="rich-editor-tool"
+                data-testid="rich-toolbar-math-block-content"
+                aria-label="插入公式块"
+                title={canAddBlockMath ? '插入公式块' : '当前位置无法插入独立公式块'}
+                disabled={!editable || Boolean(conversionError) || !canAddBlockMath}
+                onMouseDown={preventToolbarFocus}
+                onClick={() => openMathInsert('blockMath')}
+              >插入公式块</button>
+              <button
+                type="button"
+                className={`rich-editor-tool${active.selectedMath ? ' is-active' : ''}`}
+                data-testid="rich-toolbar-math-edit-content"
+                aria-label="编辑所选公式源码"
+                aria-pressed={Boolean(active.selectedMath)}
+                title="编辑所选公式源码"
+                disabled={!editable || Boolean(conversionError) || !active.selectedMath}
+                onMouseDown={preventToolbarFocus}
+                onClick={openSelectedMath}
+              >编辑所选公式</button>
+            </>
           )}
           {!simple && tool('horizontal-rule', '分隔线', () => editor?.chain().focus().setHorizontalRule().run() ?? false, false, formattingDisabled)}
           {!simple && tool('insert-table', '插入表格', () => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run() ?? false, active.table, formattingDisabled)}
@@ -474,7 +766,7 @@ export function RichTextEditor({
             ? 'Markdown：# / ## / ### 标题，**加粗**，- 列表，1. 编号，- [ ] 待办；Ctrl/⌘+B 加粗。'
             : active.codeBlock
               ? '代码块会保留缩进与空行；按 Ctrl/⌘+Enter，或点击“退出代码块”继续编辑普通文字。'
-              : 'Markdown：# / ## / ### 标题，**加粗**，*斜体*，~~删除线~~，- 列表，1. 编号，- [ ] 待办，> 引用，--- 分隔线，[文字](https://…) 链接；反引号包住行内代码；输入 ```语言 后按空格或回车进入代码块，按 Ctrl/⌘+Enter 或点击“退出代码块”退出；Ctrl/⌘+B 加粗，Ctrl/⌘+I 斜体。'}
+              : 'Markdown：# / ## / ### 标题，**加粗**，*斜体*，~~删除线~~，- 列表，1. 编号，- [ ] 待办，> 引用，--- 分隔线，[文字](https://…) 链接；反引号包住行内代码；输入 ```语言 后按空格或回车进入代码块，按 Ctrl/⌘+Enter 或点击“退出代码块”退出；行内公式写为 $...$，公式块使用独占行 $$ 包围源码；Ctrl/⌘+B 加粗，Ctrl/⌘+I 斜体。'}
         </p>
       )}
 
@@ -482,6 +774,59 @@ export function RichTextEditor({
         <div className="rich-editor-error" role="alert" data-testid={`rich-editor-error-${section}`}>
           {conversionError}
         </div>
+      )}
+
+      {mathFormOpen && !simple && (
+        <dialog
+          ref={mathDialogRef}
+          className="math-source-dialog"
+          aria-labelledby="math-source-title-content"
+          onCancel={(event) => {
+            event.preventDefault();
+            closeMathForm(true);
+          }}
+        >
+          <form className="math-source-form" data-testid="math-source-form-content" onSubmit={applyMathSource}>
+            <h2 id="math-source-title-content">{currentMathTarget?.mode === 'edit' ? '编辑公式源码' : '插入公式'}</h2>
+            <p className="math-source-type">
+              {currentMathTarget?.nodeName === 'blockMath' ? '公式块' : '行内公式'}
+              {currentMathTarget?.mode === 'edit' ? ' · 类型保持不变' : ''}
+            </p>
+            <label className="math-source-field">
+              <span>LaTeX 源码</span>
+              <textarea
+                ref={mathInputRef}
+                data-testid="math-source-input-content"
+                aria-label="LaTeX 源码"
+                aria-describedby="math-source-hint-content"
+                value={mathSource}
+                readOnly={!editable || readOnly || Boolean(conversionError)}
+                rows={9}
+                spellCheck={false}
+                wrap="soft"
+                onChange={(event) => setMathSource(event.currentTarget.value)}
+              />
+            </label>
+            <p id="math-source-hint-content" className="math-source-hint">
+              行内公式使用 $...$；公式块使用独占行 $$ 包围源码。源码按原样保存，包括空格、空行和空源码。
+            </p>
+            {mathTargetError && <p className="math-source-error" role="alert">{mathTargetError}</p>}
+            <div className="math-source-actions">
+              <button
+                className="rich-editor-tool is-primary"
+                data-testid="math-source-apply-content"
+                type="submit"
+                disabled={!editable || readOnly || Boolean(conversionError) || mathTargetInvalid || !currentMathTarget}
+              >{currentMathTarget?.mode === 'edit' ? '应用修改' : '插入公式'}</button>
+              <button
+                className="rich-editor-tool"
+                data-testid="math-source-cancel-content"
+                type="button"
+                onClick={() => closeMathForm(true)}
+              >取消</button>
+            </div>
+          </form>
+        </dialog>
       )}
 
       <div className="rich-editor-surface" onCompositionStart={onCompositionStartFromEditor} onCompositionEnd={onCompositionEndDeferred}>

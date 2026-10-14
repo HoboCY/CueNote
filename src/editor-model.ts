@@ -107,8 +107,11 @@ function toInline(inline: Inline, simple: boolean, path: string): JSONContent {
     case 'hardBreak':
       exactKeys(value, ['type'], path);
       return { type: 'hardBreak' };
-    case 'mathInline':
-      return fail(path, 'inline math is not supported by this editor');
+    case 'mathInline': {
+      exactKeys(value, ['type', 'latex'], path);
+      if (simple) return fail(path, 'inline math is not supported in this section');
+      return { type: 'inlineMath', attrs: { latex: stringAt(value.latex, `${path}.latex`) } };
+    }
     default:
       return fail(path, `unsupported inline node: ${String(value.type)}`);
   }
@@ -153,16 +156,9 @@ function validateTableRows(rowsValue: unknown, path: string): TableRow[] {
     if (columnCount === null) columnCount = cells.length;
     if (cells.length !== columnCount) fail(`${rowPath}.cells`, 'table rows must have the same number of cells');
     cells.forEach((cell, cellIndex) => {
-      arrayAt(cell, `${rowPath}.cells[${cellIndex}]`).forEach((inline, inlineIndex) => {
-        const inlineValue = objectAt(inline, `${rowPath}.cells[${cellIndex}][${inlineIndex}]`);
-        if (inlineValue.type === 'text') {
-          toInline(inline as Inline, false, `${rowPath}.cells[${cellIndex}][${inlineIndex}]`);
-        } else if (inlineValue.type === 'hardBreak') {
-          toInline(inline as Inline, false, `${rowPath}.cells[${cellIndex}][${inlineIndex}]`);
-        } else {
-          fail(`${rowPath}.cells[${cellIndex}][${inlineIndex}]`, 'table cells support text and hard breaks only');
-        }
-      });
+      arrayAt(cell, `${rowPath}.cells[${cellIndex}]`).forEach((inline, inlineIndex) =>
+        toInline(inline as Inline, false, `${rowPath}.cells[${cellIndex}][${inlineIndex}]`),
+      );
     });
   });
   return rows;
@@ -238,8 +234,11 @@ function toBlock(block: Block, simple: boolean, path: string): JSONContent {
           ? { content: [{ type: 'text', text: value.code as string }] }
           : {}),
       };
-    case 'mathBlock':
-      return fail(path, 'math blocks are not supported by this editor');
+    case 'mathBlock': {
+      exactKeys(value, ['type', 'latex'], path);
+      if (simple) return fail(path, 'math blocks are not supported in this section');
+      return { type: 'blockMath', attrs: { latex: stringAt(value.latex, `${path}.latex`) } };
+    }
     case 'image':
       return fail(path, 'images are not supported by this editor');
     case 'mindMap':
@@ -307,6 +306,12 @@ function fromInline(value: unknown, simple: boolean, path: string): Inline {
     case 'hardBreak':
       exactKeys(node, ['type'], path);
       return { type: 'hardBreak' };
+    case 'inlineMath': {
+      exactKeys(node, ['type', 'attrs'], path);
+      if (simple) return fail(path, 'inline math is not supported in this section');
+      const attrs = optionalAttrs(node, ['latex'], path);
+      return { type: 'mathInline', latex: stringAt(attrs.latex, `${path}.attrs.latex`) };
+    }
     default:
       return fail(path, `unsupported inline node: ${String(node.type)}`);
   }
@@ -418,6 +423,12 @@ function fromBlock(value: unknown, simple: boolean, path: string): Block {
         return stringAt(textValue.text, `${textPath}.text`);
       }).join('');
       return { type: 'codeBlock', language: languageValue, code };
+    }
+    case 'blockMath': {
+      exactKeys(node, ['type', 'attrs'], path);
+      if (simple) return fail(path, 'math blocks are not supported in this section');
+      const attrs = optionalAttrs(node, ['latex'], path);
+      return { type: 'mathBlock', latex: stringAt(attrs.latex, `${path}.attrs.latex`) };
     }
     case 'orderedList': {
       exactKeys(node, ['type', 'attrs', 'content'], path);

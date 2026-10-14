@@ -196,6 +196,61 @@ test('round-trips nested list blocks, task state, block quotes, rules, and basic
   assert.deepEqual(fromEditorDocument(editorJson, false), blocks);
 });
 
+test('round-trips inline and block math source exactly, including table cells', () => {
+  const invalidLatex = '\\notARealCommand{\\sqrt{x';
+  const largeLatex = `\\sum_{i=0}^{99999} x_i + ${'x'.repeat(128 * 1024)}`;
+  const blocks: Block[] = [
+    {
+      type: 'paragraph',
+      children: [
+        { type: 'mathInline', latex: '' },
+        { type: 'mathInline', latex: invalidLatex },
+        { type: 'mathInline', latex: largeLatex },
+      ],
+    },
+    { type: 'mathBlock', latex: '' },
+    { type: 'mathBlock', latex: '\\begin{align} x &= \\notARealCommand{2} \\\\ y &= 3 \\end{align}' },
+    {
+      type: 'table',
+      rows: [
+        { type: 'header', cells: [[{ type: 'mathInline', latex: 'a^2+b^2' }]] },
+        { type: 'body', cells: [[
+          { type: 'text', text: 'result = ', marks: [] },
+          { type: 'mathInline', latex: '\\frac{1}{2}' },
+        ]] },
+      ],
+    },
+  ];
+  const editorDocument = {
+    type: 'doc',
+    content: [
+      {
+        type: 'paragraph',
+        content: [
+          { type: 'inlineMath', attrs: { latex: '' } },
+          { type: 'inlineMath', attrs: { latex: invalidLatex } },
+          { type: 'inlineMath', attrs: { latex: largeLatex } },
+        ],
+      },
+      { type: 'blockMath', attrs: { latex: '' } },
+      { type: 'blockMath', attrs: { latex: '\\begin{align} x &= \\notARealCommand{2} \\\\ y &= 3 \\end{align}' } },
+      {
+        type: 'table',
+        content: [
+          { type: 'tableRow', content: [{ type: 'tableHeader', content: [{ type: 'paragraph', content: [{ type: 'inlineMath', attrs: { latex: 'a^2+b^2' } }] }] }] },
+          { type: 'tableRow', content: [{ type: 'tableCell', content: [{ type: 'paragraph', content: [
+            { type: 'text', text: 'result = ' },
+            { type: 'inlineMath', attrs: { latex: '\\frac{1}{2}' } },
+          ] }] }] },
+        ],
+      },
+    ],
+  };
+
+  assert.deepEqual(toEditorDocument(blocks, false), editorDocument);
+  assert.deepEqual(fromEditorDocument(editorDocument, false), blocks);
+});
+
 test('normalizes table header cells only when a structural command opts in', () => {
   const source: Block[] = [{
     type: 'table',
@@ -253,8 +308,11 @@ test('rejects unsupported v1 content and ProseMirror semantics instead of droppi
     { type: 'paragraph', children: [{ type: 'text', text: 'inline', marks: [{ type: 'code' }] }] },
   ], true), /code is not supported in this section/);
   assert.throws(() => toEditorDocument([
-    { type: 'paragraph', children: [{ type: 'mathInline', latex: 'x^2' }] },
-  ], false), /inline math is not supported/);
+    { type: 'image', assetId: '11111111-1111-4111-8111-111111111111', displayWidthPx: 320 },
+  ], false), /images are not supported by this editor/);
+  assert.throws(() => toEditorDocument([
+    { type: 'mindMap', mapId: '22222222-2222-4222-8222-222222222222', rootId: '33333333-3333-4333-8333-333333333333', nodes: [] },
+  ], false), /mind maps are not supported by this editor/);
   assert.throws(() => toEditorDocument([
     { type: 'blockquote', blocks: [] },
   ], false), /empty block quotes cannot be represented/);
@@ -289,6 +347,18 @@ test('rejects unsupported v1 content and ProseMirror semantics instead of droppi
     type: 'doc',
     content: [{ type: 'codeBlock', attrs: { language: 'javascript' }, content: [{ type: 'hardBreak' }] }],
   }, false), /code blocks contain plain text only/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'paragraph', content: [{ type: 'inlineMath', attrs: { latex: 'x^2', display: true } }] }],
+  }, false), /unsupported field: display/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'paragraph', content: [{ type: 'inlineMath', attrs: { latex: 'x^2' }, marks: [{ type: 'bold' }] }] }],
+  }, false), /unsupported field: marks/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'blockMath', attrs: { latex: 'x^2', macros: {} } }],
+  }, false), /unsupported field: macros/);
   assert.throws(() => fromEditorDocument({
     type: 'doc',
     content: [{ type: 'orderedList', attrs: { start: 1, type: 'a' }, content: [] }],
@@ -336,6 +406,18 @@ test('keeps the simple-section schema and adapter to text, bold, lists, and basi
   assert.throws(() => toEditorDocument([
     { type: 'paragraph', children: [{ type: 'text', text: 'Code', marks: [{ type: 'code' }] }] },
   ], true), /code is not supported in this section/);
+  assert.throws(() => toEditorDocument([
+    { type: 'paragraph', children: [{ type: 'mathInline', latex: 'x^2' }] },
+  ], true), /inline math is not supported in this section/);
+  assert.throws(() => toEditorDocument([{ type: 'mathBlock', latex: 'x^2' }], true), /math blocks are not supported in this section/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'paragraph', content: [{ type: 'inlineMath', attrs: { latex: 'x^2' } }] }],
+  }, true), /inline math is not supported in this section/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'blockMath', attrs: { latex: 'x^2' } }],
+  }, true), /math blocks are not supported in this section/);
   assert.throws(() => toEditorDocument([{ type: 'horizontalRule' }], true), /horizontal rules are not supported in this section/);
 });
 

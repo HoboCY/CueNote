@@ -136,7 +136,7 @@ fn body_code_and_unknown_languages_roundtrip_through_workspace_and_file() {
 }
 
 #[test]
-fn code_is_rejected_in_side_sections_and_math_stays_read_only() {
+fn code_and_math_are_rejected_in_side_sections() {
     let temp = workspace_temp();
     let (settings, recovery, default, library) = workspace_paths(&temp);
     let mut workspace = Workspace::new(settings, recovery.clone(), default);
@@ -179,7 +179,7 @@ fn code_is_rejected_in_side_sections_and_math_stays_read_only() {
     );
 
     let mut math_block = created.content.clone();
-    math_block.sections.content.push(Block::MathBlock {
+    math_block.sections.summary.push(Block::MathBlock {
         latex: "x^2".into(),
     });
     assert_eq!(
@@ -191,7 +191,7 @@ fn code_is_rejected_in_side_sections_and_math_stays_read_only() {
     );
 
     let mut math_inline = created.content;
-    math_inline.sections.content.push(Block::Paragraph {
+    math_inline.sections.cue.push(Block::Paragraph {
         children: vec![Inline::MathInline {
             latex: "x^2".into(),
         }],

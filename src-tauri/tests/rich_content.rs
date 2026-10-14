@@ -353,8 +353,9 @@ fn malformed_or_unsupported_content_does_not_replace_the_saved_note() {
     assert_eq!(malformed_error.kind, "format");
 
     let mut unsupported = session.content.clone();
-    unsupported.sections.content.push(Block::MathBlock {
-        latex: "x^2".into(),
+    unsupported.sections.content.push(Block::Image {
+        asset_id: "55ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
+        display_width_px: 1,
     });
     let unsupported_error = workspace
         .save_note_content(&session.session_id, unsupported)

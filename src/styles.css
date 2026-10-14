@@ -498,7 +498,7 @@ button:focus-visible {
 .cue-textarea { flex: 1; min-height: 208px; margin: 12px 0; font-size: 11px; }
 .content-textarea { min-height: 270px; margin-top: 14px; }
 .summary-textarea { min-height: 86px; margin-top: 9px; font-size: 11px; }
-.rich-editor { display: grid; min-width: 0; gap: 7px; width: 100%; flex: 1; }
+.rich-editor { display: grid; align-content: start; min-width: 0; gap: 7px; width: 100%; flex: 1; }
 .rich-editor-toolbar { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 4px; margin: 9px 0 2px; padding: 6px; border: 1px solid #e2e7de; border-radius: 8px; background: #f8f8f2; }
 .rich-editor-tool { min-height: 26px; padding: 3px 7px; border: 1px solid #dfe5dc; border-radius: 6px; background: #fffdf7; color: #5c7268; cursor: pointer; font-size: 9px; line-height: 1.35; white-space: nowrap; }
 .rich-editor-tool:hover:not(:disabled) { border-color: #b8cec1; background: #edf3eb; color: var(--teal-dark); }
@@ -531,6 +531,17 @@ button:focus-visible {
 .rich-editor-prose ul[data-type="taskList"] li > label { display: inline-flex; flex: none; align-items: center; padding-top: 4px; }
 .rich-editor-prose ul[data-type="taskList"] li > label input { accent-color: var(--teal); }
 .rich-editor-prose code { padding: 1px 4px; border-radius: 4px; background: #edf1e9; color: #76583d; font: .94em/1.6 "Cascadia Code", Consolas, "SFMono-Regular", monospace; }
+.rich-editor-prose .cn-math { max-width: 100%; overflow-wrap: anywhere; }
+.rich-editor-prose .cn-math-inline { display: inline-block; min-width: 1.3em; min-height: 1.1em; margin: 0 .08em; border-radius: 3px; vertical-align: -.14em; cursor: pointer; }
+.rich-editor-prose .cn-math-block { display: block; max-width: 100%; margin: .8em 0; padding: .2em .35em; border-radius: 5px; text-align: center; cursor: pointer; overflow-wrap: anywhere; }
+.rich-editor-prose .cn-math-output { display: block; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.rich-editor-prose .cn-math-output .katex-display { max-width: 100%; overflow-x: auto; overflow-y: hidden; }
+.rich-editor-prose .cn-math[data-math-state="pending"] .cn-math-output { min-height: 1.1em; }
+.rich-editor-prose .cn-math[data-math-state="error"] { display: inline-block; max-width: 100%; padding: 2px 5px; border: 1px solid #ead3c7; border-radius: 5px; background: #fbf1eb; color: #8a5547; text-align: left; vertical-align: middle; }
+.rich-editor-prose .cn-math-block[data-math-state="error"] { display: block; }
+.rich-editor-prose .cn-math[data-math-state="error"] .cn-math-output { max-height: 8rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: 10px/1.55 "Cascadia Code", Consolas, "SFMono-Regular", monospace; }
+.rich-editor-prose .cn-math[data-math-state="error"]::after { display: block; margin-top: 3px; color: #9b6c5e; content: "公式显示受限，可点击编辑源码"; font: 8px/1.4 "Segoe UI", "Microsoft YaHei UI", sans-serif; }
+.rich-editor-prose .cn-math-inline:hover, .rich-editor-prose .cn-math-block:hover { background: #edf3eb; }
 .rich-editor-prose pre { max-width: 100%; overflow-x: auto; margin: .75em 0; padding: 11px 13px; border: 1px solid #dfe6dc; border-radius: 8px; background: #f2f4ed; color: #354b44; font: 11px/1.65 "Cascadia Code", Consolas, "SFMono-Regular", monospace; tab-size: 4; white-space: pre; overflow-wrap: normal; }
 .rich-editor-prose pre code { display: block; min-width: max-content; padding: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; white-space: inherit; }
 .content-panel .rich-editor-prose .hljs-comment, .content-panel .rich-editor-prose .hljs-quote, .content-panel .rich-editor-prose .hljs-meta { color: #839188; font-style: italic; }
@@ -551,6 +562,18 @@ button:focus-visible {
 .rich-link-form input { width: 100%; min-width: 0; min-height: 29px; padding: 4px 7px; border: 1px solid #d6dfd6; border-radius: 6px; background: #fffdf7; color: #42564f; font: 10px "Segoe UI", "Microsoft YaHei UI", sans-serif; }
 .rich-link-actions { display: flex; gap: 4px; }
 .rich-link-error { grid-column: 1 / -1; color: #9c584a; font-size: 9px; }
+.math-source-dialog { width: min(680px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); margin: auto; padding: 0; overflow: auto; border: 1px solid #dfe5dc; border-radius: 13px; background: #fffdf7; color: #42564f; box-shadow: 0 24px 70px #1f302d38; }
+.math-source-dialog::backdrop { background: #17252288; }
+.math-source-form { display: grid; gap: 9px; padding: 20px; }
+.math-source-form h2 { margin: 0; color: #374e48; font: 600 18px/1.4 Georgia, "Songti SC", serif; }
+.math-source-type { margin: -5px 0 1px; color: #829087; font-size: 9px; }
+.math-source-field { display: grid; gap: 5px; color: #75867c; font-size: 9px; }
+.math-source-field textarea { width: 100%; min-height: 190px; resize: vertical; padding: 10px 11px; border: 1px solid #d6dfd6; border-radius: 7px; background: #fffefb; color: #42564f; font: 11px/1.65 "Cascadia Code", Consolas, "SFMono-Regular", monospace; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+.math-source-field textarea:focus { border-color: #8fb4a3; outline: 2px solid #e4eee7; }
+.math-source-field textarea[readonly] { color: #66786e; background: #f7f8f2; }
+.math-source-hint { margin: 0; color: #87958c; font-size: 9px; line-height: 1.6; }
+.math-source-error { margin: 0; padding: 8px 9px; border: 1px solid #ead3c7; border-radius: 6px; background: #fbf1eb; color: #8a5547; font-size: 9px; line-height: 1.55; }
+.math-source-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 2px; }
 .rich-editor-error { padding: 8px 10px; border: 1px solid #ead3c7; border-radius: 7px; background: #fbf1eb; color: #8a5547; font-size: 9px; line-height: 1.6; }
 .rich-editor-fallback { min-width: 0; width: 100%; }
 .rich-editor-projection { border-color: #e3e6dc; background: #fbfaf4; }
@@ -640,6 +663,9 @@ button:focus-visible {
   .code-language-control select { max-width: 150px; }
   .rich-link-form { grid-template-columns: 1fr; }
   .rich-link-actions { justify-content: flex-start; }
+  .math-source-form { padding: 16px; }
+  .math-source-field textarea { min-height: 160px; }
+  .math-source-actions { justify-content: flex-start; }
   .content-panel .rich-editor-prose { min-height: 200px; }
   .cue-panel .rich-editor-prose { min-height: 120px; }
   .unsaved-dialog { padding: 20px; }

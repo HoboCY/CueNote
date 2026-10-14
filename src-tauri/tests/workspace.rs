@@ -332,11 +332,7 @@ fn rich_and_unknown_notebook_sessions_cannot_be_forced_through_plain_text_save()
     let rich_path = library.join("notes").join(format!("{rich_id}.cuenote"));
     let rich_revision = storage::save_note(&rich_path, &recovery, &rich, None).unwrap();
     let rich_session = workspace.open_note(&rich_id).unwrap();
-    assert!(rich_session
-        .read_only_reason
-        .as_deref()
-        .unwrap()
-        .contains("只读"));
+    assert!(rich_session.read_only_reason.is_none());
     assert_eq!(
         workspace
             .save_note_text(&rich_session.session_id, rich_session.text.clone())
