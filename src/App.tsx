@@ -28,6 +28,9 @@ type SaveCoordinator = ReturnType<typeof createSaveCoordinator<PlainNoteText, Sa
 type NotebookDialogState =
   | { mode: 'create' | 'rename'; notebookId?: string; name: string }
   | { mode: 'delete'; notebookId: string; name: string };
+type TrashDialogState =
+  | { mode: 'delete'; sessionId: string; noteId: string; title: string; error: string | null }
+  | { mode: 'restore-target'; sessionId: string; noteId: string; title: string; targetNotebookId: string; error: string | null };
 
 function sameText(left: PlainNoteText | null, right: PlainNoteText | null) {
   return left !== null && right !== null
@@ -70,8 +73,10 @@ function noteTitle(note: { title: string }) {
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
+  const [isTrashView, setIsTrashView] = useState(false);
   const [notebookDialog, setNotebookDialog] = useState<NotebookDialogState | null>(null);
   const [notebookDialogError, setNotebookDialogError] = useState<string | null>(null);
+  const [trashDialog, setTrashDialog] = useState<TrashDialogState | null>(null);
   const [isNotebookBusy, setIsNotebookBusy] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceView | null>(null);
   const [session, setSession] = useState<NoteSession | null>(null);
@@ -112,6 +117,8 @@ function App() {
   const transitionWaitingForOperationRef = useRef(false);
   const activeTransitionRef = useRef<PendingTransition | null>(null);
   const isAbandoningRef = useRef(false);
+  const isTrashViewRef = useRef(false);
+  const trashMutationInProgressRef = useRef(false);
   const leaveIntentRef = useRef<ReturnType<SaveCoordinator['leave']> | null>(null);
   const lastSaveErrorRef = useRef<unknown | null>(null);
   const isComposingRef = useRef(false);
@@ -119,7 +126,13 @@ function App() {
   const closeRequestHandlerRef = useRef<() => void>(() => undefined);
   const flushCurrentRef = useRef<() => void>(() => undefined);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const trashDialogRef = useRef<HTMLDivElement | null>(null);
   const saveCoordinatorRef = useRef<SaveCoordinator | null>(null);
+
+  const setTrashView = (value: boolean) => {
+    isTrashViewRef.current = value;
+    setIsTrashView(value);
+  };
 
   const updateWorkspace = (value: WorkspaceView | null) => {
     workspaceRef.current = value;
@@ -171,7 +184,7 @@ function App() {
     saveCoordinatorRef.current?.reset(
       value?.sessionId ?? null,
       value?.text ?? null,
-      Boolean(value && value.revision === null && !value.readOnlyReason),
+      Boolean(value && value.revision === null && !value.readOnlyReason && value.trashedAt === null),
     );
     const currentWorkspace = workspaceRef.current;
     if (currentWorkspace) updateWorkspace({ ...currentWorkspace, session: value });
@@ -199,7 +212,7 @@ function App() {
     saveCoordinatorRef.current?.reset(
       value.session?.sessionId ?? null,
       value.session?.text ?? null,
-      Boolean(value.session && value.session.revision === null && !value.session.readOnlyReason),
+      Boolean(value.session && value.session.revision === null && !value.session.readOnlyReason && value.session.trashedAt === null),
     );
   };
 
@@ -355,7 +368,7 @@ function App() {
 
   const saveCurrent = async () => {
     const currentSession = sessionRef.current;
-    if (!desktopRuntime || isInitializing || operationInProgressRef.current || !currentSession || currentSession.readOnlyReason) return;
+    if (!desktopRuntime || isInitializing || operationInProgressRef.current || !currentSession || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
     await waitForComposition();
     await saveCoordinator.flush();
   };
@@ -365,7 +378,7 @@ function App() {
     await waitForComposition();
     const currentSession = sessionRef.current;
     const snapshot = draftRef.current;
-    if (!desktopRuntime || isInitializing || operationInProgressRef.current || !currentSession || !snapshot || currentSession.readOnlyReason) return;
+    if (!desktopRuntime || isInitializing || operationInProgressRef.current || !currentSession || !snapshot || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
     const copyText = { ...snapshot };
     operationInProgressRef.current = true;
     setIsOperationBusy(true);
@@ -401,6 +414,10 @@ function App() {
     label: `恢复“${draft.title || '未命名笔记'}”为新笔记`,
     run: async () => {
       const receipt = await workspaceApi.restoreRecoveryAsCopy(draft.recoveryId);
+      if (isTrashViewRef.current) {
+        setTrashView(false);
+        persistViewPreferences({ ...viewPreferencesRef.current, selectedNotebookId: null });
+      }
       const currentWorkspace = workspaceRef.current;
       if (currentWorkspace) {
         updateWorkspace({ ...currentWorkspace, library: receipt.library, session: receipt.session });
@@ -441,6 +458,7 @@ function App() {
   const requestClose = () => {
     if (!desktopRuntime) return;
     setNotebookDialog(null);
+    setTrashDialog(null);
     if (pendingTransitionRef.current?.close || activeTransitionRef.current?.close) return;
     if (pendingTransitionRef.current) clearPendingTransition();
     requestTransition({
@@ -539,6 +557,35 @@ function App() {
   }, [pendingTransition]);
 
   useEffect(() => {
+    if (!trashDialog) return;
+    const dialog = trashDialogRef.current;
+    dialog?.querySelector<HTMLButtonElement>('[data-trash-dialog-cancel]')?.focus();
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !trashMutationInProgressRef.current) {
+        event.preventDefault();
+        setTrashDialog(null);
+        return;
+      }
+      if (event.key !== 'Tab' || !dialog) return;
+      const controls = Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), select:not([disabled])'));
+      if (controls.length === 0) return;
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleDialogKeyDown);
+    return () => window.removeEventListener('keydown', handleDialogKeyDown);
+  }, [trashDialog]);
+
+  useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
@@ -553,7 +600,7 @@ function App() {
     if (operationInProgressRef.current || isAbandoningRef.current) return;
     const current = draftRef.current;
     const currentSession = sessionRef.current;
-    if (!current || !currentSession) return;
+    if (!current || !currentSession || isTrashViewRef.current || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
     const next = { ...current, [field]: value };
     draftRef.current = next;
     setDraft(next);
@@ -592,13 +639,44 @@ function App() {
   const createNote = () => {
     const currentWorkspace = workspaceRef.current;
     const currentLibrary = currentWorkspace?.library;
-    const targetNotebookId = selectedNotebookId;
+    const creatingFromTrash = isTrashViewRef.current;
+    const targetNotebookId = creatingFromTrash ? null : selectedNotebookId;
     const notebookName = targetNotebookId
       ? currentLibrary?.notebooks.find((notebook) => notebook.notebookId === targetNotebookId)?.name ?? '当前笔记本'
       : currentLibrary?.defaultNotebookName ?? '默认笔记本';
     requestTransition({
       label: `在“${notebookName}”中新建笔记`,
-      run: async () => applySession(await workspaceApi.newNote(targetNotebookId)),
+      run: async () => {
+        if (creatingFromTrash) {
+          setTrashView(false);
+          persistViewPreferences({ ...viewPreferencesRef.current, selectedNotebookId: null });
+        }
+        applySession(await workspaceApi.newNote(targetNotebookId));
+      },
+    });
+  };
+
+  const selectNotebookView = (notebookId: string | null) => {
+    const select = () => persistViewPreferences({ ...viewPreferencesRef.current, selectedNotebookId: notebookId });
+    if (!isTrashViewRef.current) {
+      select();
+      return;
+    }
+
+    requestTransition({
+      label: notebookId ? '返回普通笔记本' : '返回全部笔记',
+      run: async () => {
+        setTrashView(false);
+        select();
+      },
+    });
+  };
+
+  const selectTrashView = () => {
+    if (isTrashViewRef.current) return;
+    requestTransition({
+      label: '打开回收站',
+      run: async () => setTrashView(true),
     });
   };
 
@@ -610,6 +688,146 @@ function App() {
   const applyLibraryView = (nextLibrary: NonNullable<WorkspaceView['library']>) => {
     const currentWorkspace = workspaceRef.current;
     if (currentWorkspace) updateWorkspace({ ...currentWorkspace, library: nextLibrary });
+  };
+
+  const trashCurrentNote = () => {
+    const currentSession = sessionRef.current;
+    if (!currentSession || currentSession.trashedAt !== null) return;
+    requestTransition({
+      label: `将“${noteTitle(currentSession.text)}”移入回收站`,
+      run: async () => {
+        const activeSession = sessionRef.current;
+        if (!activeSession || activeSession.sessionId !== currentSession.sessionId) return;
+        const receipt = await workspaceApi.trashNote(currentSession.sessionId);
+        applyLibraryView(receipt.library);
+        applySession(receipt.session);
+        setTrashView(true);
+      },
+    });
+  };
+
+  const openTrashDeleteDialog = () => {
+    const currentSession = sessionRef.current;
+    if (!currentSession || currentSession.trashedAt === null || operationInProgressRef.current) return;
+    setError(null);
+    setTrashDialog({
+      mode: 'delete',
+      sessionId: currentSession.sessionId,
+      noteId: currentSession.noteId,
+      title: noteTitle(currentSession.text),
+      error: null,
+    });
+  };
+
+  const restoreTrashedNote = (targetNotebookId: string | null) => {
+    const currentSession = sessionRef.current;
+    const currentLibrary = workspaceRef.current?.library;
+    if (!currentSession || currentSession.trashedAt === null || !currentLibrary) return;
+    const sessionId = currentSession.sessionId;
+    const title = noteTitle(currentSession.text);
+    setTrashDialog((current) => current?.mode === 'restore-target' && current.sessionId === sessionId
+      ? { ...current, error: null }
+      : current);
+    setError(null);
+    requestTransition({
+      label: `恢复“${title}”`,
+      run: async () => {
+        if (sessionRef.current?.sessionId !== sessionId) return;
+        trashMutationInProgressRef.current = true;
+        try {
+          const receipt = await workspaceApi.restoreTrashedNote(sessionId, targetNotebookId);
+          const currentWorkspace = workspaceRef.current;
+          if (currentWorkspace) updateWorkspace({ ...currentWorkspace, library: receipt.library, session: receipt.session });
+          applySession(receipt.session);
+          setTrashView(false);
+          const restoredNotebookId = targetNotebookId
+            ?? receipt.session.notebookId
+            ?? receipt.library.defaultNotebookId;
+          persistViewPreferences({
+            ...viewPreferencesRef.current,
+            selectedNotebookId: restoredNotebookId === receipt.library.defaultNotebookId ? null : restoredNotebookId,
+          });
+          setTrashDialog(null);
+        } catch (cause) {
+          const operationError = toWorkspaceError(cause);
+          setTrashDialog((current) => current?.mode === 'restore-target' && current.sessionId === sessionId
+            ? { ...current, error: operationError.message }
+            : current);
+          setError(operationError);
+        } finally {
+          trashMutationInProgressRef.current = false;
+        }
+      },
+    });
+  };
+
+  const openTrashRestore = () => {
+    const currentSession = sessionRef.current;
+    const currentLibrary = workspaceRef.current?.library;
+    if (!currentSession || currentSession.trashedAt === null || !currentLibrary || operationInProgressRef.current) return;
+    const originalNotebookId = currentSession.notebookId;
+    const originalNotebookExists = originalNotebookId !== null
+      && currentLibrary.notebooks.some((notebook) => notebook.notebookId === originalNotebookId);
+    if (originalNotebookExists) {
+      restoreTrashedNote(null);
+      return;
+    }
+
+    setError(null);
+    setTrashDialog({
+      mode: 'restore-target',
+      sessionId: currentSession.sessionId,
+      noteId: currentSession.noteId,
+      title: noteTitle(currentSession.text),
+      targetNotebookId: currentLibrary.defaultNotebookId,
+      error: null,
+    });
+  };
+
+  const confirmTrashDelete = () => {
+    const dialog = trashDialog;
+    const currentSession = sessionRef.current;
+    if (!dialog || dialog.mode !== 'delete' || operationInProgressRef.current) return;
+    if (!currentSession || currentSession.sessionId !== dialog.sessionId || currentSession.trashedAt === null) {
+      setTrashDialog({ ...dialog, error: '当前回收站笔记已变化，请关闭此窗口后重新选择。' });
+      return;
+    }
+
+    setTrashDialog({ ...dialog, error: null });
+    setError(null);
+    requestTransition({
+      label: `永久删除“${dialog.title}”`,
+      run: async () => {
+        if (sessionRef.current?.sessionId !== dialog.sessionId) return;
+        trashMutationInProgressRef.current = true;
+        try {
+          const nextWorkspace = await workspaceApi.deleteTrashedNote(dialog.sessionId, true);
+          applyWorkspace(nextWorkspace);
+          setTrashView(true);
+          setTrashDialog(null);
+        } catch (cause) {
+          const operationError = toWorkspaceError(cause);
+          setTrashDialog((current) => current?.mode === 'delete' && current.sessionId === dialog.sessionId
+            ? { ...current, error: operationError.message }
+            : current);
+          setError(operationError);
+        } finally {
+          trashMutationInProgressRef.current = false;
+        }
+      },
+    });
+  };
+
+  const confirmTrashRestoreTarget = () => {
+    if (trashDialog?.mode !== 'restore-target') return;
+    const targetExists = workspaceRef.current?.library?.notebooks.some(
+      (notebook) => notebook.notebookId === trashDialog.targetNotebookId,
+    );
+    if (!targetExists) {
+      setTrashDialog({ ...trashDialog, error: '请选择一个仍存在的目标笔记本。' });
+      return;
+    }
+    restoreTrashedNote(trashDialog.targetNotebookId);
   };
 
   const openNotebookDialog = (next: NotebookDialogState) => {
@@ -720,27 +938,37 @@ function App() {
 
   const library = workspace?.library ?? null;
   const notes = library?.notes ?? [];
+  const trashNotes = library?.trashNotes ?? [];
   const notebooks = library?.notebooks ?? [];
   const selectedNotebook = notebooks.find((notebook) => notebook.notebookId === selectedNotebookId) ?? null;
-  const visibleNotes = selectedNotebook
-    ? notes.filter((note) => note.notebookId === selectedNotebook.notebookId)
-    : notes;
-  const selectedViewName = selectedNotebook?.name ?? '全部笔记';
+  const visibleNotes = isTrashView
+    ? trashNotes
+    : selectedNotebook
+      ? notes.filter((note) => note.notebookId === selectedNotebook.notebookId)
+      : notes;
+  const selectedViewName = isTrashView ? '回收站' : selectedNotebook?.name ?? '全部笔记';
+  const isTrashSession = Boolean(session?.trashedAt);
+  const sessionMatchesView = Boolean(session && isTrashSession === isTrashView);
+  const displayedDraft = sessionMatchesView ? draft : null;
   const sessionNotebookName = session
-    ? notebooks.find((notebook) => notebook.notebookId === (session.notebookId ?? library?.defaultNotebookId))?.name
-      ?? library?.defaultNotebookName
-      ?? '默认笔记本'
+    ? isTrashSession
+      ? session.notebookId === null
+        ? '原笔记本未知'
+        : notebooks.find((notebook) => notebook.notebookId === session.notebookId)?.name ?? '原笔记本已不存在'
+      : notebooks.find((notebook) => notebook.notebookId === (session.notebookId ?? library?.defaultNotebookId))?.name
+        ?? library?.defaultNotebookName
+        ?? '默认笔记本'
     : null;
-  const isReadOnly = Boolean(session?.readOnlyReason);
+  const isReadOnly = Boolean(session?.readOnlyReason || session?.trashedAt);
   const isSaving = saveState.phase === 'saving';
   const saveFailed = saveState.phase === 'failed' || saveState.phase === 'conflict';
-  const isDirty = Boolean(session && draft && !isReadOnly && (
+  const isDirty = Boolean(sessionMatchesView && session && draft && !isReadOnly && (
     isComposing || (saveState.sessionId === session.sessionId
       ? saveState.isDirty
       : session.revision === null || !sameText(draft, savedText))
   ));
-  const navigationLocked = isInitializing || isOperationBusy || isNotebookBusy || pendingTransition !== null;
-  const editingLocked = !desktopRuntime || isInitializing || isOperationBusy || isAbandoning || !closeGuardReady;
+  const navigationLocked = isInitializing || isOperationBusy || isNotebookBusy || pendingTransition !== null || trashDialog !== null;
+  const editingLocked = !desktopRuntime || isInitializing || isOperationBusy || isAbandoning || !closeGuardReady || isTrashView || isTrashSession || !sessionMatchesView;
   const canDiscardAfterCopy = Boolean(currentCopy && session && draft
     && currentCopy.sessionId === session.sessionId && sameText(currentCopy.text, draft));
   const runtimeStatus = !desktopRuntime
@@ -758,6 +986,8 @@ function App() {
       ? '保存冲突，请保留当前草稿'
       : saveFailed
       ? '保存失败，请保留当前内容'
+    : session && !sessionMatchesView
+      ? '当前视图未选中笔记'
     : isReadOnly
       ? '只读预览'
       : !session
@@ -816,15 +1046,28 @@ function App() {
             </div>
             <p className="sidebar-group-title">工作区</p>
             <button
-              className={`sidebar-current${selectedNotebookId === null ? ' is-current' : ''}`}
+              className={`sidebar-current${!isTrashView && selectedNotebookId === null ? ' is-current' : ''}`}
               type="button"
-              aria-current={selectedNotebookId === null ? 'page' : undefined}
+              data-testid="all-notes-nav"
+              aria-current={!isTrashView && selectedNotebookId === null ? 'page' : undefined}
               disabled={!library || navigationLocked}
-              onClick={() => persistViewPreferences({ ...viewPreferencesRef.current, selectedNotebookId: null })}
+              onClick={() => selectNotebookView(null)}
             >
               <span className="sidebar-item-icon" aria-hidden="true">⌂</span>
               <span>全部笔记</span>
               {library && <span className="sidebar-nav-count">{notes.length}</span>}
+            </button>
+            <button
+              className={`sidebar-current trash-nav${isTrashView ? ' is-current' : ''}`}
+              type="button"
+              data-testid="trash-nav"
+              aria-current={isTrashView ? 'page' : undefined}
+              disabled={!library || navigationLocked}
+              onClick={selectTrashView}
+            >
+              <span className="sidebar-item-icon" aria-hidden="true">↺</span>
+              <span>回收站</span>
+              {library && <span className="sidebar-nav-count">{trashNotes.length}</span>}
             </button>
             <div className="sidebar-notebook-heading">
               <div>
@@ -844,7 +1087,7 @@ function App() {
               <ul className="sidebar-notebook-list" aria-label="笔记本">
                 {notebooks.map((notebook) => {
                   const notebookNoteCount = notes.filter((note) => note.notebookId === notebook.notebookId).length;
-                  const isSelectedNotebook = selectedNotebookId === notebook.notebookId;
+                  const isSelectedNotebook = !isTrashView && selectedNotebookId === notebook.notebookId;
                   return (
                     <li className="sidebar-notebook-row" key={notebook.notebookId}>
                       <button
@@ -853,7 +1096,7 @@ function App() {
                         data-notebook-id={notebook.notebookId}
                         aria-current={isSelectedNotebook ? 'page' : undefined}
                         disabled={navigationLocked}
-                        onClick={() => persistViewPreferences({ ...viewPreferencesRef.current, selectedNotebookId: notebook.notebookId })}
+                        onClick={() => selectNotebookView(notebook.notebookId)}
                         title={notebook.name}
                       >
                         <span className="sidebar-notebook-icon" aria-hidden="true">▣</span>
@@ -895,13 +1138,16 @@ function App() {
             )}
             <div className="sidebar-notebook-heading">
               <div>
-                <span className="sidebar-group-title">笔记列表</span>
-                {library && <span className="sidebar-note-count">{visibleNotes.length}{selectedNotebook ? ` / ${notes.length}` : ''} 篇笔记</span>}
+                <span className="sidebar-group-title">{isTrashView ? '回收站笔记' : '笔记列表'}</span>
+                {library && <span className="sidebar-note-count">{visibleNotes.length}{!isTrashView && selectedNotebook ? ` / ${notes.length}` : ''} 篇笔记</span>}
               </div>
               <button
                 className="sidebar-add"
                 type="button"
-                aria-label={`在${selectedNotebook ? `“${selectedNotebook.name}”` : `“${library?.defaultNotebookName ?? '默认笔记本'}”`}中新建笔记`}
+                data-testid="create-note"
+                aria-label={isTrashView
+                  ? `在“${library?.defaultNotebookName ?? '默认笔记本'}”中新建笔记`
+                  : `在${selectedNotebook ? `“${selectedNotebook.name}”` : `“${library?.defaultNotebookName ?? '默认笔记本'}”`}中新建笔记`}
                 title="新建笔记"
                 disabled={!desktopRuntime || !library || navigationLocked}
                 onClick={createNote}
@@ -909,31 +1155,36 @@ function App() {
             </div>
             {library ? (
               visibleNotes.length > 0 ? (
-                <ul className="sidebar-note-list" aria-label="笔记列表">
+                <ul className={`sidebar-note-list${isTrashView ? ' trash-note-list' : ''}`} aria-label={isTrashView ? '回收站笔记列表' : '笔记列表'} data-testid={isTrashView ? 'trash-note-list' : 'normal-note-list'}>
                   {visibleNotes.map((note) => (
-                    <li key={note.noteId}>
+                    <li key={note.noteId} data-testid={isTrashView ? 'trash-note-row' : undefined}>
                       <button
-                        className={`sidebar-note-item${session?.noteId === note.noteId ? ' is-current' : ''}`}
+                        className={`sidebar-note-item${sessionMatchesView && session?.noteId === note.noteId ? ' is-current' : ''}`}
                         type="button"
+                        data-testid={isTrashView ? 'trash-note-item' : 'normal-note-item'}
                         data-note-id={note.noteId}
-                        aria-current={session?.noteId === note.noteId ? 'page' : undefined}
+                        aria-current={sessionMatchesView && session?.noteId === note.noteId ? 'page' : undefined}
                         disabled={navigationLocked}
                         onClick={() => openNote(note.noteId, note.title)}
-                        title={`${noteTitle(note)} · ${formatModifiedAt(note.modifiedAt)}`}
-                        aria-label={`打开笔记：${noteTitle(note)}；${note.pinned ? '已置顶；' : ''}${formatModifiedAt(note.modifiedAt)}；${note.excerpt.trim() || '暂无内容摘要'}`}
+                        title={`${noteTitle(note)} · ${formatModifiedAt(isTrashView ? note.trashedAt ?? note.modifiedAt : note.modifiedAt)}`}
+                        aria-label={isTrashView
+                          ? `打开回收站笔记：${noteTitle(note)}；移入回收站时间 ${formatModifiedAt(note.trashedAt ?? note.modifiedAt)}；${note.excerpt.trim() || '暂无内容摘要'}`
+                          : `打开笔记：${noteTitle(note)}；${note.pinned ? '已置顶；' : ''}${formatModifiedAt(note.modifiedAt)}；${note.excerpt.trim() || '暂无内容摘要'}`}
                       >
                         <span className="sidebar-note-line">
                           {note.pinned && <span className="sidebar-pin" aria-label="已置顶" title="已置顶">◆</span>}
                           <span className="sidebar-note-title">{noteTitle(note)}</span>
                         </span>
                         <span className="sidebar-note-excerpt">{note.excerpt.trim() || '暂无内容摘要'}</span>
-                        <time className="sidebar-note-time" dateTime={note.modifiedAt}>{formatModifiedAt(note.modifiedAt)}</time>
+                        <time className="sidebar-note-time" dateTime={isTrashView ? note.trashedAt ?? note.modifiedAt : note.modifiedAt}>
+                          {isTrashView ? '删除于 ' : ''}{formatModifiedAt(isTrashView ? note.trashedAt ?? note.modifiedAt : note.modifiedAt)}
+                        </time>
                       </button>
                     </li>
                   ))}
                 </ul>
               ) : (
-                <div className="sidebar-empty">{selectedNotebook ? `“${selectedNotebook.name}”里还没有笔记` : '这里还没有笔记'}</div>
+                <div className="sidebar-empty">{isTrashView ? '回收站为空' : selectedNotebook ? `“${selectedNotebook.name}”里还没有笔记` : '这里还没有笔记'}</div>
               )
             ) : (
               <div className="sidebar-empty">选择笔记库后开始记录</div>
@@ -970,14 +1221,16 @@ function App() {
             <div className="eyebrow"><span>CueNote</span><span className="eyebrow-line" />康奈尔笔记</div>
             <h1 id="page-title">
               {desktopRuntime
-                ? draft?.title.trim() || (session ? '未命名笔记' : '写下你的第一篇笔记')
+                ? displayedDraft?.title.trim() || (sessionMatchesView ? '未命名笔记' : isTrashView ? '回收站' : '写下你的第一篇笔记')
                 : '让每个想法，都有清晰的落点。'}
             </h1>
             <p>
               {desktopRuntime
-                ? library
-                  ? '在自己的笔记库中记录与回顾。'
-                  : '先选择笔记库，笔记会保存在你控制的本机目录中。'
+                ? isTrashView
+                  ? '回收站中的笔记只读；恢复后可继续编辑。'
+                  : library
+                    ? '在自己的笔记库中记录与回顾。'
+                    : '先选择笔记库，笔记会保存在你控制的本机目录中。'
                 : '这是界面预览，不会读取、创建或保存笔记。'}
             </p>
           </div>
@@ -1142,22 +1395,31 @@ function App() {
               <button className="quiet-button" type="button" disabled={navigationLocked} onClick={chooseLibrary}>选择已有笔记库</button>
             </div>
           </section>
-        ) : !session || !draft ? (
-          <section className="empty-workspace">
-            <span className="empty-mark" aria-hidden="true">✳</span>
-            <h2>准备好记录了吗？</h2>
-            <p>在“{selectedNotebook?.name ?? library.defaultNotebookName}”中创建一篇笔记，开始整理你的想法。</p>
-            <button className="primary-button" type="button" disabled={navigationLocked} onClick={createNote}>新建笔记</button>
+        ) : !sessionMatchesView || !session || !draft ? (
+          <section className="empty-workspace" data-testid={isTrashView ? 'trash-empty-view' : undefined}>
+            <span className="empty-mark" aria-hidden="true">{isTrashView && trashNotes.length === 0 ? '✓' : '✳'}</span>
+            {isTrashView ? (
+              <>
+                <h2>{trashNotes.length === 0 ? '回收站为空' : '选择一篇回收站笔记'}</h2>
+                <p>{trashNotes.length === 0 ? '移入回收站的笔记会显示在左侧列表中。' : '回收站笔记只读，可恢复到原笔记本或永久删除。'}</p>
+              </>
+            ) : (
+              <>
+                <h2>{session ? '请选择一篇普通笔记' : '准备好记录了吗？'}</h2>
+                <p>在“{selectedNotebook?.name ?? library.defaultNotebookName}”中创建一篇笔记，开始整理你的想法。</p>
+                <button className="primary-button" type="button" data-testid="create-note-empty" disabled={navigationLocked} onClick={createNote}>新建笔记</button>
+              </>
+            )}
           </section>
         ) : (
-          <article className="note-paper" aria-label="康奈尔笔记编辑区">
+          <article className={`note-paper${isTrashSession ? ' trash-note-paper' : ''}`} aria-label={isTrashSession ? '回收站笔记只读视图' : '康奈尔笔记编辑区'} data-testid={isTrashSession ? 'trash-note-view' : 'note-editor'}>
             <div className="paper-topline">
               <span>康奈尔笔记</span>
               <span className="paper-topline-right"><span className={`paper-dot${saveFailed || isDirty || session.revision === null ? ' is-unsaved' : ' is-saved'}`} />{saveStatus}</span>
             </div>
             <div className="note-organization" aria-label="当前笔记整理方式">
               <span className="note-notebook-context">当前笔记本：<strong>{sessionNotebookName}</strong></span>
-              {desktopRuntime && library && (
+              {desktopRuntime && library && !isTrashSession && (
                 <div className="note-organization-controls">
                   <label className="note-move-control">
                     <span>移动到</span>
@@ -1186,6 +1448,31 @@ function App() {
                   >
                     <span aria-hidden="true">◆</span>{session.pinned ? '已置顶' : '置顶'}
                   </button>
+                  <button
+                    className="quiet-button destructive-quiet move-to-trash-button"
+                    type="button"
+                    data-testid="move-to-trash"
+                    disabled={navigationLocked}
+                    onClick={trashCurrentNote}
+                  >移入回收站</button>
+                </div>
+              )}
+              {desktopRuntime && isTrashSession && (
+                <div className="note-organization-controls trash-note-controls">
+                  <button
+                    className="quiet-button"
+                    type="button"
+                    data-testid="trash-restore"
+                    disabled={navigationLocked}
+                    onClick={openTrashRestore}
+                  >恢复</button>
+                  <button
+                    className="quiet-button destructive-quiet"
+                    type="button"
+                    data-testid="trash-permanent-delete"
+                    disabled={navigationLocked}
+                    onClick={openTrashDeleteDialog}
+                  >永久删除</button>
                 </div>
               )}
             </div>
@@ -1193,7 +1480,7 @@ function App() {
               <div className="readonly-notice" role="status">
                 <strong>这篇笔记以只读方式打开</strong>
                 <p>{session.readOnlyReason}</p>
-                <span>当前版本暂不支持编辑其中的全部内容，原文件保持完整。</span>
+                {!isTrashSession && <span>当前版本暂不支持编辑其中的全部内容，原文件保持完整。</span>}
               </div>
             )}
             <section className="title-preview editable-title" aria-labelledby="note-title-label">
@@ -1264,8 +1551,10 @@ function App() {
             </section>
             <div className="note-actions">
               <div className="save-controls">
-                <span className="save-hint">{isReadOnly
-                  ? '当前显示可阅读的文字内容。'
+                <span className="save-hint">{isTrashSession
+                  ? '回收站中的笔记为只读；恢复后可继续编辑。'
+                  : isReadOnly
+                    ? '当前显示可阅读的文字内容。'
                   : '停止输入约 1 秒后自动保存；使用 Ctrl / ⌘ + S 可立即保存。'}</span>
                 {saveFailed && !isReadOnly && (
                   <button className="quiet-button safe-copy-button" type="button" disabled={isOperationBusy} onClick={() => void saveCurrentAs()}>
@@ -1373,7 +1662,7 @@ function App() {
               <>
                 <span className="dialog-mark" aria-hidden="true">?</span>
                 <h2 id="notebook-dialog-title">删除笔记本</h2>
-                <p id="notebook-dialog-description">要删除“{notebookDialog.name}”吗？只有空笔记本可以删除，笔记不会因此被移除。</p>
+                <p id="notebook-dialog-description">要删除“{notebookDialog.name}”吗？仅能删除没有正常笔记的笔记本。回收站笔记仍保留，恢复时需选择目标笔记本。</p>
                 {notebookDialogError && <div className="notebook-dialog-error" role="alert">{notebookDialogError}</div>}
                 <div className="dialog-actions">
                   <button className="quiet-button" type="button" disabled={isNotebookBusy} onClick={() => setNotebookDialog(null)}>取消</button>
@@ -1406,6 +1695,86 @@ function App() {
                   </button>
                 </div>
               </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {trashDialog && (
+        <div className="dialog-backdrop trash-dialog-backdrop">
+          <div
+            className="unsaved-dialog trash-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="trash-dialog-title"
+            aria-describedby="trash-dialog-description"
+            ref={trashDialogRef}
+            data-testid={trashDialog.mode === 'delete' ? 'trash-delete-dialog' : 'trash-restore-dialog'}
+            data-note-id={trashDialog.noteId}
+          >
+            <span className="dialog-mark" aria-hidden="true">{trashDialog.mode === 'delete' ? '!' : '↺'}</span>
+            {trashDialog.mode === 'delete' ? (
+              <>
+                <h2 id="trash-dialog-title">永久删除这篇笔记？</h2>
+                <p id="trash-dialog-description">将从当前笔记库永久删除“{trashDialog.title}”及内含附件。此操作无法撤销；独立备份、历史与恢复副本不受影响。</p>
+                {trashDialog.error && <div className="trash-dialog-error" role="alert" data-testid="trash-dialog-error">{trashDialog.error}</div>}
+                <div className="dialog-actions">
+                  <button
+                    className="text-button"
+                    type="button"
+                    data-testid="trash-delete-cancel"
+                    data-trash-dialog-cancel
+                    disabled={isOperationBusy}
+                    onClick={() => setTrashDialog(null)}
+                  >取消</button>
+                  <button
+                    className="quiet-button destructive-quiet"
+                    type="button"
+                    data-testid="trash-delete-confirm"
+                    disabled={isOperationBusy}
+                    onClick={confirmTrashDelete}
+                  >{isOperationBusy ? '正在永久删除…' : '永久删除'}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 id="trash-dialog-title">选择恢复目标</h2>
+                <p id="trash-dialog-description">“{trashDialog.title}”的原笔记本已不存在。请选择一个目标笔记本。</p>
+                <label className="trash-target-field">
+                  <span>恢复到笔记本</span>
+                  <select
+                    aria-label="恢复目标笔记本"
+                    data-testid="trash-restore-target-picker"
+                    value={trashDialog.targetNotebookId}
+                    disabled={isOperationBusy}
+                    onChange={(event) => setTrashDialog({ ...trashDialog, targetNotebookId: event.currentTarget.value, error: null })}
+                  >
+                    {(library?.notebooks ?? []).map((notebook) => (
+                      <option key={notebook.notebookId} value={notebook.notebookId}>{notebook.name}</option>
+                    ))}
+                  </select>
+                </label>
+                {trashDialog.error && <div className="trash-dialog-error" role="alert" data-testid="trash-dialog-error">{trashDialog.error}</div>}
+                <div className="dialog-actions">
+                  <button
+                    className="text-button"
+                    type="button"
+                    data-testid="trash-restore-cancel"
+                    data-trash-dialog-cancel
+                    disabled={isOperationBusy}
+                    onClick={() => setTrashDialog(null)}
+                  >取消</button>
+                  <button
+                    className="primary-button"
+                    type="button"
+                    data-testid="trash-restore-confirm"
+                    disabled={isOperationBusy || !trashDialog.targetNotebookId || !(library?.notebooks ?? []).some(
+                      (notebook) => notebook.notebookId === trashDialog.targetNotebookId,
+                    )}
+                    onClick={confirmTrashRestoreTarget}
+                  >{isOperationBusy ? '正在恢复…' : '恢复到所选笔记本'}</button>
+                </div>
+              </>
             )}
           </div>
         </div>

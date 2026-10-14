@@ -32,6 +32,7 @@ pub struct NoteSummary {
     pub note_id: String,
     pub title: String,
     pub modified_at: String,
+    pub trashed_at: Option<String>,
     pub notebook_id: Option<String>,
     pub pinned: bool,
     pub excerpt: String,
@@ -53,6 +54,7 @@ pub struct LibraryView {
     pub default_notebook_id: String,
     pub notebooks: Vec<NotebookSummary>,
     pub notes: Vec<NoteSummary>,
+    pub trash_notes: Vec<NoteSummary>,
     pub warnings: Vec<String>,
 }
 
@@ -63,6 +65,7 @@ pub struct NoteSession {
     pub note_id: String,
     pub notebook_id: Option<String>,
     pub pinned: bool,
+    pub trashed_at: Option<String>,
     pub text: PlainText,
     pub revision: Option<String>,
     pub read_only_reason: Option<String>,
@@ -268,14 +271,36 @@ impl Workspace {
                                             "无法检查上次笔记；请检查文件后重新打开。{error}"
                                         ));
                                     }
-                                    Ok(_) => {
-                                        if let Err(error) = self.open_note(&note_id) {
+                                    Ok(_) => match self.open_note(&note_id) {
+                                        Ok(session) if session.trashed_at.is_some() => {
+                                            self.session = None;
+                                            self.last_note_id = None;
+                                            let library_path = self
+                                                .library
+                                                .as_ref()
+                                                .expect("library was just loaded")
+                                                .path
+                                                .clone();
+                                            self.notice = Some(match self.persist_preference(
+                                                    &library_path,
+                                                    None,
+                                                    &self.preferences,
+                                                ) {
+                                                    Ok(()) => "上次笔记已移入回收站，已返回笔记列表。".into(),
+                                                    Err(error) => format!(
+                                                        "上次笔记已移入回收站，已返回笔记列表；无法更新本机设置：{}",
+                                                        error.message
+                                                    ),
+                                                });
+                                        }
+                                        Ok(_) => {}
+                                        Err(error) => {
                                             self.notice = Some(format!(
                                                 "无法重新打开上次笔记；笔记列表仍可用。{}",
                                                 error.message
                                             ));
                                         }
-                                    }
+                                    },
                                 }
                             }
                         }
@@ -382,6 +407,7 @@ impl Workspace {
             note_id,
             notebook_id: Some(assigned_notebook_id.clone()),
             pinned: false,
+            trashed_at: None,
             text: package.text_projection(),
             revision: None,
             read_only_reason: None,
@@ -431,7 +457,10 @@ impl Workspace {
             (notebook_id, read_only_reason)
         };
         let view = note_session_from_opened(note_id, &opened, read_only_reason.clone());
-        self.persist_preference(&library_path, Some(note_id), &self.preferences)?;
+        if view.trashed_at.is_none() {
+            self.persist_preference(&library_path, Some(note_id), &self.preferences)?;
+            self.last_note_id = Some(note_id.to_owned());
+        }
         self.session = Some(ActiveNoteSession {
             view: view.clone(),
             path,
@@ -439,8 +468,277 @@ impl Workspace {
             baseline_revision: Some(opened.revision),
             notebook_id,
         });
-        self.last_note_id = Some(note_id.to_owned());
         Ok(view)
+    }
+
+    pub fn trash_note(&mut self, session_id: &str) -> Result<SaveReceipt, WorkspaceError> {
+        let (library_path, default_notebook_id, notebooks) = self
+            .library
+            .as_ref()
+            .map(|library| {
+                (
+                    library.path.clone(),
+                    library.default_notebook_id.clone(),
+                    library.notebooks.clone(),
+                )
+            })
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| StorageError::new("noSession", "当前没有可移入回收站的笔记会话。"))?;
+        if session.view.session_id != session_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话已切换；请保留当前文字后重新打开笔记。",
+            ));
+        }
+        if session.package.document.organization.trashed_at.is_some() {
+            return Err(StorageError::new("trashedNote", "此笔记已在回收站中。"));
+        }
+        let notebook_id = session
+            .package
+            .document
+            .organization
+            .notebook_id
+            .as_deref()
+            .ok_or_else(|| StorageError::new("invalidNotebook", "此笔记缺少笔记本归属。"))?;
+        if !notebooks.contains_key(notebook_id) {
+            return Err(StorageError::new(
+                "invalidNotebook",
+                "此笔记属于未知笔记本；回收站状态未更改。",
+            ));
+        }
+
+        let mut candidate = session.package.clone();
+        candidate.document.organization.trashed_at = Some(now_timestamp());
+        candidate.document.timestamps.organization_modified_at =
+            next_timestamp_after(&candidate.document.timestamps.organization_modified_at);
+        let note_path = session.path.clone();
+        let baseline_revision = session.baseline_revision.clone();
+        let note_id = session.view.note_id.clone();
+        let (revision, publish_warning) = match storage::save_note(
+            &note_path,
+            &self.recovery_root,
+            &candidate,
+            baseline_revision.as_deref(),
+        ) {
+            Ok(revision) => (revision, None),
+            Err(error) => match storage::open_note(&note_path) {
+                Ok(published) if published.package == candidate => (
+                    published.revision,
+                    Some(format!(
+                        "笔记已移入回收站并通过重读校验，但保存后步骤报告错误：{}",
+                        error.message
+                    )),
+                ),
+                _ => return Err(error),
+            },
+        };
+
+        let read_only_reason = read_only_reason(
+            &candidate,
+            candidate.document.organization.notebook_id.as_deref(),
+            &notebooks,
+        );
+        let active = self
+            .session
+            .as_mut()
+            .ok_or_else(|| StorageError::new("staleSession", "笔记会话在整理期间已关闭。"))?;
+        if active.view.session_id != session_id || active.view.note_id != note_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话在整理期间发生变化；已发布的回收站状态仍保留在原笔记文件中。",
+            ));
+        }
+        active.package = candidate.clone();
+        active.baseline_revision = Some(revision.clone());
+        active.view.trashed_at = candidate.document.organization.trashed_at.clone();
+        active.view.read_only_reason = read_only_reason;
+        active.view.revision = Some(revision);
+        let saved_session = active.view.clone();
+
+        self.last_note_id = None;
+        let preference_warning = self
+            .persist_preference(&library_path, None, &self.preferences)
+            .err()
+            .map(|error| {
+                format!(
+                    "笔记已移入回收站，但无法更新本机上次笔记设置：{}",
+                    error.message
+                )
+            });
+
+        let library = self.library.as_mut().expect("library checked above");
+        let mut receipt_library =
+            match scan_library(&library_path, &library.notebooks, &default_notebook_id) {
+                Ok(view) => {
+                    library.view = view.clone();
+                    view
+                }
+                Err(error) => {
+                    let mut view = library.view.clone();
+                    view.notes.retain(|note| note.note_id != note_id);
+                    view.trash_notes.retain(|note| note.note_id != note_id);
+                    view.trash_notes
+                        .push(note_summary_from_package(&note_id, &candidate));
+                    sort_trash_notes(&mut view.trash_notes);
+                    push_warning(
+                        &mut view.warnings,
+                        format!("笔记已移入回收站，但无法刷新笔记列表：{}", error.message),
+                    );
+                    library.view = view.clone();
+                    view
+                }
+            };
+        if let Some(warning) = publish_warning {
+            push_warning(&mut receipt_library.warnings, warning);
+        }
+        if let Some(warning) = preference_warning {
+            push_warning(&mut receipt_library.warnings, warning);
+        }
+        library.view.warnings = receipt_library.warnings.clone();
+        Ok(SaveReceipt {
+            session: saved_session,
+            library: receipt_library,
+        })
+    }
+
+    pub fn restore_trashed_note(
+        &mut self,
+        session_id: &str,
+        target_notebook_id: Option<&str>,
+    ) -> Result<SaveReceipt, WorkspaceError> {
+        let (library_path, default_notebook_id, notebooks) = self
+            .library
+            .as_ref()
+            .map(|library| {
+                (
+                    library.path.clone(),
+                    library.default_notebook_id.clone(),
+                    library.notebooks.clone(),
+                )
+            })
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| StorageError::new("noSession", "当前没有可恢复的回收站笔记会话。"))?;
+        if session.view.session_id != session_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话已切换；请重新打开回收站中的笔记后再恢复。",
+            ));
+        }
+        let source_notebook_id = session.package.document.organization.notebook_id.as_deref();
+        if session.package.document.organization.trashed_at.is_none() {
+            return Err(StorageError::new("notTrashed", "所选笔记不在回收站中。"));
+        }
+        let notebook_id = match source_notebook_id {
+            Some(source) if notebooks.contains_key(source) => source.to_owned(),
+            _ => {
+                let target = target_notebook_id.ok_or_else(|| {
+                    StorageError::new(
+                        "restoreTargetRequired",
+                        "原笔记本已不存在，请选择一个现有笔记本后恢复。",
+                    )
+                })?;
+                if !notebooks.contains_key(target) {
+                    return Err(StorageError::new(
+                        "unknownNotebook",
+                        "恢复目标笔记本不存在于当前笔记库。",
+                    ));
+                }
+                target.to_owned()
+            }
+        };
+
+        let mut candidate = session.package.clone();
+        candidate.document.organization.notebook_id = Some(notebook_id.clone());
+        candidate.document.organization.trashed_at = None;
+        candidate.document.timestamps.organization_modified_at =
+            next_timestamp_after(&candidate.document.timestamps.organization_modified_at);
+        let note_path = session.path.clone();
+        let baseline_revision = session.baseline_revision.clone();
+        let note_id = session.view.note_id.clone();
+        let (revision, publish_warning) = match storage::save_note(
+            &note_path,
+            &self.recovery_root,
+            &candidate,
+            baseline_revision.as_deref(),
+        ) {
+            Ok(revision) => (revision, None),
+            Err(error) => match storage::open_note(&note_path) {
+                Ok(published) if published.package == candidate => (
+                    published.revision,
+                    Some(format!(
+                        "笔记已恢复并通过重读校验，但保存后步骤报告错误：{}",
+                        error.message
+                    )),
+                ),
+                _ => return Err(error),
+            },
+        };
+
+        let read_only_reason = read_only_reason(&candidate, Some(&notebook_id), &notebooks);
+        let active = self
+            .session
+            .as_mut()
+            .ok_or_else(|| StorageError::new("staleSession", "笔记会话在恢复期间已关闭。"))?;
+        if active.view.session_id != session_id || active.view.note_id != note_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话在恢复期间发生变化；已发布的恢复状态仍保留在原笔记文件中。",
+            ));
+        }
+        active.package = candidate.clone();
+        active.baseline_revision = Some(revision.clone());
+        active.notebook_id = Some(notebook_id.clone());
+        active.view.notebook_id = Some(notebook_id);
+        active.view.trashed_at = None;
+        active.view.read_only_reason = read_only_reason;
+        active.view.revision = Some(revision);
+        let saved_session = active.view.clone();
+
+        self.last_note_id = Some(note_id.clone());
+        let preference_warning = self
+            .persist_preference(&library_path, Some(&note_id), &self.preferences)
+            .err()
+            .map(|error| format!("笔记已恢复，但无法更新本机上次笔记设置：{}", error.message));
+
+        let library = self.library.as_mut().expect("library checked above");
+        let mut receipt_library =
+            match scan_library(&library_path, &library.notebooks, &default_notebook_id) {
+                Ok(view) => {
+                    library.view = view.clone();
+                    view
+                }
+                Err(error) => {
+                    let mut view = library.view.clone();
+                    view.trash_notes.retain(|note| note.note_id != note_id);
+                    view.notes.retain(|note| note.note_id != note_id);
+                    view.notes
+                        .push(note_summary_from_package(&note_id, &candidate));
+                    sort_note_summaries(&mut view.notes);
+                    push_warning(
+                        &mut view.warnings,
+                        format!("笔记已恢复，但无法刷新笔记列表：{}", error.message),
+                    );
+                    library.view = view.clone();
+                    view
+                }
+            };
+        if let Some(warning) = publish_warning {
+            push_warning(&mut receipt_library.warnings, warning);
+        }
+        if let Some(warning) = preference_warning {
+            push_warning(&mut receipt_library.warnings, warning);
+        }
+        library.view.warnings = receipt_library.warnings.clone();
+        Ok(SaveReceipt {
+            session: saved_session,
+            library: receipt_library,
+        })
     }
 
     pub fn save_note_text(
@@ -867,6 +1165,100 @@ impl Workspace {
             session: saved_session,
             library: receipt_library,
         })
+    }
+
+    pub fn delete_trashed_note(
+        &mut self,
+        session_id: &str,
+        confirmed: bool,
+    ) -> Result<WorkspaceView, WorkspaceError> {
+        if !confirmed {
+            return Err(StorageError::new(
+                "confirmationRequired",
+                "永久删除回收站笔记前需要明确确认。",
+            ));
+        }
+        let (library_path, default_notebook_id) = self
+            .library
+            .as_ref()
+            .map(|library| (library.path.clone(), library.default_notebook_id.clone()))
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        let session = self.session.as_ref().ok_or_else(|| {
+            StorageError::new("noSession", "当前没有可永久删除的回收站笔记会话。")
+        })?;
+        if session.view.session_id != session_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话已切换；请重新打开选中的回收站笔记后再删除。",
+            ));
+        }
+        if session.package.document.organization.trashed_at.is_none() {
+            return Err(StorageError::new(
+                "notTrashed",
+                "只能永久删除回收站中的笔记。",
+            ));
+        }
+        let note_id = session.view.note_id.clone();
+        let note_path = session.path.clone();
+        let expected_revision = session
+            .baseline_revision
+            .clone()
+            .ok_or_else(|| StorageError::new("conflict", "回收站笔记缺少版本基线。"))?;
+        let notes_directory = library_path.join("notes");
+        ensure_child_directory(&library_path, &notes_directory, false)?;
+        let expected_path = notes_directory.join(format!("{note_id}.cuenote"));
+        if note_path != expected_path {
+            return Err(StorageError::new(
+                "unsafePath",
+                "所选会话不再指向当前笔记库中的对应笔记文件。",
+            ));
+        }
+        ensure_regular_child(&library_path, &expected_path)?;
+        let deletion_warning = storage::delete_trashed_note(
+            &expected_path,
+            &self.recovery_root,
+            &note_id,
+            &expected_revision,
+        )?;
+
+        let preference_warning = if self.last_note_id.as_deref() == Some(note_id.as_str()) {
+            self.last_note_id = None;
+            self.persist_preference(&library_path, None, &self.preferences)
+                .err()
+                .map(|error| {
+                    format!(
+                        "笔记文件已永久删除，但无法更新本机上次笔记设置：{}",
+                        error.message
+                    )
+                })
+        } else {
+            None
+        };
+        self.session = None;
+
+        let library = self.library.as_mut().expect("library checked above");
+        let mut updated =
+            match scan_library(&library_path, &library.notebooks, &default_notebook_id) {
+                Ok(view) => view,
+                Err(error) => {
+                    let mut view = library.view.clone();
+                    view.notes.retain(|note| note.note_id != note_id);
+                    view.trash_notes.retain(|note| note.note_id != note_id);
+                    push_warning(
+                        &mut view.warnings,
+                        format!("笔记文件已永久删除，但无法刷新笔记列表：{}", error.message),
+                    );
+                    view
+                }
+            };
+        if let Some(warning) = deletion_warning {
+            push_warning(&mut updated.warnings, warning);
+        }
+        if let Some(warning) = preference_warning {
+            push_warning(&mut updated.warnings, warning);
+        }
+        library.view = updated;
+        Ok(self.view())
     }
 
     pub fn set_view_preferences(
@@ -1340,6 +1732,9 @@ fn read_only_reason(
     notebook_id: Option<&str>,
     notebooks: &BTreeMap<String, NotebookMetadata>,
 ) -> Option<String> {
+    if package.document.organization.trashed_at.is_some() {
+        return Some("此笔记在回收站中，请先恢复后再编辑。".into());
+    }
     if notebook_id.is_none() {
         return Some("此笔记缺少笔记本归属，当前以只读方式打开。".into());
     }
@@ -1362,6 +1757,7 @@ fn note_session_from_opened(
         note_id: note_id.to_owned(),
         notebook_id: opened.package.document.organization.notebook_id.clone(),
         pinned: opened.package.document.organization.pinned,
+        trashed_at: opened.package.document.organization.trashed_at.clone(),
         text: opened.package.text_projection(),
         revision: Some(opened.revision.clone()),
         read_only_reason,
@@ -1383,6 +1779,7 @@ fn scan_library(
         ));
     }
     let mut notes = Vec::new();
+    let mut trash_notes = Vec::new();
     let mut warnings = Vec::new();
     let mut seen_file_ids = HashSet::new();
     let mut seen_package_ids = HashMap::<String, bool>::new();
@@ -1476,51 +1873,32 @@ fn scan_library(
         }
         seen_package_ids.insert(package_id, true);
         let notebook_id = opened.package.document.organization.notebook_id.as_deref();
-        if notebook_id.is_none() {
+        let trashed_at = opened.package.document.organization.trashed_at.clone();
+        if trashed_at.is_none() && notebook_id.is_none() {
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
                 format!("笔记 {stem} 缺少笔记本归属，保存前需先处理。"),
             );
-        } else if !notebooks.contains_key(notebook_id.unwrap()) {
+        } else if trashed_at.is_none() && !notebooks.contains_key(notebook_id.unwrap()) {
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
                 format!("笔记 {stem} 属于未知笔记本，当前不会重新归属。"),
             );
         }
-        let projection = opened.package.text_projection();
-        let excerpt_source = if !projection.summary.trim().is_empty() {
-            &projection.summary
-        } else if !projection.content.trim().is_empty() {
-            &projection.content
+        let summary = note_summary_from_package(stem, &opened.package);
+        if trashed_at.is_some() {
+            trash_notes.push(summary);
         } else {
-            &projection.cue
-        };
-        notes.push(NoteSummary {
-            note_id: stem.to_owned(),
-            title: opened.package.document.title.clone(),
-            modified_at: opened
-                .package
-                .document
-                .timestamps
-                .content_modified_at
-                .clone(),
-            notebook_id: opened.package.document.organization.notebook_id.clone(),
-            pinned: opened.package.document.organization.pinned,
-            excerpt: truncate_excerpt(excerpt_source),
-        });
+            notes.push(summary);
+        }
     }
     if omitted_warnings > 0 {
         warnings.push(format!("另有 {omitted_warnings} 条笔记警告未显示。"));
     }
-    notes.sort_by(|left, right| {
-        right
-            .pinned
-            .cmp(&left.pinned)
-            .then_with(|| right.modified_at.cmp(&left.modified_at))
-            .then_with(|| left.note_id.cmp(&right.note_id))
-    });
+    sort_note_summaries(&mut notes);
+    sort_trash_notes(&mut trash_notes);
     let default_notebook_name = notebooks
         .get(default_notebook_id)
         .map(|metadata| metadata.name.clone())
@@ -1546,8 +1924,19 @@ fn scan_library(
         default_notebook_id: default_notebook_id.to_owned(),
         notebooks: notebook_summaries,
         notes,
+        trash_notes,
         warnings,
     })
+}
+
+fn sort_note_summaries(notes: &mut [NoteSummary]) {
+    notes.sort_by(|left, right| {
+        right
+            .pinned
+            .cmp(&left.pinned)
+            .then_with(|| right.modified_at.cmp(&left.modified_at))
+            .then_with(|| left.note_id.cmp(&right.note_id))
+    });
 }
 
 fn read_notebooks(
@@ -1752,6 +2141,9 @@ fn count_notebook_notes(
                 "笔记文件名与内容身份不一致；不能确认笔记本为空。",
             ));
         }
+        if opened.package.document.organization.trashed_at.is_some() {
+            continue;
+        }
         let assigned_id = opened
             .package
             .document
@@ -1775,6 +2167,35 @@ fn count_notebook_notes(
         }
     }
     Ok(assigned)
+}
+
+fn note_summary_from_package(note_id: &str, package: &NotePackage) -> NoteSummary {
+    let projection = package.text_projection();
+    let excerpt_source = if !projection.summary.trim().is_empty() {
+        &projection.summary
+    } else if !projection.content.trim().is_empty() {
+        &projection.content
+    } else {
+        &projection.cue
+    };
+    NoteSummary {
+        note_id: note_id.to_owned(),
+        title: package.document.title.clone(),
+        modified_at: package.document.timestamps.content_modified_at.clone(),
+        trashed_at: package.document.organization.trashed_at.clone(),
+        notebook_id: package.document.organization.notebook_id.clone(),
+        pinned: package.document.organization.pinned,
+        excerpt: truncate_excerpt(excerpt_source),
+    }
+}
+
+fn sort_trash_notes(notes: &mut [NoteSummary]) {
+    notes.sort_by(|left, right| {
+        right
+            .trashed_at
+            .cmp(&left.trashed_at)
+            .then_with(|| left.note_id.cmp(&right.note_id))
+    });
 }
 
 fn truncate_excerpt(summary: &str) -> String {

@@ -84,6 +84,60 @@ pub fn open_note(path: &Path) -> Result<OpenedNote, StorageError> {
     })
 }
 
+/// Removes one confirmed trashed package after coordinating with note saves and
+/// matching the session's exact package revision. Returns a warning if removal
+/// succeeded but the platform could not confirm the parent-directory sync.
+pub(crate) fn delete_trashed_note(
+    path: &Path,
+    recovery_root: &Path,
+    note_id: &str,
+    expected_revision: &str,
+) -> Result<Option<String>, StorageError> {
+    let parsed_id = Uuid::parse_str(note_id)
+        .map_err(|_| StorageError::new("invalidNoteId", "笔记身份格式无效。"))?;
+    if parsed_id.get_version_num() != 4 || parsed_id.to_string() != note_id {
+        return Err(StorageError::new("invalidNoteId", "笔记身份格式无效。"));
+    }
+    let target = resolve_target(path)?;
+    if target.path.file_stem().and_then(|stem| stem.to_str()) != Some(note_id) {
+        return Err(StorageError::new(
+            "invalidNoteId",
+            "笔记身份与指定文件名不一致。",
+        ));
+    }
+    let recovery = prepare_recovery_root(recovery_root, &target.parent)?;
+    let _lock = acquire_save_lock(&recovery, &target.path)
+        .map_err(|error| StorageError::io("无法协调笔记永久删除", error))?;
+    let current = inspect_note(&target)?
+        .ok_or_else(|| StorageError::new("conflict", "回收站笔记已不存在；没有删除其他文件。"))?;
+    if current.package.document.note_id != note_id {
+        return Err(StorageError::new(
+            "conflict",
+            "笔记文件身份已变化；没有删除其他文件。",
+        ));
+    }
+    if current.revision != expected_revision {
+        return Err(StorageError::new(
+            "conflict",
+            "回收站笔记在打开后已发生变化；请重新打开并确认删除。",
+        ));
+    }
+    if current.package.document.organization.trashed_at.is_none() {
+        return Err(StorageError::new(
+            "notTrashed",
+            "笔记已不在回收站中；没有删除文件。",
+        ));
+    }
+    fs::remove_file(&target.path)
+        .map_err(|error| StorageError::io("无法永久删除所选回收站笔记", error))?;
+    match sync_parent_directory(&target.parent) {
+        Ok(()) => Ok(None),
+        Err(error) => Ok(Some(format!(
+            "笔记文件已移除，但无法确认笔记库目录已同步：{error}"
+        ))),
+    }
+}
+
 /// Atomically replaces a small library metadata file after confirming its current bytes.
 /// The old bytes remain at the destination on a failed publish or in the reported
 /// same-directory backup when the platform has already completed the replacement.

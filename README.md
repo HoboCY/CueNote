@@ -6,6 +6,8 @@ CueNote 是面向 Windows x64 与 Apple Silicon macOS 的个人康奈尔笔记�
 
 笔记本支持新建、重命名和删除空本，默认笔记本不可删除。可在全部笔记或单本中浏览、创建笔记，通过摘要和时间区分同名笔记；移动和置顶不改变内容修改时间。重启定位到上次编辑的笔记，侧栏与列表范围偏好只保存在本机。
 
+删除笔记先进入独立的只读回收站，不自动清空。恢复时返回原笔记本；原本已删除时选择现有目标。已无正常笔记的自建本可以删除，回收站记录仍可恢复。永久删除单独确认，只移除选中的笔记包及内含附件，独立备份、历史与恢复副本不受影响。
+
 ## 开发环境
 
 需要 Node.js/npm、Rust，以及目标平台的 Tauri 构建依赖。Windows 需要 C++ 构建工具、Windows SDK 和 WebView2；macOS 桌面开发需要 Xcode 或其命令行工具。安装步骤以 [Tauri 官方前置条件](https://v2.tauri.app/start/prerequisites/)为准。
@@ -81,6 +83,7 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 - [首篇笔记保存与重开验证](docs/note-storage-validation.md)
 - [自动保存与恢复验证](docs/autosave-recovery-validation.md)
 - [笔记本与列表验证](docs/notebook-management-validation.md)
+- [回收站验证](docs/trash-validation.md)
 
 Mac、真实 OneDrive 双端、完整编辑能力、容量与性能验收仍需后续实现与测试；当前版本不代表已达到日用标准。
 

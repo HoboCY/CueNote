@@ -10,6 +10,7 @@ export interface NoteSummary {
   notebookId: string | null;
   pinned: boolean;
   excerpt: string;
+  trashedAt: string | null;
 }
 
 export interface NotebookSummary {
@@ -29,6 +30,7 @@ export interface LibraryView {
   defaultNotebookId: string;
   notebooks: NotebookSummary[];
   notes: NoteSummary[];
+  trashNotes: NoteSummary[];
   warnings: string[];
 }
 
@@ -40,6 +42,7 @@ export interface NoteSession {
   readOnlyReason: string | null;
   notebookId: string | null;
   pinned: boolean;
+  trashedAt: string | null;
 }
 
 export interface WorkspaceView {
@@ -94,6 +97,11 @@ export const workspaceApi = {
   deleteNotebook: (notebookId: string) => invoke<LibraryView>('delete_notebook', { notebookId }),
   updateNoteOrganization: (sessionId: string, notebookId: string, pinned: boolean) =>
     invoke<SaveReceipt>('update_note_organization', { sessionId, notebookId, pinned }),
+  trashNote: (sessionId: string) => invoke<SaveReceipt>('trash_note', { sessionId }),
+  restoreTrashedNote: (sessionId: string, targetNotebookId: string | null = null) =>
+    invoke<SaveReceipt>('restore_trashed_note', { sessionId, targetNotebookId }),
+  deleteTrashedNote: (sessionId: string, confirmed: boolean) =>
+    invoke<WorkspaceView>('delete_trashed_note', { sessionId, confirmed }),
   setViewPreferences: (sidebarCollapsed: boolean, selectedNotebookId: string | null) =>
     invoke<void>('set_view_preferences', { sidebarCollapsed, selectedNotebookId }),
   save: (sessionId: string, text: PlainNoteText) =>

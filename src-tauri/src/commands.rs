@@ -144,6 +144,41 @@ pub async fn update_note_organization(
 }
 
 #[tauri::command]
+pub async fn trash_note(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+) -> Result<SaveReceipt, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.trash_note(&session_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn restore_trashed_note(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    target_notebook_id: Option<String>,
+) -> Result<SaveReceipt, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.restore_trashed_note(&session_id, target_notebook_id.as_deref())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn delete_trashed_note(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    confirmed: bool,
+) -> Result<WorkspaceView, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.delete_trashed_note(&session_id, confirmed)
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn set_view_preferences(
     state: State<'_, WorkspaceState>,
     sidebar_collapsed: bool,

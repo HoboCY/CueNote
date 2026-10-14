@@ -721,3 +721,22 @@ button:focus-visible {
   .note-organization { align-items: flex-start; flex-direction: column; }
   .note-organization-controls { width: 100%; justify-content: flex-start; }
 }
+
+.trash-nav { margin-top: 3px; }
+.trash-nav .sidebar-item-icon { color: #8a766b; }
+.trash-nav.is-current .sidebar-item-icon { color: var(--teal-dark); }
+.trash-note-list .sidebar-note-item { border: 1px solid transparent; }
+.trash-note-list .sidebar-note-item.is-current { border-color: #d8e1d6; background: #edf2e9; }
+.trash-note-paper .readonly-notice { border-color: #e6dcc8; background: #faf5e9; }
+.trash-note-controls { justify-content: flex-end; }
+.move-to-trash-button { min-height: 30px; padding: 0 9px; font-size: 9px; }
+.trash-dialog { width: min(470px, 100%); }
+.trash-dialog-error { margin-top: 13px; padding: 9px 10px; border: 1px solid #e4c8be; border-radius: 8px; background: #fbf2ee; color: #77564e; font-size: 9px; line-height: 1.6; overflow-wrap: anywhere; }
+.trash-target-field { display: grid; gap: 6px; margin-top: 17px; color: #718078; font-size: 9px; }
+.trash-target-field select { width: 100%; min-height: 38px; padding: 0 10px; border: 1px solid #d7dfd7; border-radius: 8px; background: #fffefb; color: #344b46; font: inherit; }
+.trash-target-field select:focus { border-color: #8fb4a3; outline: 2px solid #e4eee7; }
+.trash-target-field select:disabled { cursor: wait; opacity: .6; }
+
+@media (max-width: 700px) {
+  .trash-note-controls { justify-content: flex-start; }
+}
