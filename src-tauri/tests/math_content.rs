@@ -234,19 +234,19 @@ fn math_is_rejected_in_side_sections_and_unsupported_content_stays_read_only() {
         "readOnly"
     );
 
-    let mut unsupported_map = expected.clone();
-    unsupported_map.sections.content.push(Block::MindMap {
+    let mut sidebar_map = expected.clone();
+    sidebar_map.sections.cue.push(Block::MindMap {
         map_id: "85ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
         root_id: "65ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
         nodes: vec![MindMapNode {
             id: "65ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
-            text: "仍不可编辑的导图".into(),
+            text: "线索区不可编辑的导图".into(),
             children: Vec::new(),
         }],
     });
     assert_eq!(
         workspace
-            .save_note_content(&created.session_id, unsupported_map)
+            .save_note_content(&created.session_id, sidebar_map)
             .unwrap_err()
             .kind,
         "readOnly"

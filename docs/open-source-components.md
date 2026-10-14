@@ -14,6 +14,7 @@
 | KaTeX | 0.18.10 | MIT | 本地线程中的公式排版及离线字体 |
 | lowlight | 3.3.0 | MIT | 语法高亮树生成 |
 | highlight.js | 11.11.1 | BSD-3-Clause | 七种代码语言的离线语法定义 |
+| Mind Elixir | 5.15.1 | MIT | 展开编辑思维导图的节点和层级；[许可原文](licenses/mind-elixir-LICENSE.txt) |
 | @tauri-apps/api | 2.12.3 | Apache-2.0 OR MIT | 受限宿主调用 |
 | @tauri-apps/cli | 2.12.1 | Apache-2.0 OR MIT | 桌面构建 |
 | TypeScript | 5.9.3 | Apache-2.0 | 类型检查 |

@@ -20,6 +20,7 @@ fn main() {
             "save_note_content",
             "stage_image_raw",
             "preflight_image_insert",
+            "preflight_note_content",
             "read_image_asset",
             "activate_close_guard",
             "complete_close",

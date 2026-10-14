@@ -23,6 +23,7 @@
     "allow-save-note-content",
     "allow-stage-image-raw",
     "allow-preflight-image-insert",
+    "allow-preflight-note-content",
     "allow-read-image-asset",
     "allow-activate-close-guard",
     "allow-complete-close",

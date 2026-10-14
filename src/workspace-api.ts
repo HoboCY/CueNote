@@ -116,6 +116,8 @@ export const workspaceApi = {
     }),
   preflightImageInsert: (sessionId: string, content: NoteContent) =>
     invoke<void>('preflight_image_insert', { sessionId, content }),
+  preflightNoteContent: (sessionId: string, content: NoteContent) =>
+    invoke<void>('preflight_note_content', { sessionId, content }),
   readImage: async (sessionId: string, assetId: string) => {
     const bytes = await invoke<ArrayBuffer>('read_image_asset', { sessionId, assetId });
     // The host only returns already validated PNG/JPEG assets from this session.

@@ -426,7 +426,7 @@ test('rejects unsupported v1 content and ProseMirror semantics instead of droppi
   ], false), /expected a lowercase UUIDv4/);
   assert.throws(() => toEditorDocument([
     { type: 'mindMap', mapId: '22222222-2222-4222-8222-222222222222', rootId: '33333333-3333-4333-8333-333333333333', nodes: [] },
-  ], false), /mind maps are not supported by this editor/);
+  ], false), /导图必须包含根节点/);
   assert.throws(() => toEditorDocument([
     { type: 'blockquote', blocks: [] },
   ], false), /empty block quotes cannot be represented/);

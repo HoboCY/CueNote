@@ -4,6 +4,7 @@ import { listen } from '@tauri-apps/api/event';
 import { createSaveCoordinator, type SaveCoordinatorState } from './save-coordinator';
 import { RichTextEditor, type RichTextSection } from './RichTextEditor';
 import type { ImageEditorBridge } from './image-session';
+import type { MindMapEditorBridge } from './mindmap-session';
 import {
   workspaceApi,
   type NoteSession,
@@ -105,7 +106,7 @@ function App() {
   const [recoveryCopyPaths, setRecoveryCopyPaths] = useState<Record<string, string>>({});
   const [closeGuardReady, setCloseGuardReady] = useState(!desktopRuntime);
   const [isComposing, setIsComposing] = useState(false);
-  const [pendingImageCount, setPendingImageCount] = useState(0);
+  const [pendingEditorOperationCount, setPendingEditorOperationCount] = useState(0);
   const [pendingTransition, setPendingTransition] = useState<PendingTransition | null>(null);
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
   const [isTransitionSaving, setIsTransitionSaving] = useState(false);
@@ -131,7 +132,8 @@ function App() {
   const lastSaveErrorRef = useRef<unknown | null>(null);
   const isComposingRef = useRef(false);
   const compositionWaitersRef = useRef<Array<() => void>>([]);
-  const pendingImagesRef = useRef(new Map<Promise<void>, Promise<WorkspaceError | null>>());
+  const pendingEditorOperationsRef = useRef(new Map<Promise<void>, Promise<WorkspaceError | null>>());
+  const editorFlushersRef = useRef(new Map<() => Promise<void>, string>());
   const savingPauseRef = useRef<Promise<void>>(Promise.resolve());
   const closeRequestHandlerRef = useRef<() => void>(() => undefined);
   const flushCurrentRef = useRef<() => void>(() => undefined);
@@ -339,13 +341,32 @@ function App() {
     return new Promise<void>((resolve) => compositionWaitersRef.current.push(resolve));
   };
 
-  const waitForImages = async () => {
-    while (pendingImagesRef.current.size > 0) {
-      const results = await Promise.all([...pendingImagesRef.current.values()]);
+  const waitForEditorOperations = async () => {
+    while (pendingEditorOperationsRef.current.size > 0) {
+      const results = await Promise.all([...pendingEditorOperationsRef.current.values()]);
       const failure = results.find((result) => result !== null);
       if (failure) throw failure;
     }
   };
+
+  const settleEditors = async () => {
+    const sessionId = sessionRef.current?.sessionId;
+    for (;;) {
+      await waitForComposition();
+      if (sessionRef.current?.sessionId !== sessionId) return;
+      for (const [settle, registeredSessionId] of editorFlushersRef.current) {
+        if (registeredSessionId === sessionId) await settle();
+        if (sessionRef.current?.sessionId !== sessionId) return;
+      }
+      await waitForEditorOperations();
+      // A second composition may have begun while an earlier candidate was
+      // being validated. Do not let that earlier completion release the leave.
+      if (!isComposingRef.current && pendingEditorOperationsRef.current.size === 0) return;
+    }
+  };
+
+  const hasExpandedEditor = () => [...editorFlushersRef.current.values()]
+    .some(sessionId => sessionId === sessionRef.current?.sessionId);
 
   const attemptTransitionAfterSave = async (transition: PendingTransition) => {
     if (transitionAttemptRef.current) return;
@@ -353,8 +374,7 @@ function App() {
     setIsTransitionSaving(true);
     setDialogMessage(`正在保存最新修改，完成后继续${transition.label}。可以取消此次操作。`);
     try {
-      await waitForComposition();
-      await waitForImages();
+      await settleEditors();
       if (pendingTransitionRef.current !== transition || transitionAttemptRef.current !== transition) return;
       if (hasBlockingEditorIssue()) {
         setDialogMessage('编辑器内容尚无法转换为安全的保存快照。请撤销或修复该操作后再继续。');
@@ -377,7 +397,7 @@ function App() {
     } catch (cause) {
       if (pendingTransitionRef.current === transition) {
         setError(toWorkspaceError(cause));
-        setDialogMessage('图片粘贴未完成，当前草稿仍留在本页。请检查提示后重试保存或取消此次操作。');
+        setDialogMessage('内容编辑尚未完成，当前草稿仍留在本页。请检查提示后重试保存或取消此次操作。');
       }
     } finally {
       if (transitionAttemptRef.current === transition) {
@@ -394,7 +414,7 @@ function App() {
     }
     if (transitionAttemptRef.current || operationInProgressRef.current) return;
     const state = saveCoordinator.getState();
-    if (isComposingRef.current || pendingImagesRef.current.size > 0 || state.isDirty || state.phase === 'saving') {
+    if (isComposingRef.current || pendingEditorOperationsRef.current.size > 0 || hasExpandedEditor() || state.isDirty || state.phase === 'saving') {
       void attemptTransitionAfterSave(transition);
       return;
     }
@@ -420,7 +440,7 @@ function App() {
       return;
     }
     const state = saveCoordinator.getState();
-    if (isComposingRef.current || pendingImagesRef.current.size > 0 || state.isDirty || state.phase === 'saving') {
+    if (isComposingRef.current || pendingEditorOperationsRef.current.size > 0 || hasExpandedEditor() || state.isDirty || state.phase === 'saving') {
       pendingTransitionRef.current = transition;
       setPendingTransition(transition);
       void attemptTransitionAfterSave(transition);
@@ -441,8 +461,7 @@ function App() {
     const currentSession = sessionRef.current;
     if (!desktopRuntime || isInitializing || operationInProgressRef.current || hasEditorIssue() || !currentSession || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
     try {
-      await waitForComposition();
-      await waitForImages();
+      await settleEditors();
       if (sessionRef.current?.sessionId !== currentSession.sessionId || operationInProgressRef.current) return;
       await saveCoordinator.flush();
     } catch (cause) {
@@ -453,8 +472,7 @@ function App() {
 
   const saveCurrentAs = async () => {
     try {
-      await waitForComposition();
-      await waitForImages();
+      await settleEditors();
     } catch (cause) {
       setSafeCopyError(toWorkspaceError(cause));
       return;
@@ -703,6 +721,16 @@ function App() {
     if (!isComposingRef.current && !hasEditorIssue()) saveCoordinator.edit(currentSession.sessionId, cloneNoteContent(next));
   };
 
+  const trackEditorOperation = (operation: Promise<void>) => {
+    const settled = operation.then(() => null, (cause: unknown) => toWorkspaceError(cause));
+    pendingEditorOperationsRef.current.set(operation, settled);
+    setPendingEditorOperationCount(pendingEditorOperationsRef.current.size);
+    void settled.then(() => {
+      pendingEditorOperationsRef.current.delete(operation);
+      setPendingEditorOperationCount(pendingEditorOperationsRef.current.size);
+    });
+  };
+
   const imageBridgeForSession = (sessionId: string): ImageEditorBridge => {
     const assertSession = () => {
       const current = sessionRef.current;
@@ -744,7 +772,11 @@ function App() {
         assertEditable();
         const basis = draftRef.current;
         if (!basis) throw new Error('当前笔记草稿不可用。');
-        const candidate = cloneNoteContent({ ...basis, sections: { ...basis.sections, content: contentBlocks } });
+        // A map may be open while a previously started image paste completes.
+        // Its latest tree lives in the draft until it is collapsed into Tiptap.
+        const draftMaps = new Map(basis.sections.content.flatMap(block => block.type === 'mindMap' ? [[block.mapId, block] as const] : []));
+        const currentBlocks = contentBlocks.map(block => block.type === 'mindMap' ? draftMaps.get(block.mapId) ?? block : block);
+        const candidate = cloneNoteContent({ ...basis, sections: { ...basis.sections, content: currentBlocks } });
         try {
           await workspaceApi.preflightImageInsert(sessionId, candidate);
         } catch (cause) {
@@ -756,14 +788,48 @@ function App() {
         return () => sessionRef.current?.sessionId === sessionId && draftRef.current === basis
           && !operationInProgressRef.current && !isAbandoningRef.current && !hasEditorIssue();
       },
-      track: (operation) => {
-        const settled = operation.then(() => null, (cause: unknown) => toWorkspaceError(cause));
-        pendingImagesRef.current.set(operation, settled);
-        setPendingImageCount(pendingImagesRef.current.size);
-        void settled.then(() => {
-          pendingImagesRef.current.delete(operation);
-          setPendingImageCount(pendingImagesRef.current.size);
-        });
+      track: trackEditorOperation,
+    };
+  };
+
+  const mindMapBridgeForSession = (sessionId: string): MindMapEditorBridge => {
+    const assertEditable = () => {
+      const current = sessionRef.current;
+      if (!current || current.sessionId !== sessionId || current.readOnlyReason
+        || current.trashedAt !== null || isTrashViewRef.current || operationInProgressRef.current
+        || isAbandoningRef.current || hasEditorIssue()) {
+        throw new Error('当前笔记暂时无法编辑导图。已有内容保持不变。');
+      }
+    };
+    return {
+      canStart: () => {
+        try {
+          assertEditable();
+          return desktopRuntime && !pendingTransitionRef.current;
+        } catch {
+          return false;
+        }
+      },
+      preflight: async contentBlocks => {
+        // An operation begun before a close/switch request may still finish.
+        // The transition waits for registered editors and tracked operations.
+        assertEditable();
+        const basis = draftRef.current;
+        if (!basis) throw new Error('当前笔记草稿不可用。');
+        const candidate = cloneNoteContent({ ...basis, sections: { ...basis.sections, content: contentBlocks } });
+        try {
+          await workspaceApi.preflightNoteContent(sessionId, candidate);
+        } catch (cause) {
+          if (sessionRef.current?.sessionId === sessionId && draftRef.current !== basis) return () => false;
+          throw cause;
+        }
+        return () => sessionRef.current?.sessionId === sessionId && draftRef.current === basis
+          && !operationInProgressRef.current && !isAbandoningRef.current && !hasEditorIssue();
+      },
+      track: trackEditorOperation,
+      registerFlush: settle => {
+        editorFlushersRef.current.set(settle, sessionId);
+        return () => { editorFlushersRef.current.delete(settle); };
       },
     };
   };
@@ -1166,8 +1232,8 @@ function App() {
     ? '只读文字投影，原件保持不变'
     : editorIssue
       ? '内容无法安全转换，保存已暂停'
-    : pendingImageCount > 0
-      ? '正在处理图片，完成后自动保存'
+    : pendingEditorOperationCount > 0
+      ? '正在处理内容，完成后自动保存'
     : isSaving
     ? '正在保存…'
     : isComposing
@@ -1227,6 +1293,7 @@ function App() {
         readOnly={isReadOnly || hasInitialIssue}
         projectionText={session.text[section]}
         imageBridge={section === 'content' ? imageBridgeForSession(session.sessionId) : undefined}
+        mindMapBridge={section === 'content' ? mindMapBridgeForSession(session.sessionId) : undefined}
         onChange={(blocks) => updateSectionDraft(section, blocks)}
         onError={(message, initial) => updateEditorIssue(section, message, initial)}
         onCompositionStart={handleCompositionStart}

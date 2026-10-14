@@ -980,6 +980,27 @@ impl Workspace {
         candidate_for_content(session, &content).map(|_| ())
     }
 
+    pub fn preflight_note_content(
+        &self,
+        session_id: &str,
+        content: NoteContent,
+    ) -> Result<(), WorkspaceError> {
+        let session = self
+            .session
+            .as_ref()
+            .ok_or_else(|| StorageError::new("noSession", "当前没有可编辑的笔记会话。"))?;
+        if session.view.session_id != session_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话已切换；请重新打开笔记后再检查内容。",
+            ));
+        }
+        if let Some(reason) = session.view.read_only_reason.as_ref() {
+            return Err(StorageError::new("readOnly", reason.clone()));
+        }
+        candidate_for_content(session, &content).map(|_| ())
+    }
+
     fn preserve_removed_assets(
         &mut self,
         session_id: &str,
@@ -2734,6 +2755,7 @@ fn supports_editable_blocks(blocks: &[Block], side_section: bool, top_level_cont
         Block::HorizontalRule if !side_section => true,
         Block::MathBlock { .. } if !side_section => true,
         Block::Image { .. } if !side_section && top_level_content => true,
+        Block::MindMap { .. } if !side_section && top_level_content => true,
         Block::Table { rows } if !side_section => rows.iter().all(|row| {
             let cells = match row {
                 TableRow::Header { cells } | TableRow::Body { cells } => cells,

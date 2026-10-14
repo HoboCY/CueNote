@@ -92,6 +92,7 @@ pub fn run() {
             commands::save_note_content,
             commands::stage_image_raw,
             commands::preflight_image_insert,
+            commands::preflight_note_content,
             commands::read_image_asset,
             commands::activate_close_guard,
             commands::complete_close,

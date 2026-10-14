@@ -174,7 +174,7 @@ fn plain_package(notebook_id: &str, title: &str) -> NotePackage {
     )
 }
 
-fn rich_unsupported_package(notebook_id: &str) -> NotePackage {
+fn rich_package(notebook_id: &str) -> NotePackage {
     let mut package = plain_package(notebook_id, "只读富内容");
     let asset_id = "55ad7e2b-9523-4f0b-9041-426d7f94d924".to_owned();
     let bytes = include_bytes!("fixtures/pixel.png").to_vec();
@@ -352,18 +352,22 @@ fn malformed_or_unsupported_content_does_not_replace_the_saved_note() {
         .unwrap_err();
     assert_eq!(malformed_error.kind, "format");
 
-    let mut unsupported = session.content.clone();
-    unsupported.sections.content.push(Block::MindMap {
-        map_id: "85ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
-        root_id: "65ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
-        nodes: vec![MindMapNode {
-            id: "65ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
-            text: "仍不可编辑的导图".into(),
-            children: Vec::new(),
+    let mut nested_map = session.content.clone();
+    nested_map.sections.content.push(Block::BulletList {
+        items: vec![ListItem {
+            blocks: vec![Block::MindMap {
+                map_id: "85ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
+                root_id: "65ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
+                nodes: vec![MindMapNode {
+                    id: "65ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
+                    text: "列表内不可编辑的导图".into(),
+                    children: Vec::new(),
+                }],
+            }],
         }],
     });
     let unsupported_error = workspace
-        .save_note_content(&session.session_id, unsupported)
+        .save_note_content(&session.session_id, nested_map)
         .unwrap_err();
     assert_eq!(unsupported_error.kind, "readOnly");
 
@@ -425,20 +429,25 @@ fn stale_structured_save_preserves_external_version_and_records_recovery() {
 }
 
 #[test]
-fn unchanged_unsupported_content_can_be_saved_as_a_full_independent_copy() {
+fn read_only_rich_content_can_be_saved_as_a_full_independent_copy() {
     let temp = workspace_temp();
     let (settings, recovery, default, library) = workspace_paths(&temp);
     let mut workspace = Workspace::new(settings, recovery.clone(), default);
     let selected = workspace.select_library(library.clone()).unwrap();
     let notebook_id = selected.library.unwrap().default_notebook_id;
-    let mut package = rich_unsupported_package(&notebook_id);
+    let mut package = rich_package(&notebook_id);
+    package.document.organization.notebook_id = Some("35ad7e2b-9523-4f0b-9041-426d7f94d924".into());
     package.document.organization.pinned = true;
     let note_id = package.document.note_id.clone();
     let note_path = library.join("notes").join(format!("{note_id}.cuenote"));
     storage::save_note(&note_path, &recovery, &package, None).unwrap();
     let before = storage::open_note(&note_path).unwrap();
     let session = workspace.open_note(&note_id).unwrap();
-    assert!(session.read_only_reason.is_some());
+    assert!(session
+        .read_only_reason
+        .as_deref()
+        .unwrap()
+        .contains("未知笔记本"));
     assert_eq!(
         workspace
             .save_note_content(&session.session_id, session.content.clone())
@@ -474,15 +483,17 @@ fn unchanged_unsupported_content_can_be_saved_as_a_full_independent_copy() {
 
     let mut changed = session.content;
     changed.title = "改动后的富内容".into();
-    let rejected_copy_path = temp.path().join("不得创建.cuenote");
-    assert_eq!(
-        workspace
-            .save_current_content_as(&session.session_id, changed, rejected_copy_path.clone(),)
-            .unwrap_err()
-            .kind,
-        "readOnly"
-    );
-    assert!(!rejected_copy_path.exists());
+    let changed_copy_path = temp.path().join("编辑后副本.cuenote");
+    workspace
+        .save_current_content_as(
+            &session.session_id,
+            changed.clone(),
+            changed_copy_path.clone(),
+        )
+        .unwrap();
+    let changed_copy = storage::open_note(&changed_copy_path).unwrap();
+    assert_eq!(changed_copy.package.content(), changed);
+    assert_ne!(changed_copy.package.document.note_id, note_id);
     let after = storage::open_note(&note_path).unwrap();
     assert_eq!(after.revision, before.revision);
     assert_eq!(after.package, before.package);

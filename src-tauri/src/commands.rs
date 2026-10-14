@@ -265,6 +265,18 @@ pub async fn preflight_image_insert(
 }
 
 #[tauri::command]
+pub async fn preflight_note_content(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    content: NoteContent,
+) -> Result<(), WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.preflight_note_content(&session_id, content)
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn read_image_asset(
     state: State<'_, WorkspaceState>,
     session_id: String,

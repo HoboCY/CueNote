@@ -5,12 +5,17 @@ import { closeHistory } from '@tiptap/pm/history';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection, type Selection, type SelectionBookmark, type Transaction } from '@tiptap/pm/state';
 import 'katex/dist/katex.min.css';
+import 'mind-elixir/style.css';
+import './mindmap.css';
 import type { Block } from './generated/note-format';
 import { CODE_LANGUAGES } from './code-languages';
 import { fromEditorDocument, toEditorDocument } from './editor-model';
 import { createEditorExtensions, TABLE_HEADER_NORMALIZATION_META } from './editor-extensions';
 import type { ImageEditorBridge } from './image-session';
 import { refreshImageNodeViews, type ImageEditorRuntime } from './image-extensions';
+import { refreshMindMapNodeViews, type MindMapEditorRuntime } from './mindmap-extensions';
+import { assertMindMapCollection, readMindMap, type MindMapBlock } from './mindmap-model';
+import type { MindMapEditorBridge } from './mindmap-session';
 
 export type RichTextSection = 'cue' | 'content' | 'summary';
 
@@ -22,6 +27,7 @@ interface RichTextEditorProps {
   readOnly: boolean;
   projectionText: string;
   imageBridge?: ImageEditorBridge;
+  mindMapBridge?: MindMapEditorBridge;
   onChange: (blocks: Block[]) => void;
   onError: (message: string | null, initial: boolean) => void;
   onCompositionStart: () => void;
@@ -162,6 +168,7 @@ export function RichTextEditor({
   readOnly,
   projectionText,
   imageBridge,
+  mindMapBridge,
   onChange,
   onError,
   onCompositionStart,
@@ -180,6 +187,14 @@ export function RichTextEditor({
   const [mathTargetError, setMathTargetError] = useState<string | null>(null);
   const [mathTargetInvalid, setMathTargetInvalid] = useState(false);
   const [imageNotice, setImageNotice] = useState<{ kind: 'error' | 'status'; message: string } | null>(null);
+  const [mapNotice, setMapNotice] = useState<{ kind: 'error' | 'status'; message: string } | null>(null);
+  const [bodyLocked, setBodyLocked] = useState(false);
+  const liveMapsRef = useRef(new Map<string, MindMapBlock>());
+  const expandedMapsRef = useRef(new Set<string>());
+  const changeRef = useRef(onChange);
+  changeRef.current = onChange;
+  const mapBridgeRef = useRef(mindMapBridge);
+  mapBridgeRef.current = mindMapBridge;
   const linkInputRef = useRef<HTMLInputElement | null>(null);
   const mathDialogRef = useRef<HTMLDialogElement | null>(null);
   const mathInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -200,18 +215,63 @@ export function RichTextEditor({
     getBridge: () => imageBridgeRef.current,
     canEdit: () => {
       const permissions = imagePermissionsRef.current;
-      return permissions.editable && !permissions.readOnly && !permissions.simple && !permissions.conversionError;
+      return permissions.editable && !permissions.readOnly && !permissions.simple && !permissions.conversionError
+        && expandedMapsRef.current.size === 0;
     },
     isCurrent: current => currentEditorRef.current === current,
     reportError: message => setImageNotice({ kind: 'error', message }),
     reportStatus: message => setImageNotice({ kind: 'status', message }),
   }), []);
 
+  const overlayMaps = useCallback((currentBlocks: Block[]) => {
+    const next = currentBlocks.map(block => block.type === 'mindMap'
+      ? liveMapsRef.current.get(block.mapId) ?? block : block);
+    assertMindMapCollection(next);
+    return next;
+  }, []);
+
+  const mindMapRuntime = useMemo<MindMapEditorRuntime>(() => ({
+    getBridge: () => mapBridgeRef.current,
+    canEdit: () => {
+      const permissions = imagePermissionsRef.current;
+      return permissions.editable && !permissions.readOnly && !permissions.simple && !permissions.conversionError;
+    },
+    isCurrent: current => currentEditorRef.current === current,
+    overlayBlocks: overlayMaps,
+    blocksFor: (current, replacement) => {
+      const blocks = overlayMaps(fromEditorDocument(current.getJSON(), false));
+      if (!blocks.some(block => block.type === 'mindMap' && block.mapId === replacement.mapId)) {
+        throw new Error('导图已从当前正文移除。');
+      }
+      const next = blocks.map(block => block.type === 'mindMap' && block.mapId === replacement.mapId ? replacement : block);
+      assertMindMapCollection(next);
+      return next;
+    },
+    publishMap: (current, map) => {
+      if (currentEditorRef.current !== current || current.isDestroyed) return;
+      liveMapsRef.current.set(map.mapId, readMindMap(map));
+      changeRef.current(overlayMaps(fromEditorDocument(current.getJSON(), false)));
+    },
+    clearLiveMap: mapId => { liveMapsRef.current.delete(mapId); },
+    setExpanded: (current, mapId, expanded) => {
+      if (currentEditorRef.current !== current || current.isDestroyed) return;
+      if (expanded) expandedMapsRef.current.add(mapId);
+      else expandedMapsRef.current.delete(mapId);
+      const locked = expandedMapsRef.current.size > 0;
+      setBodyLocked(locked);
+      current.setEditable(imagePermissionsRef.current.editable && initial.document !== null && !locked, false);
+      refreshImageNodeViews(current);
+      refreshMindMapNodeViews(current);
+    },
+    reportError: message => setMapNotice({ kind: 'error', message }),
+    reportStatus: message => setMapNotice({ kind: 'status', message }),
+  }), [initial.document, overlayMaps]);
+
   const openMathFromNode = useCallback((node: ProseMirrorNode, position: number) => {
     const currentEditor = currentEditorRef.current;
     const permissions = mathPermissionsRef.current;
     if (!currentEditor || !currentEditor.view.dom.isConnected || !permissions.editable
-      || permissions.readOnly || permissions.simple || permissions.conversionError) return;
+      || permissions.readOnly || permissions.simple || permissions.conversionError || expandedMapsRef.current.size > 0) return;
     const currentNode = currentEditor.state.doc.nodeAt(position);
     if (!isMathNodeName(node.type.name) || currentNode !== node) return;
 
@@ -223,8 +283,8 @@ export function RichTextEditor({
   }, []);
 
   const extensions = useMemo(
-    () => createEditorExtensions(simple, openMathFromNode, undefined, imageRuntime),
-    [simple, openMathFromNode, imageRuntime],
+    () => createEditorExtensions(simple, openMathFromNode, undefined, imageRuntime, undefined, mindMapRuntime),
+    [simple, openMathFromNode, imageRuntime, mindMapRuntime],
   );
   const notifyError = useCallback((message: string | null, isInitial: boolean) => {
     setConversionError(message);
@@ -253,7 +313,7 @@ export function RichTextEditor({
     },
     onUpdate: ({ editor: updatedEditor }) => {
       try {
-        const next = fromEditorDocument(updatedEditor.getJSON(), simple);
+        const next = overlayMaps(fromEditorDocument(updatedEditor.getJSON(), simple));
         notifyError(null, false);
         onChange(next);
       } catch (cause) {
@@ -338,9 +398,10 @@ export function RichTextEditor({
 
   useEffect(() => {
     if (!editor) return;
-    editor.setEditable(editable && initial.document !== null, false);
+    editor.setEditable(editable && initial.document !== null && !bodyLocked, false);
     refreshImageNodeViews(editor);
-  }, [editor, editable, initial.document]);
+    refreshMindMapNodeViews(editor);
+  }, [editor, editable, initial.document, bodyLocked, readOnly]);
 
   useEffect(() => {
     if (!linkOpen) return;
@@ -376,7 +437,7 @@ export function RichTextEditor({
     }
   };
   const run = (command: () => boolean) => {
-    if (!editor || !editable || conversionError) return;
+    if (!editor || !editable || bodyLocked || conversionError) return;
     synchronizeTextSelection();
     command();
   };
@@ -545,7 +606,7 @@ export function RichTextEditor({
       aria-label={label}
       aria-pressed={active}
       title={label}
-      disabled={!editable || Boolean(conversionError) || disabled}
+      disabled={!editable || bodyLocked || Boolean(conversionError) || disabled}
       onMouseDown={preventToolbarFocus}
       onClick={() => run(command)}
     >{label}</button>
@@ -561,7 +622,7 @@ export function RichTextEditor({
     requestAnimationFrame(() => {
       if (sequence !== compositionSequenceRef.current) return;
       try {
-        const next = fromEditorDocument(editor.getJSON(), simple);
+        const next = overlayMaps(fromEditorDocument(editor.getJSON(), simple));
         notifyError(null, false);
         onCompositionEnd(next);
       } catch (cause) {
@@ -611,7 +672,7 @@ export function RichTextEditor({
       data-session-id={sessionId}
     >
       {!readOnly && (
-        <div className="rich-editor-toolbar" role="toolbar" aria-label={`${section === 'cue' ? '线索区' : section === 'content' ? '内容区' : '总结区'}格式工具`}>
+        <div className="rich-editor-toolbar" role="toolbar" inert={bodyLocked} aria-label={`${section === 'cue' ? '线索区' : section === 'content' ? '内容区' : '总结区'}格式工具`}>
           {tool('paragraph', '段落', () => editor?.chain().focus().setParagraph().run() ?? false, active.paragraph, formattingDisabled)}
           {tool('heading-1', '一级标题', () => editor?.chain().focus().toggleHeading({ level: 1 }).run() ?? false, active.heading1, formattingDisabled)}
           {tool('heading-2', '二级标题', () => editor?.chain().focus().toggleHeading({ level: 2 }).run() ?? false, active.heading2, formattingDisabled)}
@@ -625,6 +686,7 @@ export function RichTextEditor({
           {!simple && tool('blockquote', '引用', () => editor?.chain().focus().toggleBlockquote().run() ?? false, active.blockquote, formattingDisabled)}
           {!simple && tool('code', '行内代码', () => editor?.chain().focus().toggleCode().run() ?? false, active.inlineCode, active.codeBlock)}
           {!simple && tool('code-block', '代码块', () => editor?.chain().focus().toggleCodeBlock().run() ?? false, active.codeBlock, active.inlineCode)}
+          {!simple && tool('mind-map', '插入思维导图', () => editor?.commands.insertMindMap() ?? false)}
           {!simple && (
             <button
               type="button"
@@ -753,7 +815,7 @@ export function RichTextEditor({
         </div>
       )}
 
-      {linkOpen && !simple && !readOnly && (
+      {linkOpen && !simple && !readOnly && !bodyLocked && (
         <form className="rich-link-form" data-testid={`rich-link-form-${section}`} onSubmit={submitLink}>
           <label>
             <span>链接文字</span>
@@ -863,6 +925,18 @@ export function RichTextEditor({
         >
           <span>{imageNotice.message}</span>
           <button type="button" aria-label="关闭图片提示" onClick={() => setImageNotice(null)}>关闭</button>
+        </div>
+      )}
+
+      {mapNotice && (
+        <div
+          className={`rich-image-operation-notice is-${mapNotice.kind}`}
+          role={mapNotice.kind === 'error' ? 'alert' : 'status'}
+          aria-live="polite"
+          data-testid={`rich-mind-map-operation-${mapNotice.kind}`}
+        >
+          <span>{mapNotice.message}</span>
+          <button type="button" aria-label="关闭导图提示" onClick={() => setMapNotice(null)}>关闭</button>
         </div>
       )}
 

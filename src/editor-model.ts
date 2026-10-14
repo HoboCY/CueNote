@@ -1,5 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
 import type { Block, Inline, Mark, TableRow } from './generated/note-format.ts';
+import { assertMindMapCollection, readMindMap } from './mindmap-model.ts';
 
 const LINK_DEFAULTS = {
   target: '_blank',
@@ -258,8 +259,12 @@ function toBlock(block: Block, simple: boolean, path: string, topLevel = false):
           displayWidthPx: positiveIntegerAt(value.displayWidthPx, `${path}.displayWidthPx`),
         },
       };
-    case 'mindMap':
-      return fail(path, 'mind maps are not supported by this editor');
+    case 'mindMap': {
+      if (simple) return fail(path, 'mind maps are not supported in this section');
+      if (!topLevel) return fail(path, 'mind maps must be top-level blocks');
+      const { mapId, rootId, nodes } = readMindMap(value);
+      return { type: 'mindMap', attrs: { mapId, rootId, nodes } };
+    }
     default:
       return fail(path, `unsupported block node: ${String(value.type)}`);
   }
@@ -267,6 +272,7 @@ function toBlock(block: Block, simple: boolean, path: string, topLevel = false):
 
 export function toEditorDocument(blocks: Block[], simple: boolean): JSONContent {
   const content = arrayAt(blocks, 'blocks').map((block, index) => toBlock(block as Block, simple, `blocks[${index}]`, true));
+  assertMindMapCollection(blocks);
   // ProseMirror's document schema requires a text block. The UI must suppress the
   // initial editor update so opening an empty canonical section does not save it.
   if (content.length === 0) content.push({ type: 'paragraph' });
@@ -458,6 +464,13 @@ function fromBlock(value: unknown, simple: boolean, path: string, topLevel = fal
         displayWidthPx: positiveIntegerAt(attrs.displayWidthPx, `${path}.attrs.displayWidthPx`),
       };
     }
+    case 'mindMap': {
+      exactKeys(node, ['type', 'attrs'], path);
+      if (simple) return fail(path, 'mind maps are not supported in this section');
+      if (!topLevel) return fail(path, 'mind maps must be top-level blocks');
+      const attrs = optionalAttrs(node, ['mapId', 'rootId', 'nodes'], path);
+      return readMindMap({ type: 'mindMap', ...attrs });
+    }
     case 'orderedList': {
       exactKeys(node, ['type', 'attrs', 'content'], path);
       const attrs = optionalAttrs(node, ['start', 'type'], path);
@@ -503,5 +516,7 @@ export function fromEditorDocument(doc: JSONContent, simple: boolean): Block[] {
   const value = objectAt(doc, 'doc');
   exactKeys(value, ['type', 'content'], 'doc');
   if (value.type !== 'doc') fail('doc.type', 'expected a ProseMirror document');
-  return fromBlocks(value.content, simple, 'doc.content', true);
+  const blocks = fromBlocks(value.content, simple, 'doc.content', true);
+  assertMindMapCollection(blocks);
+  return blocks;
 }

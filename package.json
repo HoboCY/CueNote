@@ -24,6 +24,7 @@
     "highlight.js": "11.11.1",
     "katex": "0.18.10",
     "lowlight": "3.3.0",
+    "mind-elixir": "5.15.1",
     "react": "19.1.1",
     "react-dom": "19.1.1"
   },

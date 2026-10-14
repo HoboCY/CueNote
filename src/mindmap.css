@@ -1,0 +1,144 @@
+.mind-map-node {
+  min-width: 0;
+  margin: 14px 0;
+  overflow: hidden;
+  border: 1px solid #dce4dc;
+  border-radius: 10px;
+  background: #fffefa;
+  box-shadow: 0 2px 7px #32443a0a;
+}
+
+.mind-map-preview {
+  max-height: 330px;
+  overflow: auto;
+  padding: 14px 18px;
+  color: #40584f;
+  cursor: pointer;
+  outline: none;
+}
+
+.mind-map-preview:focus-visible {
+  box-shadow: inset 0 0 0 2px #65a69d;
+}
+
+.mind-map-preview-tree,
+.mind-map-preview-tree ul {
+  margin: 0;
+  padding-left: 22px;
+  list-style: none;
+}
+
+.mind-map-preview-tree > li { padding-left: 0; }
+.mind-map-preview-tree li { position: relative; padding-top: 4px; padding-bottom: 4px; }
+.mind-map-preview-tree li::before {
+  position: absolute;
+  top: 15px;
+  left: -13px;
+  width: 8px;
+  border-top: 1px solid #b9c9bc;
+  content: "";
+}
+.mind-map-preview-tree > li::before { display: none; }
+.mind-map-preview-text {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid #dbe6dd;
+  border-radius: 6px;
+  background: #f7faf5;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.mind-map-preview-tree > li > .mind-map-preview-text {
+  border-color: #bbd4c5;
+  background: #edf5ee;
+  color: #315f50;
+  font-weight: 650;
+}
+
+.mind-map-block-controls,
+.mind-map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-top: 1px solid #e6ebe4;
+  background: #f8f9f4;
+}
+.mind-map-action {
+  min-height: 30px;
+  padding: 4px 9px;
+  border: 1px solid #d8e1d8;
+  border-radius: 6px;
+  background: #fffefa;
+  color: #47645a;
+  cursor: pointer;
+  font-size: 11px;
+}
+.mind-map-action:hover:not(:disabled) { border-color: #9ebcaf; background: #edf5ef; }
+.mind-map-action:disabled { color: #9aa69e; cursor: not-allowed; }
+.mind-map-editor-panel { border-top: 1px solid #dce4dc; background: #fbfcf8; }
+.mind-map-toolbar { border-top: 0; }
+.mind-map-canvas {
+  width: 100%;
+  height: min(58vh, 520px);
+  min-height: 300px;
+  overflow: hidden;
+  border-top: 1px solid #e7ece5;
+  background: #fffefa;
+}
+.mind-map-canvas .map-container {
+  --bgcolor: #fffefa;
+  --root-bgcolor: #e7f1e9;
+  --root-color: #315f50;
+  --main-bgcolor: #f0f6ef;
+  --main-color: #47645a;
+  --color: #42584e;
+  --selected: #28766f;
+  --topic-padding: 6px 10px;
+  background: #fffefa;
+  font-family: "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+  font-size: 13px;
+}
+.mind-map-text-editor {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid #e6ebe4;
+}
+.mind-map-text-input {
+  width: 100%;
+  min-height: 76px;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid #d6e1d7;
+  border-radius: 7px;
+  background: #fffefa;
+  color: #344b43;
+  font: 12px/1.6 "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+  white-space: pre-wrap;
+}
+.mind-map-text-input:focus-visible { outline: 2px solid #65a69d; outline-offset: 1px; }
+.mind-map-text-editor .mind-map-action { justify-self: start; }
+.mind-map-error {
+  display: block;
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid #ecd8d0;
+  background: #fff4ee;
+  color: #91594a;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.mind-map-error[hidden],
+.mind-map-editor-panel[hidden],
+.mind-map-text-editor[hidden],
+.mind-map-block-controls[hidden] { display: none !important; }
+
+@media (max-width: 640px) {
+  .mind-map-preview { max-height: 260px; padding: 12px; }
+  .mind-map-canvas { height: 52vh; min-height: 250px; }
+  .mind-map-action { flex: 1 1 auto; }
+}

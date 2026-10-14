@@ -1,6 +1,6 @@
 use cuenote_lib::note_format::MediaType;
 use cuenote_lib::note_format::MAX_PACKAGE_BYTES;
-use cuenote_lib::note_format::{Block, MindMapNode, NotePackage};
+use cuenote_lib::note_format::{Block, NotePackage};
 use cuenote_lib::storage;
 use cuenote_lib::workspace::Workspace;
 use image::ImageEncoder;
@@ -735,23 +735,18 @@ fn read_only_notes_reject_image_staging_without_creating_a_stash() {
     let mut package =
         NotePackage::new_plain(created.notebook_id.clone().unwrap(), created.text.clone());
     package.document.note_id = created.note_id.clone();
-    let root_id = "55ad7e2b-9523-4f0b-9041-426d7f94d924".to_owned();
-    package.document.sections.content.push(Block::MindMap {
-        map_id: "65ad7e2b-9523-4f0b-9041-426d7f94d924".into(),
-        root_id: root_id.clone(),
-        nodes: vec![MindMapNode {
-            id: root_id,
-            text: "只读节点".into(),
-            children: Vec::new(),
-        }],
-    });
+    package.document.organization.trashed_at = Some("2026-10-15T00:00:00.000Z".into());
     let note_path = library
         .join("notes")
         .join(format!("{}.cuenote", created.note_id));
     storage::save_note(&note_path, &recovery, &package, None).unwrap();
     let read_only = workspace.open_note(&created.note_id).unwrap();
 
-    assert!(read_only.read_only_reason.is_some());
+    assert!(read_only
+        .read_only_reason
+        .as_deref()
+        .unwrap()
+        .contains("回收站"));
     assert_eq!(
         workspace
             .stage_image(

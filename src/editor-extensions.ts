@@ -9,6 +9,8 @@ import { createLowlight } from 'lowlight';
 import { createMathExtensions, type MathEditHandler } from './math-extensions.ts';
 import { createImageExtensions, type ImageEditorRuntime } from './image-extensions.ts';
 import type { ImageEditorBridge } from './image-session.ts';
+import { createMindMapExtensions, type MindMapEditorRuntime } from './mindmap-extensions.ts';
+import type { MindMapEditorBridge } from './mindmap-session.ts';
 import csharp from 'highlight.js/lib/languages/csharp';
 import javascript from 'highlight.js/lib/languages/javascript';
 import json from 'highlight.js/lib/languages/json';
@@ -207,6 +209,8 @@ export function createEditorExtensions(
   onEditMath?: MathEditHandler,
   imageBridge?: ImageEditorBridge,
   imageRuntime?: ImageEditorRuntime,
+  mindMapBridge?: MindMapEditorBridge,
+  mindMapRuntime?: MindMapEditorRuntime,
 ): Extensions {
   return [
     StarterKit.configure({
@@ -233,6 +237,7 @@ export function createEditorExtensions(
     ...(!simple ? [createCodeBlockExtension(), createCodeBlockPlainTextPaste()] : []),
     ...(!simple ? createMathExtensions(onEditMath) : []),
     ...(!simple ? createImageExtensions(imageBridge, imageRuntime) : []),
+    ...(!simple ? createMindMapExtensions(mindMapBridge, mindMapRuntime) : []),
     ListItem.extend({ content: 'block*' }),
     BulletList.extend({ content() { return `${this.options.itemTypeName}*`; } }),
     OrderedList.extend({ content() { return `${this.options.itemTypeName}*`; } }),
