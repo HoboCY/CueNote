@@ -20,11 +20,13 @@
     "allow-set-view-preferences",
     "allow-open-note",
     "allow-save-note-text",
+    "allow-save-note-content",
     "allow-activate-close-guard",
     "allow-complete-close",
     "allow-list-recovery-drafts",
     "allow-restore-recovery-as-copy",
     "allow-save-current-as",
+    "allow-save-current-content-as",
     "allow-save-recovery-as",
     "core:event:allow-listen",
     "core:event:allow-unlisten"

@@ -17,11 +17,13 @@ fn main() {
             "set_view_preferences",
             "open_note",
             "save_note_text",
+            "save_note_content",
             "activate_close_guard",
             "complete_close",
             "list_recovery_drafts",
             "restore_recovery_as_copy",
             "save_current_as",
+            "save_current_content_as",
             "save_recovery_as",
         ]));
 

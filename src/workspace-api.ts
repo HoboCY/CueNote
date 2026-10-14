@@ -1,5 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
-import type { PlainText } from './generated/note-format';
+import type { NoteContent, PlainText } from './generated/note-format';
+
+export type { NoteContent } from './generated/note-format';
 
 export type PlainNoteText = PlainText;
 
@@ -38,6 +40,7 @@ export interface NoteSession {
   sessionId: string;
   noteId: string;
   text: PlainNoteText;
+  content: NoteContent;
   revision: string | null;
   readOnlyReason: string | null;
   notebookId: string | null;
@@ -104,15 +107,15 @@ export const workspaceApi = {
     invoke<WorkspaceView>('delete_trashed_note', { sessionId, confirmed }),
   setViewPreferences: (sidebarCollapsed: boolean, selectedNotebookId: string | null) =>
     invoke<void>('set_view_preferences', { sidebarCollapsed, selectedNotebookId }),
-  save: (sessionId: string, text: PlainNoteText) =>
-    invoke<SaveReceipt>('save_note_text', { sessionId, text }),
+  save: (sessionId: string, content: NoteContent) =>
+    invoke<SaveReceipt>('save_note_content', { sessionId, content }),
   listRecoveryDrafts: () => invoke<RecoveryList>('list_recovery_drafts'),
   restoreRecoveryAsCopy: (recoveryId: string) =>
     invoke<SaveReceipt>('restore_recovery_as_copy', { recoveryId }),
   saveRecoveryAs: (recoveryId: string) =>
     invoke<SavedCopy | null>('save_recovery_as', { recoveryId }),
-  saveCurrentAs: (sessionId: string, text: PlainNoteText) =>
-    invoke<SavedCopy | null>('save_current_as', { sessionId, text }),
+  saveCurrentAs: (sessionId: string, content: NoteContent) =>
+    invoke<SavedCopy | null>('save_current_content_as', { sessionId, content }),
   activateCloseGuard: () => invoke<void>('activate_close_guard'),
   completeClose: () => invoke<void>('complete_close'),
 };

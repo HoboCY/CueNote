@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { createSaveCoordinator, type SaveCoordinatorState } from './save-coordinator';
+import { RichTextEditor, type RichTextSection } from './RichTextEditor';
 import {
   workspaceApi,
   type NoteSession,
-  type PlainNoteText,
+  type NoteContent,
   type RecoveryDraftSummary,
   type RecoveryList,
   type SaveReceipt,
@@ -23,8 +24,12 @@ type PendingTransition = {
   run: () => Promise<void>;
 };
 
-type CurrentCopy = SavedCopy & { sessionId: string; text: PlainNoteText };
-type SaveCoordinator = ReturnType<typeof createSaveCoordinator<PlainNoteText, SaveReceipt>>;
+type CurrentCopy = SavedCopy & { sessionId: string; content: NoteContent };
+type SaveCoordinator = ReturnType<typeof createSaveCoordinator<NoteContent, SaveReceipt>>;
+type EditorIssue = { message: string; initial: boolean } | null;
+type EditorIssues = Record<RichTextSection, EditorIssue>;
+
+const emptyEditorIssues: EditorIssues = { cue: null, content: null, summary: null };
 type NotebookDialogState =
   | { mode: 'create' | 'rename'; notebookId?: string; name: string }
   | { mode: 'delete'; notebookId: string; name: string };
@@ -32,12 +37,12 @@ type TrashDialogState =
   | { mode: 'delete'; sessionId: string; noteId: string; title: string; error: string | null }
   | { mode: 'restore-target'; sessionId: string; noteId: string; title: string; targetNotebookId: string; error: string | null };
 
-function sameText(left: PlainNoteText | null, right: PlainNoteText | null) {
-  return left !== null && right !== null
-    && left.title === right.title
-    && left.cue === right.cue
-    && left.content === right.content
-    && left.summary === right.summary;
+function cloneNoteContent(content: NoteContent): NoteContent {
+  return structuredClone(content);
+}
+
+function sameContent(left: NoteContent | null, right: NoteContent | null) {
+  return left !== null && right !== null && JSON.stringify(left) === JSON.stringify(right);
 }
 
 function toWorkspaceError(error: unknown): WorkspaceError {
@@ -80,8 +85,9 @@ function App() {
   const [isNotebookBusy, setIsNotebookBusy] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceView | null>(null);
   const [session, setSession] = useState<NoteSession | null>(null);
-  const [draft, setDraft] = useState<PlainNoteText | null>(null);
-  const [savedText, setSavedText] = useState<PlainNoteText | null>(null);
+  const [draft, setDraft] = useState<NoteContent | null>(null);
+  const [savedContent, setSavedContent] = useState<NoteContent | null>(null);
+  const [editorIssues, setEditorIssues] = useState<EditorIssues>({ ...emptyEditorIssues });
   const [isInitializing, setIsInitializing] = useState(desktopRuntime);
   const [isOperationBusy, setIsOperationBusy] = useState(false);
   const [saveState, setSaveState] = useState<SaveCoordinatorState>({
@@ -109,8 +115,8 @@ function App() {
   const viewPreferencesInitializedRef = useRef(false);
   const viewPreferencesWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
   const sessionRef = useRef<NoteSession | null>(null);
-  const draftRef = useRef<PlainNoteText | null>(null);
-  const savedTextRef = useRef<PlainNoteText | null>(null);
+  const draftRef = useRef<NoteContent | null>(null);
+  const editorIssuesRef = useRef<EditorIssues>({ ...emptyEditorIssues });
   const operationInProgressRef = useRef(false);
   const pendingTransitionRef = useRef<PendingTransition | null>(null);
   const transitionAttemptRef = useRef<PendingTransition | null>(null);
@@ -123,6 +129,7 @@ function App() {
   const lastSaveErrorRef = useRef<unknown | null>(null);
   const isComposingRef = useRef(false);
   const compositionWaitersRef = useRef<Array<() => void>>([]);
+  const savingPauseRef = useRef<Promise<void>>(Promise.resolve());
   const closeRequestHandlerRef = useRef<() => void>(() => undefined);
   const flushCurrentRef = useRef<() => void>(() => undefined);
   const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -174,16 +181,19 @@ function App() {
 
   const applySession = (value: NoteSession | null) => {
     updateSessionMetadata(value);
-    draftRef.current = value?.text ?? null;
-    savedTextRef.current = value?.text ?? null;
-    setDraft(value?.text ?? null);
-    setSavedText(value?.text ?? null);
+    const nextDraft = value ? cloneNoteContent(value.content) : null;
+    const nextSaved = value ? cloneNoteContent(value.content) : null;
+    draftRef.current = nextDraft;
+    setDraft(nextDraft);
+    setSavedContent(nextSaved);
+    editorIssuesRef.current = { ...emptyEditorIssues };
+    setEditorIssues({ ...emptyEditorIssues });
     setSaveError(null);
     setSafeCopyError(null);
     setCurrentCopy(null);
     saveCoordinatorRef.current?.reset(
       value?.sessionId ?? null,
-      value?.text ?? null,
+      value ? cloneNoteContent(value.content) : null,
       Boolean(value && value.revision === null && !value.readOnlyReason && value.trashedAt === null),
     );
     const currentWorkspace = workspaceRef.current;
@@ -202,28 +212,31 @@ function App() {
     setSelectedNotebookId(preferences.selectedNotebookId);
     updateWorkspace(value);
     updateSessionMetadata(value.session);
-    draftRef.current = value.session?.text ?? null;
-    savedTextRef.current = value.session?.text ?? null;
-    setDraft(value.session?.text ?? null);
-    setSavedText(value.session?.text ?? null);
+    const nextDraft = value.session ? cloneNoteContent(value.session.content) : null;
+    const nextSaved = value.session ? cloneNoteContent(value.session.content) : null;
+    draftRef.current = nextDraft;
+    setDraft(nextDraft);
+    setSavedContent(nextSaved);
+    editorIssuesRef.current = { ...emptyEditorIssues };
+    setEditorIssues({ ...emptyEditorIssues });
     setSaveError(null);
     setSafeCopyError(null);
     setCurrentCopy(null);
     saveCoordinatorRef.current?.reset(
       value.session?.sessionId ?? null,
-      value.session?.text ?? null,
+      value.session ? cloneNoteContent(value.session.content) : null,
       Boolean(value.session && value.session.revision === null && !value.session.readOnlyReason && value.session.trashedAt === null),
     );
   };
 
   if (saveCoordinatorRef.current === null) {
-    saveCoordinatorRef.current = createSaveCoordinator<PlainNoteText, SaveReceipt>({
+    saveCoordinatorRef.current = createSaveCoordinator<NoteContent, SaveReceipt>({
       save: (sessionId, snapshot) => workspaceApi.save(sessionId, snapshot),
       onSaved: (snapshot, receipt) => {
         if (sessionRef.current?.sessionId !== snapshot.sessionId) return;
         updateSessionMetadata(receipt.session);
-        savedTextRef.current = receipt.session.text;
-        setSavedText(receipt.session.text);
+        const saved = cloneNoteContent(snapshot.value);
+        setSavedContent(saved);
         const currentWorkspace = workspaceRef.current;
         if (currentWorkspace) {
           updateWorkspace({ ...currentWorkspace, library: receipt.library, session: receipt.session });
@@ -252,6 +265,35 @@ function App() {
 
   const saveCoordinator = saveCoordinatorRef.current!;
 
+  const hasEditorIssue = () => Object.values(editorIssuesRef.current).some(Boolean);
+  const hasInitialEditorIssue = () => Object.values(editorIssuesRef.current).some((issue) => issue?.initial);
+  const hasBlockingEditorIssue = () => Object.values(editorIssuesRef.current).some((issue) => issue && !issue.initial);
+  const pauseAutomaticSaving = () => {
+    const pause = saveCoordinator.pauseAutomaticSavingAndWait();
+    savingPauseRef.current = Promise.all([savingPauseRef.current, pause]).then(() => undefined);
+    return savingPauseRef.current;
+  };
+  const resumeAutomaticSavingWhenSafe = () => {
+    void savingPauseRef.current.then(() => {
+      if (!isComposingRef.current && !hasEditorIssue() && !isAbandoningRef.current) {
+        saveCoordinator.resumeAutomaticSaving();
+      }
+    });
+  };
+  const updateEditorIssue = (section: RichTextSection, message: string | null, initial = false) => {
+    const next = { ...editorIssuesRef.current, [section]: message ? { message, initial } : null };
+    editorIssuesRef.current = next;
+    setEditorIssues(next);
+    const firstIssue = Object.values(next).find(Boolean);
+    if (firstIssue) {
+      setError({ kind: 'editor_conversion', message: firstIssue.message });
+      void pauseAutomaticSaving();
+      return;
+    }
+    setError((current) => current?.kind === 'editor_conversion' ? null : current);
+    resumeAutomaticSavingWhenSafe();
+  };
+
   const clearPendingTransition = (resumeAutomaticSaving = true) => {
     leaveIntentRef.current?.cancel();
     leaveIntentRef.current = null;
@@ -262,7 +304,7 @@ function App() {
     setDialogMessage(null);
     setIsTransitionSaving(false);
     setIsWaitingForOperation(false);
-    if (resumeAutomaticSaving && !isAbandoningRef.current) saveCoordinator.resumeAutomaticSaving();
+    if (resumeAutomaticSaving) resumeAutomaticSavingWhenSafe();
   };
 
   const executeTransition = async (transition: PendingTransition) => {
@@ -285,7 +327,7 @@ function App() {
       operationInProgressRef.current = false;
       if (activeTransitionRef.current === transition) activeTransitionRef.current = null;
       setIsOperationBusy(false);
-      saveCoordinator.resumeAutomaticSaving();
+      resumeAutomaticSavingWhenSafe();
     }
   };
 
@@ -302,6 +344,10 @@ function App() {
     try {
       await waitForComposition();
       if (pendingTransitionRef.current !== transition || transitionAttemptRef.current !== transition) return;
+      if (hasBlockingEditorIssue()) {
+        setDialogMessage('编辑器内容尚无法转换为安全的保存快照。请撤销或修复该操作后再继续。');
+        return;
+      }
       const intent = saveCoordinator.leave();
       leaveIntentRef.current = intent;
       const saved = await intent.result;
@@ -325,6 +371,10 @@ function App() {
   };
 
   const beginTransition = (transition: PendingTransition) => {
+    if (hasBlockingEditorIssue()) {
+      setDialogMessage('编辑器内容尚无法转换为安全的保存快照。请撤销或修复该操作后再继续。');
+      return;
+    }
     if (transitionAttemptRef.current || operationInProgressRef.current) return;
     const state = saveCoordinator.getState();
     if (isComposingRef.current || state.isDirty || state.phase === 'saving') {
@@ -337,6 +387,10 @@ function App() {
 
   const requestTransition = (transition: PendingTransition, queueWhileBusy = false) => {
     if (pendingTransitionRef.current) return;
+    if (hasBlockingEditorIssue()) {
+      setError({ kind: 'editor_conversion', message: '编辑器内容尚无法转换为安全的保存快照。请撤销或修复该操作后再继续。' });
+      return;
+    }
     if (isInitializing || operationInProgressRef.current) {
       if (!queueWhileBusy) return;
       pendingTransitionRef.current = transition;
@@ -368,7 +422,7 @@ function App() {
 
   const saveCurrent = async () => {
     const currentSession = sessionRef.current;
-    if (!desktopRuntime || isInitializing || operationInProgressRef.current || !currentSession || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
+    if (!desktopRuntime || isInitializing || operationInProgressRef.current || hasEditorIssue() || !currentSession || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
     await waitForComposition();
     await saveCoordinator.flush();
   };
@@ -378,14 +432,15 @@ function App() {
     await waitForComposition();
     const currentSession = sessionRef.current;
     const snapshot = draftRef.current;
-    if (!desktopRuntime || isInitializing || operationInProgressRef.current || !currentSession || !snapshot || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
-    const copyText = { ...snapshot };
+    const unchangedReadOnlyCopy = Boolean(currentSession && (currentSession.readOnlyReason || hasInitialEditorIssue()));
+    if (!desktopRuntime || isInitializing || operationInProgressRef.current || hasEditorIssue() && !unchangedReadOnlyCopy || !currentSession || !snapshot || currentSession.trashedAt !== null) return;
+    const copyContent = cloneNoteContent(unchangedReadOnlyCopy ? currentSession.content : snapshot);
     operationInProgressRef.current = true;
     setIsOperationBusy(true);
     setSafeCopyError(null);
     try {
-      const copy = await workspaceApi.saveCurrentAs(currentSession.sessionId, copyText);
-      if (copy) setCurrentCopy({ ...copy, sessionId: currentSession.sessionId, text: copyText });
+      const copy = await workspaceApi.saveCurrentAs(currentSession.sessionId, copyContent);
+      if (copy) setCurrentCopy({ ...copy, sessionId: currentSession.sessionId, content: copyContent });
     } catch (cause) {
       setSafeCopyError(toWorkspaceError(cause));
     } finally {
@@ -429,7 +484,7 @@ function App() {
 
   const discardAndContinue = async () => {
     const transition = pendingTransitionRef.current;
-    if (!transition || isTransitionSaving || isOperationBusy || isSaving || isComposing || isInitializing) return;
+    if (!transition || hasEditorIssue() || isTransitionSaving || isOperationBusy || isSaving || isComposing || isInitializing) return;
     isAbandoningRef.current = true;
     operationInProgressRef.current = true;
     setIsAbandoning(true);
@@ -587,6 +642,7 @@ function App() {
 
   useEffect(() => {
     const handleSaveShortcut = (event: KeyboardEvent) => {
+      if (event.isComposing || isComposingRef.current) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         if (desktopRuntime) flushCurrentRef.current();
@@ -596,27 +652,49 @@ function App() {
     return () => window.removeEventListener('keydown', handleSaveShortcut);
   }, []);
 
-  const updateDraft = (field: keyof PlainNoteText, value: string) => {
+  const updateDraft = (value: string) => {
     if (operationInProgressRef.current || isAbandoningRef.current) return;
     const current = draftRef.current;
     const currentSession = sessionRef.current;
     if (!current || !currentSession || isTrashViewRef.current || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
-    const next = { ...current, [field]: value };
+    const next = { ...current, title: value };
     draftRef.current = next;
     setDraft(next);
-    if (!isComposingRef.current) saveCoordinator.edit(currentSession.sessionId, next);
+    if (!isComposingRef.current && !hasEditorIssue()) saveCoordinator.edit(currentSession.sessionId, cloneNoteContent(next));
+  };
+
+  const updateSectionDraft = (section: RichTextSection, blocks: NoteContent['sections'][RichTextSection]) => {
+    if (operationInProgressRef.current || isAbandoningRef.current) return;
+    const current = draftRef.current;
+    const currentSession = sessionRef.current;
+    if (!current || !currentSession || isTrashViewRef.current || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
+    const next = cloneNoteContent({ ...current, sections: { ...current.sections, [section]: blocks } });
+    draftRef.current = next;
+    setDraft(next);
+    if (!isComposingRef.current && !hasEditorIssue()) saveCoordinator.edit(currentSession.sessionId, cloneNoteContent(next));
   };
 
   const handleCompositionStart = () => {
     isComposingRef.current = true;
     setIsComposing(true);
+    void pauseAutomaticSaving();
   };
-  const handleCompositionEnd = (field: keyof PlainNoteText, value: string) => {
-    isComposingRef.current = false;
-    setIsComposing(false);
-    updateDraft(field, value);
+  const resolveCompositionWaiters = () => {
     const waiters = compositionWaitersRef.current.splice(0);
     waiters.forEach((resolve) => resolve());
+    resumeAutomaticSavingWhenSafe();
+  };
+  const handleCompositionEnd = (value: string) => {
+    isComposingRef.current = false;
+    setIsComposing(false);
+    updateDraft(value);
+    resolveCompositionWaiters();
+  };
+  const handleEditorCompositionEnd = (section: RichTextSection, blocks: NoteContent['sections'][RichTextSection] | null) => {
+    isComposingRef.current = false;
+    setIsComposing(false);
+    if (blocks) updateSectionDraft(section, blocks);
+    resolveCompositionWaiters();
   };
 
   const chooseLibrary = () => requestTransition({
@@ -907,8 +985,8 @@ function App() {
       if (!currentSession) return;
       const receipt = await workspaceApi.updateNoteOrganization(currentSession.sessionId, notebookId, pinned);
       const currentWorkspace = workspaceRef.current;
+      updateSessionMetadata(receipt.session);
       if (currentWorkspace) updateWorkspace({ ...currentWorkspace, library: receipt.library, session: receipt.session });
-      applySession(receipt.session);
     },
   });
 
@@ -950,6 +1028,11 @@ function App() {
   const isTrashSession = Boolean(session?.trashedAt);
   const sessionMatchesView = Boolean(session && isTrashSession === isTrashView);
   const displayedDraft = sessionMatchesView ? draft : null;
+  const editorIssue = Object.values(editorIssues).find(Boolean) ?? null;
+  const hasAnyEditorIssue = Boolean(editorIssue);
+  const hasInitialIssue = Object.values(editorIssues).some((issue) => issue?.initial);
+  const hasBlockingIssue = Object.values(editorIssues).some((issue) => issue !== null && !issue.initial);
+  const displayedTitle = session?.readOnlyReason ? session.text.title : displayedDraft?.title;
   const sessionNotebookName = session
     ? isTrashSession
       ? session.notebookId === null
@@ -963,14 +1046,21 @@ function App() {
   const isSaving = saveState.phase === 'saving';
   const saveFailed = saveState.phase === 'failed' || saveState.phase === 'conflict';
   const isDirty = Boolean(sessionMatchesView && session && draft && !isReadOnly && (
-    isComposing || (saveState.sessionId === session.sessionId
+    isComposing || hasBlockingIssue || (saveState.sessionId === session.sessionId
       ? saveState.isDirty
-      : session.revision === null || !sameText(draft, savedText))
+      : session.revision === null || !sameContent(draft, savedContent))
   ));
   const navigationLocked = isInitializing || isOperationBusy || isNotebookBusy || pendingTransition !== null || trashDialog !== null;
-  const editingLocked = !desktopRuntime || isInitializing || isOperationBusy || isAbandoning || !closeGuardReady || isTrashView || isTrashSession || !sessionMatchesView;
+  const editingLocked = !desktopRuntime || isInitializing || isOperationBusy || isAbandoning || !closeGuardReady || isTrashView || isTrashSession || !sessionMatchesView || hasAnyEditorIssue;
+  const sectionCanEdit = (section: RichTextSection) => {
+    const ownIssue = editorIssues[section];
+    return desktopRuntime && !isInitializing && !isOperationBusy && !isAbandoning && closeGuardReady
+      && !isTrashView && !isTrashSession && sessionMatchesView && !session?.readOnlyReason
+      && (!hasAnyEditorIssue || Boolean(ownIssue && !ownIssue.initial && !hasInitialIssue));
+  };
   const canDiscardAfterCopy = Boolean(currentCopy && session && draft
-    && currentCopy.sessionId === session.sessionId && sameText(currentCopy.text, draft));
+    && currentCopy.sessionId === session.sessionId
+    && sameContent(currentCopy.content, session.readOnlyReason || hasInitialIssue ? session.content : draft));
   const runtimeStatus = !desktopRuntime
     ? '浏览器只读预览'
     : isInitializing
@@ -978,7 +1068,11 @@ function App() {
       : error && !workspace
         ? '桌面连接失败'
         : '桌面应用 · 本地笔记';
-  const saveStatus = isSaving
+  const saveStatus = editorIssue?.initial
+    ? '只读文字投影，原件保持不变'
+    : editorIssue
+      ? '内容无法安全转换，保存已暂停'
+    : isSaving
     ? '正在保存…'
     : isComposing
       ? '正在输入，完成后自动保存'
@@ -1010,6 +1104,39 @@ function App() {
       )}
     </div>
   );
+
+  const renderSectionEditor = (section: RichTextSection) => {
+    if (!session || !draft) return null;
+    if (session.readOnlyReason) {
+      const projection = session.text[section];
+      return (
+        <textarea
+          className={`note-textarea rich-editor-projection${section === 'cue' ? ' cue-textarea' : section === 'summary' ? ' summary-textarea' : ' content-textarea'}`}
+          data-testid={`rich-editor-input-${section}`}
+          data-section={section}
+          aria-label={`${section === 'cue' ? '线索区' : section === 'content' ? '内容区' : '总结区'}只读文字投影`}
+          value={projection}
+          readOnly
+          rows={section === 'content' ? 14 : 6}
+        />
+      );
+    }
+    return (
+      <RichTextEditor
+        key={`${session.sessionId}:${section}`}
+        sessionId={session.sessionId}
+        section={section}
+        blocks={draft.sections[section]}
+        editable={sectionCanEdit(section)}
+        readOnly={isReadOnly || hasInitialIssue}
+        projectionText={session.text[section]}
+        onChange={(blocks) => updateSectionDraft(section, blocks)}
+        onError={(message, initial) => updateEditorIssue(section, message, initial)}
+        onCompositionStart={handleCompositionStart}
+        onCompositionEnd={(blocks) => handleEditorCompositionEnd(section, blocks)}
+      />
+    );
+  };
 
   return (
     <div className={`app-shell${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
@@ -1221,7 +1348,7 @@ function App() {
             <div className="eyebrow"><span>CueNote</span><span className="eyebrow-line" />康奈尔笔记</div>
             <h1 id="page-title">
               {desktopRuntime
-                ? displayedDraft?.title.trim() || (sessionMatchesView ? '未命名笔记' : isTrashView ? '回收站' : '写下你的第一篇笔记')
+                ? displayedTitle?.trim() || (sessionMatchesView ? '未命名笔记' : isTrashView ? '回收站' : '写下你的第一篇笔记')
                 : '让每个想法，都有清晰的落点。'}
             </h1>
             <p>
@@ -1415,7 +1542,7 @@ function App() {
           <article className={`note-paper${isTrashSession ? ' trash-note-paper' : ''}`} aria-label={isTrashSession ? '回收站笔记只读视图' : '康奈尔笔记编辑区'} data-testid={isTrashSession ? 'trash-note-view' : 'note-editor'}>
             <div className="paper-topline">
               <span>康奈尔笔记</span>
-              <span className="paper-topline-right"><span className={`paper-dot${saveFailed || isDirty || session.revision === null ? ' is-unsaved' : ' is-saved'}`} />{saveStatus}</span>
+              <span className="paper-topline-right"><span className={`paper-dot${saveFailed || isDirty || hasAnyEditorIssue || session.revision === null ? ' is-unsaved' : ' is-saved'}`} />{saveStatus}</span>
             </div>
             <div className="note-organization" aria-label="当前笔记整理方式">
               <span className="note-notebook-context">当前笔记本：<strong>{sessionNotebookName}</strong></span>
@@ -1483,7 +1610,7 @@ function App() {
                 {!isTrashSession && <span>当前版本暂不支持编辑其中的全部内容，原文件保持完整。</span>}
               </div>
             )}
-            <section className="title-preview editable-title" aria-labelledby="note-title-label">
+            <section className="title-preview editable-title" aria-labelledby="note-title-label" data-testid="editor-section-title">
               <div className="title-copy">
                 <span className="section-number">00</span>
                 <div className="title-field-wrap">
@@ -1492,79 +1619,55 @@ function App() {
                     id="note-title-input"
                     className="title-input"
                     aria-label="笔记标题"
-                    value={draft.title}
+                    value={session.readOnlyReason ? session.text.title : draft.title}
                     placeholder="输入笔记标题"
-                    readOnly={isReadOnly}
+                    readOnly={isReadOnly || hasAnyEditorIssue}
                     disabled={editingLocked}
-                    onChange={(event) => updateDraft('title', event.currentTarget.value)}
+                    onChange={(event) => updateDraft(event.currentTarget.value)}
                     onCompositionStart={handleCompositionStart}
-                    onCompositionEnd={(event) => handleCompositionEnd('title', event.currentTarget.value)}
+                    onCompositionEnd={(event) => handleCompositionEnd(event.currentTarget.value)}
                   />
                 </div>
               </div>
-              <span className="coming-soon">{isReadOnly ? '只读' : '纯文字'}</span>
+              <span className="coming-soon">{isReadOnly || hasInitialIssue ? '只读' : '富文本'}</span>
             </section>
             <div className="cornell-grid">
-              <section className="cornell-panel cue-panel" aria-labelledby="cue-title">
+              <section className="cornell-panel cue-panel" aria-labelledby="cue-title" data-testid="editor-section-cue" data-section="cue">
                 <div className="section-heading"><span className="section-number">01</span><h3 id="cue-title">线索区</h3></div>
-                <textarea
-                  aria-labelledby="cue-title"
-                  className="note-textarea cue-textarea"
-                  value={draft.cue}
-                  placeholder="记录问题、关键词与回顾提示"
-                  readOnly={isReadOnly}
-                  disabled={editingLocked}
-                  onChange={(event) => updateDraft('cue', event.currentTarget.value)}
-                  onCompositionStart={handleCompositionStart}
-                  onCompositionEnd={(event) => handleCompositionEnd('cue', event.currentTarget.value)}
-                />
+                {renderSectionEditor('cue')}
                 <span className="panel-note">用于回想与复习</span>
               </section>
-              <section className="cornell-panel content-panel" aria-labelledby="content-title">
-                <div className="section-heading"><span className="section-number">02</span><h3 id="content-title">内容区</h3><span className="content-hint">纯文字记录</span></div>
-                <textarea
-                  aria-labelledby="content-title"
-                  className="note-textarea content-textarea"
-                  value={draft.content}
-                  placeholder="从这里开始记录……"
-                  readOnly={isReadOnly}
-                  disabled={editingLocked}
-                  onChange={(event) => updateDraft('content', event.currentTarget.value)}
-                  onCompositionStart={handleCompositionStart}
-                  onCompositionEnd={(event) => handleCompositionEnd('content', event.currentTarget.value)}
-                />
+              <section className="cornell-panel content-panel" aria-labelledby="content-title" data-testid="editor-section-content" data-section="content">
+                <div className="section-heading"><span className="section-number">02</span><h3 id="content-title">内容区</h3><span className="content-hint">{isReadOnly ? '只读内容' : '主要记录区域'}</span></div>
+                {renderSectionEditor('content')}
               </section>
             </div>
-            <section className="summary-panel" aria-labelledby="summary-title">
+            <section className="summary-panel" aria-labelledby="summary-title" data-testid="editor-section-summary" data-section="summary">
               <div className="section-heading"><span className="section-number">03</span><h3 id="summary-title">总结区</h3><span className="content-hint">收束本篇要点</span></div>
-              <textarea
-                aria-labelledby="summary-title"
-                className="note-textarea summary-textarea"
-                value={draft.summary}
-                placeholder="复述重点，留下自己的结论"
-                readOnly={isReadOnly}
-                disabled={editingLocked}
-                onChange={(event) => updateDraft('summary', event.currentTarget.value)}
-                onCompositionStart={handleCompositionStart}
-                onCompositionEnd={(event) => handleCompositionEnd('summary', event.currentTarget.value)}
-              />
+              {renderSectionEditor('summary')}
             </section>
             <div className="note-actions">
               <div className="save-controls">
                 <span className="save-hint">{isTrashSession
                   ? '回收站中的笔记为只读；恢复后可继续编辑。'
+                  : session.readOnlyReason || hasInitialIssue
+                    ? '这篇笔记包含当前编辑器无法安全转换的内容；文字投影只读，可另存完整副本。'
+                  : hasAnyEditorIssue
+                    ? '编辑内容尚无法转换，自动保存和切换操作已暂停。请撤销或修复当前编辑。'
                   : isReadOnly
-                    ? '当前显示可阅读的文字内容。'
+                    ? '当前笔记只读显示。'
                   : '停止输入约 1 秒后自动保存；使用 Ctrl / ⌘ + S 可立即保存。'}</span>
-                {saveFailed && !isReadOnly && (
-                  <button className="quiet-button safe-copy-button" type="button" disabled={isOperationBusy} onClick={() => void saveCurrentAs()}>
-                    另存当前草稿…
+                {!isTrashSession && (saveFailed && !isReadOnly || session.readOnlyReason || hasInitialIssue) && (
+                  <button className="quiet-button safe-copy-button" type="button" disabled={isOperationBusy || hasAnyEditorIssue && !hasInitialIssue} onClick={() => void saveCurrentAs()}>
+                    {session.readOnlyReason || hasInitialIssue ? '另存完整副本…' : '另存当前草稿…'}
                   </button>
                 )}
                 {currentCopy && (
                   <span className="safe-copy-path" role="status">
                     此次草稿已另存到：<code>{currentCopy.path}</code>{canDiscardAfterCopy
-                      ? isDirty ? '；本机原稿仍未保存。' : '；本机原稿已保存。'
+                      ? session.readOnlyReason || hasInitialIssue
+                        ? '；此副本保留了当前只读原件的完整内容。'
+                        : isDirty ? '；本机原稿仍未保存。' : '；本机原稿已保存。'
                       : '；此副本对应先前快照，本机原稿仍保留。'}
                   </span>
                 )}
@@ -1574,10 +1677,10 @@ function App() {
               <button
                 className="primary-button save-button"
                 type="button"
-                disabled={editingLocked || isSaving || isReadOnly || (!isDirty && !saveFailed)}
+                disabled={editingLocked || isSaving || isReadOnly || hasAnyEditorIssue || (!isDirty && !saveFailed)}
                 onClick={() => void saveCurrent()}
               >
-                {isSaving ? '正在保存…' : saveFailed ? '重试保存' : isDirty ? '立即保存' : session.revision === null ? '尚未保存' : '已保存到本地'}
+                {editorIssue?.initial ? '只读内容' : editorIssue ? '内容无法保存' : isSaving ? '正在保存…' : saveFailed ? '重试保存' : isDirty ? '立即保存' : session.revision === null ? '尚未保存' : '已保存到本地'}
               </button>
             </div>
           </article>
@@ -1624,9 +1727,9 @@ function App() {
               >
                 {isWaitingForOperation ? '等待当前操作…' : isTransitionSaving ? '正在保存…' : pendingTransition.close ? '重试保存并关闭' : '重试保存并继续'}
               </button>
-              {saveFailed && !isReadOnly && (
+              {((saveFailed && !isReadOnly) || Boolean(session?.readOnlyReason || hasInitialIssue)) && (
                 <button className="quiet-button" type="button" disabled={isOperationBusy || isWaitingForOperation || isInitializing} onClick={() => void saveCurrentAs()}>
-                  另存当前草稿…
+                  {session?.readOnlyReason || hasInitialIssue ? '另存完整副本…' : '另存当前草稿…'}
                 </button>
               )}
               {session && !isReadOnly && (isDirty || saveFailed) && (

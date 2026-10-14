@@ -260,7 +260,7 @@ button:focus-visible {
 .title-copy h2 { margin: 0; color: #344b46; font: 600 22px/1.25 Georgia, "Songti SC", serif; }
 .coming-soon { flex: none; padding: 5px 8px; border: 1px solid #e8e1d4; border-radius: 999px; color: #9b8867; font-size: 8px; }
 
-.cornell-grid { display: grid; grid-template-columns: minmax(190px, 29%) minmax(0, 1fr); border-bottom: 1px solid #d8e0d8; }
+.cornell-grid { display: grid; grid-template-columns: minmax(190px, 28%) minmax(0, 1fr); border-bottom: 1px solid #d8e0d8; }
 .cornell-panel { min-width: 0; min-height: 300px; padding: 19px 18px 17px; }
 .cue-panel { display: flex; flex-direction: column; border-right: 1px solid #d6ded7; background: #faf9f3; }
 .content-panel { position: relative; overflow: hidden; background: #fffdf7; }
@@ -498,6 +498,47 @@ button:focus-visible {
 .cue-textarea { flex: 1; min-height: 208px; margin: 12px 0; font-size: 11px; }
 .content-textarea { min-height: 270px; margin-top: 14px; }
 .summary-textarea { min-height: 86px; margin-top: 9px; font-size: 11px; }
+.rich-editor { display: grid; min-width: 0; gap: 7px; width: 100%; flex: 1; }
+.rich-editor-toolbar { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: 4px; margin: 9px 0 2px; padding: 6px; border: 1px solid #e2e7de; border-radius: 8px; background: #f8f8f2; }
+.rich-editor-tool { min-height: 26px; padding: 3px 7px; border: 1px solid #dfe5dc; border-radius: 6px; background: #fffdf7; color: #5c7268; cursor: pointer; font-size: 9px; line-height: 1.35; white-space: nowrap; }
+.rich-editor-tool:hover:not(:disabled) { border-color: #b8cec1; background: #edf3eb; color: var(--teal-dark); }
+.rich-editor-tool.is-active { border-color: #b8d1c3; background: #e4f0ec; color: var(--teal-dark); }
+.rich-editor-tool.is-primary { border-color: #92b7a5; background: #e4f0ec; color: var(--teal-dark); }
+.rich-editor-tool:disabled { cursor: not-allowed; opacity: .45; }
+.rich-editor-surface { min-width: 0; width: 100%; }
+.rich-editor-prose { display: block; min-width: 0; min-height: 190px; padding: 10px; border: 1px solid transparent; border-radius: 7px; background: transparent; color: #42564f; font: 12px/1.8 "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif; overflow-wrap: anywhere; outline: 0; }
+.cue-panel .rich-editor-prose { min-height: 180px; }
+.content-panel .rich-editor-prose { min-height: 270px; }
+.summary-panel .rich-editor-prose { min-height: 86px; }
+.rich-editor-prose:focus { border-color: #d9e4da; background: #fffefb; box-shadow: 0 0 0 2px #e4eee7; }
+.rich-editor-prose[contenteditable="false"] { color: #66786e; }
+.rich-editor-prose p { margin: 0 0 .8em; }
+.rich-editor-prose p:last-child { margin-bottom: 0; }
+.rich-editor-prose h1, .rich-editor-prose h2, .rich-editor-prose h3 { margin: .7em 0 .4em; color: #344b46; font-family: Georgia, "Songti SC", serif; line-height: 1.4; }
+.rich-editor-prose h1 { font-size: 21px; }
+.rich-editor-prose h2 { font-size: 17px; }
+.rich-editor-prose h3 { font-size: 14px; }
+.rich-editor-prose ul, .rich-editor-prose ol { margin: .45em 0; padding-left: 1.8em; }
+.rich-editor-prose li p { margin: 0; }
+.rich-editor-prose blockquote { margin: .8em 0; padding: 3px 12px; border-left: 3px solid #a9c4b3; color: #687d73; }
+.rich-editor-prose hr { margin: 1.2em 0; border: 0; border-top: 1px solid #cfd9cf; }
+.rich-editor-prose table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.rich-editor-prose th, .rich-editor-prose td { min-width: 42px; padding: 6px 8px; border: 1px solid #d9e1d8; vertical-align: top; overflow-wrap: anywhere; }
+.rich-editor-prose th { background: #edf2ea; color: #405d53; font-weight: 650; text-align: left; }
+.rich-editor-prose td p, .rich-editor-prose th p { margin: 0; }
+.rich-editor-prose ul[data-type="taskList"] { padding-left: .3em; list-style: none; }
+.rich-editor-prose ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 7px; }
+.rich-editor-prose ul[data-type="taskList"] li > label { display: inline-flex; flex: none; align-items: center; padding-top: 4px; }
+.rich-editor-prose ul[data-type="taskList"] li > label input { accent-color: var(--teal); }
+.markdown-editor-help { margin: 0; color: #87958c; font-size: 8px; line-height: 1.55; }
+.rich-link-form { display: grid; grid-template-columns: minmax(100px, .7fr) minmax(160px, 1.3fr) auto; align-items: end; gap: 7px; padding: 8px; border: 1px solid #dfe5dc; border-radius: 8px; background: #f8f8f2; }
+.rich-link-form label { display: grid; min-width: 0; gap: 4px; color: #75867c; font-size: 8px; }
+.rich-link-form input { width: 100%; min-width: 0; min-height: 29px; padding: 4px 7px; border: 1px solid #d6dfd6; border-radius: 6px; background: #fffdf7; color: #42564f; font: 10px "Segoe UI", "Microsoft YaHei UI", sans-serif; }
+.rich-link-actions { display: flex; gap: 4px; }
+.rich-link-error { grid-column: 1 / -1; color: #9c584a; font-size: 9px; }
+.rich-editor-error { padding: 8px 10px; border: 1px solid #ead3c7; border-radius: 7px; background: #fbf1eb; color: #8a5547; font-size: 9px; line-height: 1.6; }
+.rich-editor-fallback { min-width: 0; width: 100%; }
+.rich-editor-projection { border-color: #e3e6dc; background: #fbfaf4; }
 .readonly-notice { margin: 14px 0 0; padding: 11px 13px; border: 1px solid #e6dcc8; border-radius: 9px; background: #faf5e9; color: #7d6a4f; }
 .readonly-notice strong { font-size: 10px; }
 .readonly-notice p, .readonly-notice span { display: block; margin: 5px 0 0; font-size: 9px; line-height: 1.6; overflow-wrap: anywhere; }
@@ -578,6 +619,12 @@ button:focus-visible {
   .title-input { font-size: 19px; }
   .cue-textarea { min-height: 120px; }
   .content-textarea { min-height: 200px; }
+  .rich-editor-toolbar { gap: 3px; padding: 5px; }
+  .rich-editor-tool { min-height: 25px; padding: 3px 5px; font-size: 8px; }
+  .rich-link-form { grid-template-columns: 1fr; }
+  .rich-link-actions { justify-content: flex-start; }
+  .content-panel .rich-editor-prose { min-height: 200px; }
+  .cue-panel .rich-editor-prose { min-height: 120px; }
   .unsaved-dialog { padding: 20px; }
   .dialog-actions { align-items: stretch; flex-direction: column; }
   .dialog-actions > button { width: 100%; }

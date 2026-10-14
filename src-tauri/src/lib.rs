@@ -89,11 +89,13 @@ pub fn run() {
             commands::set_view_preferences,
             commands::open_note,
             commands::save_note_text,
+            commands::save_note_content,
             commands::activate_close_guard,
             commands::complete_close,
             commands::list_recovery_drafts,
             commands::restore_recovery_as_copy,
             commands::save_current_as,
+            commands::save_current_content_as,
             commands::save_recovery_as,
         ])
         .build(tauri::generate_context!())

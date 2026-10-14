@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
-use crate::note_format::PlainText;
+use crate::note_format::{NoteContent, PlainText};
 use crate::workspace::{
     LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy, Workspace, WorkspaceError,
     WorkspaceView,
@@ -214,6 +214,18 @@ pub async fn save_note_text(
 }
 
 #[tauri::command]
+pub async fn save_note_content(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    content: NoteContent,
+) -> Result<SaveReceipt, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.save_note_content(&session_id, content)
+    })
+    .await
+}
+
+#[tauri::command]
 pub fn activate_close_guard(gate: State<'_, crate::CloseGate>) {
     gate.armed.store(true, std::sync::atomic::Ordering::Release);
 }
@@ -282,6 +294,24 @@ pub async fn save_current_as(
     };
     work(state.inner().clone(), move |workspace| {
         workspace.save_current_as(&session_id, text, path).map(Some)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn save_current_content_as(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    content: NoteContent,
+) -> Result<Option<SavedCopy>, WorkspaceError> {
+    let Some(path) = pick_copy_path(app).await? else {
+        return Ok(None);
+    };
+    work(state.inner().clone(), move |workspace| {
+        workspace
+            .save_current_content_as(&session_id, content, path)
+            .map(Some)
     })
     .await
 }

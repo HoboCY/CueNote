@@ -3,7 +3,7 @@
 //! The frontend receives only DTOs and opaque session identifiers. Paths,
 //! package contents, organization fields, and revision baselines stay here.
 
-use crate::note_format::{NotePackage, PlainText};
+use crate::note_format::{Block, Inline, Mark, NoteContent, NotePackage, PlainText, TableRow};
 use crate::storage::{self, OpenedNote, StorageError};
 use chrono::{SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
@@ -67,6 +67,7 @@ pub struct NoteSession {
     pub pinned: bool,
     pub trashed_at: Option<String>,
     pub text: PlainText,
+    pub content: NoteContent,
     pub revision: Option<String>,
     pub read_only_reason: Option<String>,
 }
@@ -409,6 +410,7 @@ impl Workspace {
             pinned: false,
             trashed_at: None,
             text: package.text_projection(),
+            content: package.content(),
             revision: None,
             read_only_reason: None,
         };
@@ -764,6 +766,12 @@ impl Workspace {
         if let Some(reason) = session.view.read_only_reason.as_ref() {
             return Err(StorageError::new("readOnly", reason.clone()));
         }
+        if session.package.plain_text().is_none() {
+            return Err(StorageError::new(
+                "readOnly",
+                "此笔记包含结构化内容，请使用富文本编辑器保存。",
+            ));
+        }
 
         let mut candidate = session.package.clone();
         candidate
@@ -800,6 +808,7 @@ impl Workspace {
         active.package = candidate;
         active.baseline_revision = Some(revision.clone());
         active.view.text = text;
+        active.view.content = active.package.content();
         active.view.revision = Some(revision);
         let saved_session = active.view.clone();
 
@@ -823,6 +832,125 @@ impl Workspace {
                 view
             }
         };
+        Ok(SaveReceipt {
+            session: saved_session,
+            library: receipt_library,
+        })
+    }
+
+    pub fn save_note_content(
+        &mut self,
+        session_id: &str,
+        content: NoteContent,
+    ) -> Result<SaveReceipt, WorkspaceError> {
+        let library_path = self
+            .library
+            .as_ref()
+            .map(|library| library.path.clone())
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        let (candidate, note_path, baseline_revision, note_id) = {
+            let session = self
+                .session
+                .as_ref()
+                .ok_or_else(|| StorageError::new("noSession", "当前没有可保存的笔记会话。"))?;
+            if session.view.session_id != session_id {
+                return Err(StorageError::new(
+                    "staleSession",
+                    "笔记会话已切换；请保留当前内容后重新打开笔记。",
+                ));
+            }
+            if let Some(reason) = session.view.read_only_reason.as_ref() {
+                return Err(StorageError::new("readOnly", reason.clone()));
+            }
+            if !supports_editable_content(&content) {
+                return Err(StorageError::new(
+                    "readOnly",
+                    "笔记包含当前编辑器尚不支持的内容，未保存任何更改。",
+                ));
+            }
+
+            let mut candidate = session.package.clone();
+            candidate.replace_content(content.clone());
+            candidate
+                .validate()
+                .map_err(|error| StorageError::new("format", error.to_string()))?;
+            if candidate.document.note_id != session.view.note_id
+                || candidate.document.organization != session.package.document.organization
+                || candidate.document.organization.notebook_id != session.notebook_id
+            {
+                return Err(StorageError::new(
+                    "format",
+                    "结构化编辑器不能更改笔记身份或组织信息。",
+                ));
+            }
+            (
+                candidate,
+                session.path.clone(),
+                session.baseline_revision.clone(),
+                session.view.note_id.clone(),
+            )
+        };
+
+        let (revision, publish_warning) = match storage::save_note(
+            &note_path,
+            &self.recovery_root,
+            &candidate,
+            baseline_revision.as_deref(),
+        ) {
+            Ok(revision) => (revision, None),
+            Err(error) => match storage::open_note(&note_path) {
+                Ok(published) if published.package == candidate => (
+                    published.revision,
+                    Some(format!(
+                        "笔记已保存并通过重读校验，但保存后步骤报告错误：{}",
+                        error.message
+                    )),
+                ),
+                _ => return Err(error),
+            },
+        };
+
+        let active = self
+            .session
+            .as_mut()
+            .ok_or_else(|| StorageError::new("staleSession", "笔记会话在保存期间已关闭。"))?;
+        if active.view.session_id != session_id || active.view.note_id != note_id {
+            return Err(StorageError::new(
+                "staleSession",
+                "笔记会话在保存期间发生变化；已保存快照仍保留在原笔记文件中。",
+            ));
+        }
+        active.package = candidate.clone();
+        active.baseline_revision = Some(revision.clone());
+        active.view.content = content;
+        active.view.text = candidate.text_projection();
+        active.view.revision = Some(revision);
+        let saved_session = active.view.clone();
+
+        let library = self.library.as_mut().expect("library checked above");
+        let mut receipt_library = match scan_library(
+            &library_path,
+            &library.notebooks,
+            &library.default_notebook_id,
+        ) {
+            Ok(view) => {
+                library.view = view.clone();
+                view
+            }
+            Err(error) => {
+                let mut view = library.view.clone();
+                push_warning(
+                    &mut view.warnings,
+                    format!("笔记已保存，但无法刷新列表：{}", error.message),
+                );
+                library.view = view.clone();
+                view
+            }
+        };
+        if let Some(warning) = publish_warning {
+            push_warning(&mut receipt_library.warnings, warning);
+        }
+        library.view.warnings = receipt_library.warnings.clone();
         Ok(SaveReceipt {
             session: saved_session,
             library: receipt_library,
@@ -1454,6 +1582,53 @@ impl Workspace {
         })
     }
 
+    pub fn save_current_content_as(
+        &mut self,
+        session_id: &str,
+        content: NoteContent,
+        path: PathBuf,
+    ) -> Result<SavedCopy, WorkspaceError> {
+        let (mut package, default_notebook_id) = {
+            let library = self
+                .library
+                .as_ref()
+                .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+            let session = self
+                .session
+                .as_ref()
+                .ok_or_else(|| StorageError::new("noSession", "当前没有可另存的笔记会话。"))?;
+            if session.view.session_id != session_id {
+                return Err(StorageError::new(
+                    "staleSession",
+                    "笔记会话已切换；请重新打开笔记后再另存。",
+                ));
+            }
+            (session.package.clone(), library.default_notebook_id.clone())
+        };
+
+        let original_content = package.content();
+        if content != original_content {
+            if !supports_editable_content(&original_content) || !supports_editable_content(&content)
+            {
+                return Err(StorageError::new(
+                    "readOnly",
+                    "当前笔记或另存内容包含编辑器尚不支持的结构；未创建副本。",
+                ));
+            }
+            package.replace_content(content);
+            package
+                .validate()
+                .map_err(|error| StorageError::new("format", error.to_string()))?;
+        }
+        assign_copy_identity(&mut package, &default_notebook_id);
+        let destination = self.resolve_copy_destination(&path)?;
+        let (saved_path, revision) = storage::save_copy(&destination, &package)?;
+        Ok(SavedCopy {
+            path: display_path(&saved_path),
+            revision,
+        })
+    }
+
     pub fn save_recovery_as(
         &mut self,
         recovery_id: &str,
@@ -1741,10 +1916,54 @@ fn read_only_reason(
     if !notebooks.contains_key(notebook_id.unwrap()) {
         return Some("此笔记属于未知笔记本，当前以只读方式打开。".into());
     }
-    if package.plain_text().is_none() {
-        return Some("此笔记包含简易编辑器尚不支持的内容，当前以只读方式打开。".into());
+    if !supports_editable_content(&package.content()) {
+        return Some("此笔记包含当前编辑器尚不支持的内容，当前以只读方式打开。".into());
     }
     None
+}
+
+fn supports_editable_content(content: &NoteContent) -> bool {
+    supports_editable_blocks(&content.sections.cue, true)
+        && supports_editable_blocks(&content.sections.content, false)
+        && supports_editable_blocks(&content.sections.summary, true)
+}
+
+fn supports_editable_blocks(blocks: &[Block], side_section: bool) -> bool {
+    blocks.iter().all(|block| match block {
+        Block::Paragraph { children }
+        | Block::Heading1 { children }
+        | Block::Heading2 { children }
+        | Block::Heading3 { children } => supports_editable_inlines(children, side_section),
+        Block::OrderedList { items, .. } | Block::BulletList { items } => items
+            .iter()
+            .all(|item| supports_editable_blocks(&item.blocks, side_section)),
+        Block::TaskList { items } => items
+            .iter()
+            .all(|item| supports_editable_blocks(&item.blocks, side_section)),
+        Block::Blockquote { blocks } if !side_section => supports_editable_blocks(blocks, false),
+        Block::HorizontalRule if !side_section => true,
+        Block::Table { rows } if !side_section => rows.iter().all(|row| {
+            let cells = match row {
+                TableRow::Header { cells } | TableRow::Body { cells } => cells,
+            };
+            cells
+                .iter()
+                .all(|cell| supports_editable_inlines(cell, false))
+        }),
+        _ => false,
+    })
+}
+
+fn supports_editable_inlines(inlines: &[Inline], side_section: bool) -> bool {
+    inlines.iter().all(|inline| match inline {
+        Inline::Text { marks, .. } => marks.iter().all(|mark| match mark {
+            Mark::Bold => true,
+            Mark::Italic | Mark::Strike | Mark::Link { .. } => !side_section,
+            Mark::Code => false,
+        }),
+        Inline::HardBreak => true,
+        Inline::MathInline { .. } => false,
+    })
 }
 
 fn note_session_from_opened(
@@ -1759,6 +1978,7 @@ fn note_session_from_opened(
         pinned: opened.package.document.organization.pinned,
         trashed_at: opened.package.document.organization.trashed_at.clone(),
         text: opened.package.text_projection(),
+        content: opened.package.content(),
         revision: Some(opened.revision.clone()),
         read_only_reason,
     }

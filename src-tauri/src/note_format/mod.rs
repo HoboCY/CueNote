@@ -5,7 +5,8 @@ mod validation;
 
 pub use ast::{
     AssetManifest, AssetManifestEntry, Block, Document, Inline, ListItem, Mark, MediaType,
-    MindMapNode, Organization, PlainText, Sections, TableRow, TaskListItem, Timestamps,
+    MindMapNode, NoteContent, Organization, PlainText, Sections, TableRow, TaskListItem,
+    Timestamps,
 };
 pub use package::{read_package, write_package, FormatError, NotePackage};
 pub use validation::{

@@ -46,6 +46,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             "timestamps": opened.package.document.timestamps,
             "revision": opened.revision,
             "text": opened.package.text_projection(),
+            "document": opened.package.document,
             "plainEditable": opened.package.plain_text().is_some(),
             "assetCount": opened.package.assets.len(),
         }))?

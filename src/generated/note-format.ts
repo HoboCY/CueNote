@@ -2,6 +2,8 @@
 
 export type PlainText = { title: string, cue: string, content: string, summary: string, };
 
+export type NoteContent = { title: string, sections: Sections, };
+
 export type Document = { schemaVersion: number, noteId: string, title: string, sections: Sections, organization: Organization, timestamps: Timestamps, };
 
 export type Sections = { cue: Array<Block>, content: Array<Block>, summary: Array<Block>, };

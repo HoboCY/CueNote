@@ -7,6 +7,8 @@
 | 组件 | 锁定版本 | 许可 | 用途 |
 | --- | --- | --- | --- |
 | React / React DOM | 19.1.1 | MIT | 界面与交互 |
+| Tiptap core / react / pm / starter-kit | 3.31.4 | MIT | 三分区富文本编辑、选区与独立撤销 |
+| Tiptap extension-table / extension-list | 3.31.4 | MIT | 基础表格与任务列表 |
 | @tauri-apps/api | 2.12.3 | Apache-2.0 OR MIT | 受限宿主调用 |
 | @tauri-apps/cli | 2.12.1 | Apache-2.0 OR MIT | 桌面构建 |
 | TypeScript | 5.9.3 | Apache-2.0 | 类型检查 |

@@ -7,7 +7,8 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use uuid::Uuid;
 
 use super::{
-    AssetManifest, Block, Document, Inline, Organization, PlainText, Sections, Timestamps,
+    AssetManifest, Block, Document, Inline, NoteContent, Organization, PlainText, Sections,
+    Timestamps,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -18,6 +19,27 @@ pub struct NotePackage {
 }
 
 impl NotePackage {
+    pub fn content(&self) -> NoteContent {
+        NoteContent {
+            title: self.document.title.clone(),
+            sections: self.document.sections.clone(),
+        }
+    }
+
+    pub fn replace_content(&mut self, content: NoteContent) {
+        if self.content() == content {
+            return;
+        }
+        self.document.title = content.title;
+        self.document.sections = content.sections;
+        self.document.timestamps.content_modified_at =
+            next_modified_at(&self.document.timestamps.content_modified_at);
+    }
+
+    pub(crate) fn validate(&self) -> Result<(), FormatError> {
+        super::validation::validate_package(self)
+    }
+
     pub fn new_plain(notebook_id: String, text: PlainText) -> Self {
         let now = now_string();
         Self {

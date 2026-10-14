@@ -22,7 +22,7 @@ Rust 中严格的 v1 类型及原生校验器是格式权威，生成 JSON Schem
 
 导图保存扁平节点表、根 ID 及有序子节点 ID，验证单根、无环、每个非根节点仅有一个父节点、全体可达和 ID 唯一；节点文字与顺序保真。这样链状导图不会被当成深层 JSON。图片清单固定记录 ID、PNG/JPEG 媒体类型、长度、SHA-256 和原始尺寸，图片节点只保存资产 ID 与显示宽度；引用必须闭合，不接受本机路径或 blob URL。
 
-当前 UI 只编辑纯文字段落。含已知富内容的有效 v1 文件可只读查看，其完整文档与资产保留在宿主；UI 与宿主同时阻止简易编辑器改写富内容。未知、缺图、损坏或未下载文件明确报错，不转为空白笔记。
+#14 交付时 UI 只编辑纯文字段落；#18 接入基础富文本，当前编辑边界见[富文本编辑契约](rich-editor-contract.md)。未接入编辑功能的有效 v1 内容继续只读查看，完整文档与资产保留在宿主；旧纯文本入口仍禁止改写富内容。未知、缺图、损坏或未下载文件明确报错，不转为空白笔记。
 
 `document.json` 的顶层字段固定为 `schemaVersion`、`noteId`、`title`、`sections`、`organization`、`timestamps`。`sections` 中的 `cue`、`content`、`summary` 各为内容块数组；组织信息包含可空的 `notebookId`、`pinned` 和可空的 `trashedAt`，时间包含 `createdAt`、`contentModifiedAt`、`organizationModifiedAt`。可空字段仍必须出现。块使用 `type` 判别，字段统一为 camelCase；标题为空不改变笔记身份。更高格式版本在进入 v1 结构校验前识别并拒绝。
 
@@ -50,7 +50,7 @@ Rust 中严格的 v1 类型及原生校验器是格式权威，生成 JSON Schem
 
 前端仅能请求选择/使用默认笔记库、在当前库新建/打开/保存笔记、打开已选目录。目录授权由 Rust 原生选择器或默认位置产生，不接受前端任意路径读写。文件路径、完整文档、资产和版本基线由宿主会话保存。
 
-界面使用 `WorkspaceView`、`LibraryView`、`NoteSession` 和 `PlainNoteText`；当前保存命令只接收会话 ID 与四个文字字段。宿主设置身份、归属、时间和版本，不信任前端提交的元信息。保存返回的是该次快照；响应期间的新文字仍显示未保存。未保存编辑的切换需要明确处理；完整自动保存与关闭恢复由 #15 继续落实。
+界面使用 `WorkspaceView`、`LibraryView` 和 `NoteSession`。#14 的保存入口接收会话 ID 与四个文字字段；#18 的结构化入口接收会话 ID 与 `NoteContent`（标题及三个分区）。宿主设置身份、归属、时间和版本，不信任前端提交的元信息。保存返回的是该次快照；响应期间的新输入仍显示未保存。自动保存与关闭恢复见 [#15 契约](autosave-recovery-contract.md)。
 
 ## 保存与失败
 

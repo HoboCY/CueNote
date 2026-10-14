@@ -13,6 +13,15 @@ pub struct PlainText {
     pub summary: String,
 }
 
+/// Editable note content without identity, organization, or asset metadata.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(rename_all = "camelCase")]
+pub struct NoteContent {
+    pub title: String,
+    pub sections: Sections,
+}
+
 /// The canonical v1 document stored as `document.json`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
