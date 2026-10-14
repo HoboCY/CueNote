@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AssetManifest",
+  "description": "The canonical v1 asset metadata stored in `assets/manifest.json`.",
+  "type": "object",
+  "properties": {
+    "assets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/AssetManifestEntry"
+      },
+      "maxItems": 8192
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "format": "uint32",
+      "maximum": 1,
+      "minimum": 1
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "assets"
+  ],
+  "$defs": {
+    "AssetManifestEntry": {
+      "type": "object",
+      "properties": {
+        "byteLength": {
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0
+        },
+        "height": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+        },
+        "mediaType": {
+          "$ref": "#/$defs/MediaType"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "width": {
+          "type": "integer",
+          "format": "uint32",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "mediaType",
+        "byteLength",
+        "sha256",
+        "width",
+        "height"
+      ]
+    },
+    "MediaType": {
+      "type": "string",
+      "enum": [
+        "image/png",
+        "image/jpeg"
+      ]
+    }
+  }
+}

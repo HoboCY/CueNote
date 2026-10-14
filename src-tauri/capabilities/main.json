@@ -1,7 +1,16 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
-  "description": "仅允许主窗口调用 CueNote 的只读应用版本命令。",
+  "description": "主窗口仅可使用已授权笔记库的会话操作；不授予任意路径、shell 或通用文件系统访问。",
   "windows": ["main"],
-  "permissions": ["allow-get-app-version"]
+  "permissions": [
+    "allow-get-app-version",
+    "allow-get-workspace",
+    "allow-use-default-library",
+    "allow-choose-library",
+    "allow-open-library-folder",
+    "allow-new-note",
+    "allow-open-note",
+    "allow-save-note-text"
+  ]
 }

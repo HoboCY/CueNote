@@ -2,7 +2,7 @@
 
 CueNote 是面向 Windows x64 与 Apple Silicon macOS 的个人康奈尔笔记应用。首版规格包含标题、线索区、内容区和总结区，以及 Markdown 排版、公式、代码、图片粘贴、可编辑思维导图与本地文件保存；笔记库由用户通过 OneDrive 同步。
 
-当前为正式工程的基础开发预览：提供桌面窗口、康奈尔布局、侧栏展开/收起与受限宿主调用。笔记编辑和保存尚未接入，界面不会接收或保存真实笔记。已验证的技术样机保留在独立原型分支。
+当前开发版本已接入选择笔记库、标题与康奈尔三分区纯文字编辑，以及原生文件的手动保存和重开。侧栏可展开/收起。包含富内容的有效 v1 笔记暂以只读方式打开，后续任务逐步接入完整编辑能力；自动保存与关闭保护仍由下一项任务实现，退出前请手动保存。完整日用验收尚未完成，技术样机保留在独立原型分支。
 
 ## 开发环境
 
@@ -34,21 +34,26 @@ npm run typecheck
 npm run build
 cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 cargo check --locked --manifest-path src-tauri/Cargo.toml
+cargo test --locked --manifest-path src-tauri/Cargo.toml
+cargo run --locked --manifest-path src-tauri/Cargo.toml --bin export_note_schema -- --check
 npm run build:desktop -- --debug
 ```
 
-最后一条命令生成调试桌面程序，不生成安装包。当前工程没有文件保存等领域行为测试；后续任务围绕实际保存、编辑和恢复接口添加测试，不用空测试数量代替验收。
+最后一条命令生成调试桌面程序，不生成安装包。文件格式、真实目录的安全保存和库会话分别有集成测试；磁盘测试使用 `src-tauri/target/testdata` 中的隔离目录。受限执行器可能阻止 Windows 文件替换，须先区分执行器权限与真实目录能力，不能为通过测试改成直接覆盖。
+
+修改 Rust 文档类型后，运行 `cargo run --manifest-path src-tauri/Cargo.toml --bin export_note_schema` 更新 JSON Schema 与 TypeScript，再执行上面的同步检查。调试桌面验证可显式设置绝对路径 `CUENOTE_TEST_ROOT`，把设置、恢复区和默认库放入独立测试目录；发布构建忽略此变量。真实桌面验证请使用 Tauri 构建产物，普通 Cargo 开发构建依赖前端开发服务器。
 
 ## 工程结构
 
 | 位置 | 职责 |
 | --- | --- |
 | `src/` | React 界面及宿主交互 |
-| `src-tauri/` | Rust 宿主、能力配置及桌面构建 |
+| `src-tauri/` | Rust 宿主、笔记格式、安全存储、库会话及桌面构建 |
+| `schemas/`、`src/generated/` | 从 Rust 类型生成的 v1 文档契约 |
 | `docs/` | 工作约定、架构决策与开发计划 |
 | `GLOSSARY.md` | 项目领域术语 |
 
-只在行为落地时增加模块，避免提前创建空的存储、同步或编辑层。笔记格式与用户数据目录将由首个可写笔记流程实现。
+笔记格式、目录布局、资源上限与失败行为见[首篇笔记实现契约](docs/note-storage-contract.md)。笔记库可以交给 OneDrive 同步；本机设置与恢复副本独立存放，应用只报告本机保存结果。
 
 ## 规格与计划
 
@@ -57,9 +62,10 @@ npm run build:desktop -- --debug
 - [GitHub 开发与验收总任务](https://github.com/HoboCY/CueNote/issues/12)
 - [开发任务与依赖](docs/implementation-plan.md)
 - [正式工程本机验证记录](docs/foundation-validation.md)
+- [首篇笔记保存与重开验证](docs/note-storage-validation.md)
 
-Mac、真实 OneDrive 双端、完整编辑/保存、容量与性能验收仍需后续实现与测试；基础工程可运行不代表已达到日用标准。
+Mac、真实 OneDrive 双端、完整编辑能力、容量与性能验收仍需后续实现与测试；当前版本不代表已达到日用标准。
 
 ## 许可
 
-项目采用 [Apache License 2.0](LICENSE)。第三方依赖继续遵守各自许可；正式分发前按已定任务补齐依赖许可清单。
+项目采用 [Apache License 2.0](LICENSE)。第三方依赖遵守各自许可；直接依赖见[开源组件](docs/open-source-components.md)，正式分发前补齐随包许可清单。
