@@ -526,6 +526,31 @@ button:focus-visible {
 .dialog-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 20px; }
 .dialog-actions .text-button { margin-left: auto; }
 
+.recovery-panel {
+  margin: 0 0 16px;
+  padding: 15px 17px;
+  border: 1px solid #dfe5db;
+  border-radius: 12px;
+  background: #f8f8f1;
+}
+.recovery-panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 9px; }
+.recovery-panel-heading h2 { margin: 4px 0 0; color: #405c52; font: 600 15px/1.4 Georgia, "Songti SC", serif; }
+.recovery-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.recovery-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 14px; padding: 11px 12px; border: 1px solid #e2e7dd; border-radius: 9px; background: #fffdf7; }
+.recovery-copy { display: grid; min-width: 0; gap: 4px; }
+.recovery-copy strong { overflow: hidden; color: #40584f; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.recovery-copy span, .recovery-empty { color: #89958c; font-size: 9px; line-height: 1.55; }
+.recovery-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.recovery-actions .quiet-button { min-height: 30px; padding: 0 9px; }
+.recovery-saved-path { grid-column: 1 / -1; margin: 0; color: #628173; font-size: 9px; line-height: 1.6; overflow-wrap: anywhere; }
+.recovery-saved-path code, .safe-copy-path code { overflow-wrap: anywhere; white-space: normal; }
+.recovery-empty { margin: 8px 2px 2px; }
+.save-controls { display: grid; justify-items: start; gap: 7px; min-width: 0; }
+.save-controls .error-notice { margin: 0; }
+.safe-copy-button { min-height: 30px; }
+.safe-copy-path { display: block; color: #72877a; font-size: 9px; line-height: 1.6; overflow-wrap: anywhere; }
+.note-actions { align-items: flex-start; }
+
 @media (max-width: 900px) {
   .library-actions { max-width: 54%; }
   .title-input { width: min(56vw, 540px); }
@@ -540,6 +565,7 @@ button:focus-visible {
   .editable-title { align-items: flex-start; padding: 15px 0; }
   .title-input { width: min(68vw, 530px); min-width: 0; }
   .note-actions { align-items: flex-start; flex-direction: column; }
+  .save-controls { width: 100%; }
   .save-button { align-self: stretch; }
 }
 

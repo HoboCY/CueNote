@@ -1,8 +1,9 @@
 use cuenote_lib::note_format::PlainText;
-use cuenote_lib::note_format::{Block, Inline, NotePackage};
+use cuenote_lib::note_format::{AssetManifestEntry, Block, Inline, MediaType, NotePackage};
 use cuenote_lib::storage;
 use cuenote_lib::workspace::Workspace;
-use std::path::Path;
+use sha2::{Digest, Sha256};
+use std::path::{Path, PathBuf};
 
 fn workspace_temp() -> tempfile::TempDir {
     let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
@@ -20,6 +21,24 @@ fn notebook_json(id: &str, default: bool) -> String {
 }
 
 const KNOWN_NOTEBOOK_ID: &str = "25ad7e2b-9523-4f0b-9041-426d7f94d924";
+
+fn add_test_image(package: &mut NotePackage) {
+    let id = "55ad7e2b-9523-4f0b-9041-426d7f94d924".to_owned();
+    let bytes = include_bytes!("fixtures/pixel.png").to_vec();
+    package.document.sections.content.push(Block::Image {
+        asset_id: id.clone(),
+        display_width_px: 1,
+    });
+    package.manifest.assets.push(AssetManifestEntry {
+        id: id.clone(),
+        media_type: MediaType::Png,
+        byte_length: bytes.len() as u64,
+        sha256: format!("{:x}", Sha256::digest(&bytes)),
+        width: 1,
+        height: 1,
+    });
+    package.assets.insert(id, bytes);
+}
 
 #[test]
 fn choosing_a_chinese_library_persists_the_default_notebook_and_location() {
@@ -456,4 +475,286 @@ fn saving_unchanged_text_keeps_the_content_and_organization_timestamps() {
         before.organization_modified_at
     );
     assert_eq!(after.created_at, before.created_at);
+}
+
+#[test]
+fn recovery_lists_after_restart_and_copy_restore_preserves_full_package() {
+    let temp = workspace_temp();
+    let library = temp.path().join("Library");
+    let config = temp.path().join("settings");
+    let recovery = temp.path().join("recovery");
+    let default = temp.path().join("default");
+    let mut original_workspace = Workspace::new(config.clone(), recovery.clone(), default.clone());
+    original_workspace.select_library(library.clone()).unwrap();
+    let blank = original_workspace.new_note().unwrap();
+    let original_text = PlainText {
+        title: "原始笔记".into(),
+        cue: "原线索".into(),
+        content: "原正文".into(),
+        summary: "原总结".into(),
+    };
+    original_workspace
+        .save_note_text(&blank.session_id, original_text)
+        .unwrap();
+    let original_path = library
+        .join("notes")
+        .join(format!("{}.cuenote", blank.note_id));
+    let original_opened = storage::open_note(&original_path).unwrap();
+
+    let mut draft = original_opened.package.clone();
+    draft
+        .replace_plain_text(PlainText {
+            title: "待恢复草稿".into(),
+            cue: "恢复线索".into(),
+            content: "保留完整结构与附件".into(),
+            summary: "恢复总结".into(),
+        })
+        .unwrap();
+    draft.document.sections.content.push(Block::Heading1 {
+        children: vec![Inline::Text {
+            text: "富内容也要保留".into(),
+            marks: Vec::new(),
+        }],
+    });
+    add_test_image(&mut draft);
+    let conflict =
+        storage::save_note(&original_path, &recovery, &draft, Some("stale-revision")).unwrap_err();
+    assert_eq!(conflict.kind, "conflict");
+    assert_eq!(
+        storage::open_note(&original_path).unwrap().revision,
+        original_opened.revision
+    );
+
+    let copy_directory = temp.path().join("safe-copies");
+    std::fs::create_dir_all(&copy_directory).unwrap();
+    let mut without_library = Workspace::new(
+        temp.path().join("unselected-settings"),
+        recovery.clone(),
+        default.clone(),
+    );
+    let listed = without_library.list_recovery_drafts().unwrap();
+    assert_eq!(listed.warnings, Vec::<String>::new());
+    assert_eq!(listed.drafts.len(), 1);
+    let recovery_id = listed.drafts[0].recovery_id.clone();
+    assert_eq!(listed.drafts[0].note_id, blank.note_id);
+    assert_eq!(listed.drafts[0].title, "待恢复草稿");
+    assert_eq!(
+        listed.drafts[0].revision,
+        storage::open_note(Path::new(conflict.recovery_path.as_deref().unwrap(),))
+            .unwrap()
+            .revision
+    );
+
+    let invalid_revision_id = format!(
+        "{}:{}",
+        recovery_id.rsplit_once(':').unwrap().0,
+        "0".repeat(64)
+    );
+    let changed = without_library
+        .save_recovery_as(
+            &invalid_revision_id,
+            copy_directory.join("must-not-be-created.cuenote"),
+        )
+        .unwrap_err();
+    assert_eq!(changed.kind, "recoveryChanged");
+
+    let into_recovery = without_library
+        .save_recovery_as(&recovery_id, recovery.join("blocked.cuenote"))
+        .unwrap_err();
+    assert_eq!(into_recovery.kind, "unsafePath");
+    assert!(!recovery.join("blocked.cuenote").exists());
+
+    let recovery_copy_path = copy_directory.join("recovery-copy.cuenote");
+    let recovery_copy = without_library
+        .save_recovery_as(&recovery_id, recovery_copy_path.clone())
+        .unwrap();
+    let recovery_copy_note = storage::open_note(&recovery_copy_path).unwrap();
+    assert_eq!(recovery_copy.revision, recovery_copy_note.revision);
+    assert_ne!(recovery_copy_note.package.document.note_id, blank.note_id);
+    assert_eq!(
+        recovery_copy_note.package.document.organization.notebook_id,
+        draft.document.organization.notebook_id
+    );
+    let mut expected_recovery_copy = draft.clone();
+    expected_recovery_copy.document.note_id = recovery_copy_note.package.document.note_id.clone();
+    expected_recovery_copy.document.timestamps.created_at = recovery_copy_note
+        .package
+        .document
+        .timestamps
+        .created_at
+        .clone();
+    expected_recovery_copy
+        .document
+        .timestamps
+        .organization_modified_at = recovery_copy_note
+        .package
+        .document
+        .timestamps
+        .organization_modified_at
+        .clone();
+    assert_eq!(recovery_copy_note.package, expected_recovery_copy);
+    assert_eq!(
+        without_library.list_recovery_drafts().unwrap().drafts.len(),
+        1
+    );
+
+    let mut restarted = Workspace::new(config, recovery.clone(), default);
+    restarted.snapshot().unwrap();
+    let into_library = restarted
+        .save_recovery_as(&recovery_id, library.join("notes/blocked.cuenote"))
+        .unwrap_err();
+    assert_eq!(into_library.kind, "unsafePath");
+    assert!(!library.join("notes/blocked.cuenote").exists());
+    let active_original = restarted.open_note(&blank.note_id).unwrap();
+    let current_copy_path = copy_directory.join("current-copy.cuenote");
+    let current_copy_text = PlainText {
+        title: "另存编辑".into(),
+        cue: "新的线索".into(),
+        content: "原会话不应改变".into(),
+        summary: "副本总结".into(),
+    };
+    let current_copy = restarted
+        .save_current_as(
+            &active_original.session_id,
+            current_copy_text.clone(),
+            current_copy_path.clone(),
+        )
+        .unwrap();
+    let current_copy_note = storage::open_note(&current_copy_path).unwrap();
+    assert_eq!(current_copy.revision, current_copy_note.revision);
+    assert_eq!(
+        current_copy_note.package.text_projection(),
+        current_copy_text
+    );
+    assert_ne!(current_copy_note.package.document.note_id, blank.note_id);
+    let unchanged_session = restarted.snapshot().unwrap().session.unwrap();
+    assert_eq!(unchanged_session.session_id, active_original.session_id);
+    assert_eq!(unchanged_session.revision, active_original.revision);
+    assert_eq!(
+        storage::open_note(&original_path).unwrap().revision,
+        original_opened.revision
+    );
+
+    let restored = restarted.restore_recovery_as_copy(&recovery_id).unwrap();
+    assert_ne!(restored.session.note_id, blank.note_id);
+    let restored_path = library
+        .join("notes")
+        .join(format!("{}.cuenote", restored.session.note_id));
+    let restored_note = storage::open_note(&restored_path).unwrap();
+    assert_eq!(
+        restored_note.package.document.sections,
+        draft.document.sections
+    );
+    assert_eq!(restored_note.package.manifest, draft.manifest);
+    assert_eq!(restored_note.package.assets, draft.assets);
+    assert_eq!(restored_note.package.document.title, draft.document.title);
+    assert_ne!(
+        restored_note.package.document.timestamps.created_at,
+        draft.document.timestamps.created_at
+    );
+    assert_ne!(
+        restored_note
+            .package
+            .document
+            .timestamps
+            .organization_modified_at,
+        draft.document.timestamps.organization_modified_at
+    );
+    assert_eq!(restarted.list_recovery_drafts().unwrap().drafts.len(), 0);
+    assert_eq!(
+        storage::open_note(&original_path).unwrap().revision,
+        original_opened.revision
+    );
+}
+
+#[test]
+fn unreadable_recovery_draft_is_warned_about_and_left_in_place() {
+    let temp = workspace_temp();
+    let library = temp.path().join("Library");
+    let config = temp.path().join("settings");
+    let recovery = temp.path().join("recovery");
+    let default = temp.path().join("default");
+    let mut workspace = Workspace::new(config.clone(), recovery.clone(), default.clone());
+    workspace.select_library(library.clone()).unwrap();
+    let blank = workspace.new_note().unwrap();
+    workspace
+        .save_note_text(
+            &blank.session_id,
+            PlainText {
+                title: "原件".into(),
+                cue: String::new(),
+                content: "原始内容".into(),
+                summary: String::new(),
+            },
+        )
+        .unwrap();
+    let path = library
+        .join("notes")
+        .join(format!("{}.cuenote", blank.note_id));
+    let original = storage::open_note(&path).unwrap();
+    let mut draft = original.package.clone();
+    draft
+        .replace_plain_text(PlainText {
+            title: "损坏草稿".into(),
+            cue: String::new(),
+            content: "损坏后仍应保留".into(),
+            summary: String::new(),
+        })
+        .unwrap();
+    let error = storage::save_note(&path, &recovery, &draft, Some("stale")).unwrap_err();
+    let recovery_path = PathBuf::from(error.recovery_path.unwrap());
+    std::fs::write(&recovery_path, b"invalid package bytes").unwrap();
+
+    let mut restarted = Workspace::new(config, recovery, default);
+    let listing = restarted.list_recovery_drafts().unwrap();
+    assert!(listing.drafts.is_empty());
+    assert!(listing
+        .warnings
+        .iter()
+        .any(|warning| warning.contains("校验失败")));
+    assert_eq!(
+        std::fs::read(&recovery_path).unwrap(),
+        b"invalid package bytes"
+    );
+    assert_eq!(
+        storage::open_note(&path).unwrap().revision,
+        original.revision
+    );
+}
+
+#[test]
+fn missing_library_target_is_checkpointed_when_recovery_is_available() {
+    let temp = workspace_temp();
+    let library = temp.path().join("Library");
+    let recovery = temp.path().join("recovery");
+    let mut workspace = Workspace::new(
+        temp.path().join("settings"),
+        recovery.clone(),
+        temp.path().join("default"),
+    );
+    workspace.select_library(library.clone()).unwrap();
+    let blank = workspace.new_note().unwrap();
+    std::fs::remove_dir(library.join("notes")).unwrap();
+
+    let text = PlainText {
+        title: "目录暂不可用".into(),
+        cue: String::new(),
+        content: "恢复快照仍需保存".into(),
+        summary: String::new(),
+    };
+    let error = workspace
+        .save_note_text(&blank.session_id, text.clone())
+        .unwrap_err();
+
+    assert_eq!(error.kind, "io");
+    let recovery_path = error
+        .recovery_path
+        .as_deref()
+        .expect("available external recovery must preserve the editor contents");
+    assert!(error.recovery_error.is_none());
+    let saved = storage::open_note(Path::new(recovery_path)).unwrap();
+    assert_eq!(saved.package.text_projection(), text);
+    assert_eq!(saved.package.document.note_id, blank.note_id);
+    assert!(!library.join("notes").exists());
+    assert_eq!(workspace.list_recovery_drafts().unwrap().drafts.len(), 1);
 }

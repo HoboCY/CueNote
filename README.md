@@ -2,7 +2,7 @@
 
 CueNote 是面向 Windows x64 与 Apple Silicon macOS 的个人康奈尔笔记应用。首版规格包含标题、线索区、内容区和总结区，以及 Markdown 排版、公式、代码、图片粘贴、可编辑思维导图与本地文件保存；笔记库由用户通过 OneDrive 同步。
 
-当前开发版本已接入选择笔记库、标题与康奈尔三分区纯文字编辑，以及原生文件的手动保存和重开。侧栏可展开/收起。包含富内容的有效 v1 笔记暂以只读方式打开，后续任务逐步接入完整编辑能力；自动保存与关闭保护仍由下一项任务实现，退出前请手动保存。完整日用验收尚未完成，技术样机保留在独立原型分支。
+当前开发版本已接入选择笔记库、标题与康奈尔三分区纯文字编辑，以及原生文件保存和重开。停止输入约一秒后自动保存，切换和关闭会等待待保存内容，也可取消离开；保存失败会保留草稿并提供安全另存，重启后可找回已持久化的恢复草稿。侧栏可展开/收起。包含富内容的有效 v1 笔记暂以只读方式打开，后续任务逐步接入完整编辑能力。完整日用验收尚未完成，技术样机保留在独立原型分支。
 
 ## 开发环境
 
@@ -31,6 +31,7 @@ npm run dev
 
 ```sh
 npm run typecheck
+npm test
 npm run build
 cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 cargo check --locked --manifest-path src-tauri/Cargo.toml
@@ -40,6 +41,15 @@ npm run build:desktop -- --debug
 ```
 
 最后一条命令生成调试桌面程序，不生成安装包。文件格式、真实目录的安全保存和库会话分别有集成测试；磁盘测试使用 `src-tauri/target/testdata` 中的隔离目录。受限执行器可能阻止 Windows 文件替换，须先区分执行器权限与真实目录能力，不能为通过测试改成直接覆盖。
+
+保存中断矩阵使用单独启用的调试功能，先构建子进程探针再运行测试：
+
+```sh
+cargo build --locked --manifest-path src-tauri/Cargo.toml --features storage-fault-injection --example storage_fault_probe
+cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-fault-injection --test storage_interruptions -- --test-threads=1
+```
+
+该矩阵在隔离目录注入进程退出、候选损坏与模拟空间不足，不填满用户磁盘。普通构建不启用注入，发布构建忽略故障环境变量。
 
 修改 Rust 文档类型后，运行 `cargo run --manifest-path src-tauri/Cargo.toml --bin export_note_schema` 更新 JSON Schema 与 TypeScript，再执行上面的同步检查。调试桌面验证可显式设置绝对路径 `CUENOTE_TEST_ROOT`，把设置、恢复区和默认库放入独立测试目录；发布构建忽略此变量。真实桌面验证请使用 Tauri 构建产物，普通 Cargo 开发构建依赖前端开发服务器。
 
@@ -55,6 +65,8 @@ npm run build:desktop -- --debug
 
 笔记格式、目录布局、资源上限与失败行为见[首篇笔记实现契约](docs/note-storage-contract.md)。笔记库可以交给 OneDrive 同步；本机设置与恢复副本独立存放，应用只报告本机保存结果。
 
+自动保存、可取消的关闭等待与安全另存见[自动保存和恢复契约](docs/autosave-recovery-contract.md)。另存成功只表示独立副本已保存，不会把原位置的失败状态改成成功；尚未落盘的最后输入不承诺在断电或强制结束时零丢失。
+
 ## 规格与计划
 
 - [首版最终规格与验收标准](https://github.com/HoboCY/CueNote/issues/8#issuecomment-6165724793)
@@ -63,6 +75,7 @@ npm run build:desktop -- --debug
 - [开发任务与依赖](docs/implementation-plan.md)
 - [正式工程本机验证记录](docs/foundation-validation.md)
 - [首篇笔记保存与重开验证](docs/note-storage-validation.md)
+- [自动保存与恢复验证](docs/autosave-recovery-validation.md)
 
 Mac、真实 OneDrive 双端、完整编辑能力、容量与性能验收仍需后续实现与测试；当前版本不代表已达到日用标准。
 

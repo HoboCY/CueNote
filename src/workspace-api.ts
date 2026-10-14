@@ -44,6 +44,24 @@ export interface WorkspaceError {
   recoveryError?: string | null;
 }
 
+export interface RecoveryDraftSummary {
+  recoveryId: string;
+  noteId: string;
+  title: string;
+  savedAt: string;
+  revision: string;
+}
+
+export interface RecoveryList {
+  drafts: RecoveryDraftSummary[];
+  warnings: string[];
+}
+
+export interface SavedCopy {
+  path: string;
+  revision: string;
+}
+
 export const workspaceApi = {
   get: () => invoke<WorkspaceView>('get_workspace'),
   useDefault: () => invoke<WorkspaceView>('use_default_library'),
@@ -53,4 +71,13 @@ export const workspaceApi = {
   openNote: (noteId: string) => invoke<NoteSession>('open_note', { noteId }),
   save: (sessionId: string, text: PlainNoteText) =>
     invoke<SaveReceipt>('save_note_text', { sessionId, text }),
+  listRecoveryDrafts: () => invoke<RecoveryList>('list_recovery_drafts'),
+  restoreRecoveryAsCopy: (recoveryId: string) =>
+    invoke<SaveReceipt>('restore_recovery_as_copy', { recoveryId }),
+  saveRecoveryAs: (recoveryId: string) =>
+    invoke<SavedCopy | null>('save_recovery_as', { recoveryId }),
+  saveCurrentAs: (sessionId: string, text: PlainNoteText) =>
+    invoke<SavedCopy | null>('save_current_as', { sessionId, text }),
+  activateCloseGuard: () => invoke<void>('activate_close_guard'),
+  completeClose: () => invoke<void>('complete_close'),
 };

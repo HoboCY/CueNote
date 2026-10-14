@@ -10,6 +10,15 @@ default-run = "cuenote"
 name = "cuenote_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# Explicitly opt in for isolated fault-injection runs. Release code never reads
+# these controls, even if this feature is accidentally enabled during a build.
+storage-fault-injection = []
+
+[[example]]
+name = "storage_fault_probe"
+required-features = ["storage-fault-injection"]
+
 [build-dependencies]
 tauri-build = { version = "2.7.2", features = [] }
 

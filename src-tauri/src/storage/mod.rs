@@ -3,11 +3,18 @@ use crate::note_format::{
 };
 use serde::Serialize;
 use sha2::{Digest, Sha256};
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File, Metadata, OpenOptions};
 use std::io::Cursor;
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+
+mod recovery;
+
+pub(crate) use recovery::{
+    create_recovery_snapshot, list_recovery_drafts, open_recovery_draft, remove_recovery_snapshot,
+    save_copy, RecoverySnapshot,
+};
 
 const HISTORY_LIMIT: usize = 30;
 
@@ -85,71 +92,94 @@ pub fn save_note(
     let target = match resolve_target(path) {
         Ok(target) => target,
         Err(error) => {
-            return Err(preserve_draft(error, None, recovery_root, package, None));
+            return Err(preserve_snapshot_for_unresolved_target(
+                error,
+                path,
+                recovery_root,
+                package,
+            ));
         }
     };
     let note_id = package.document.note_id.clone();
     let recovery = match prepare_recovery_root(recovery_root, &target.parent) {
         Ok(root) => root,
-        Err(error) => {
-            return Err(preserve_draft(
-                error,
-                None,
-                recovery_root,
-                package,
-                Some(&target.parent),
+        Err(mut error) => {
+            error.recovery_error = Some(format!(
+                "无法在修改笔记前准备独立恢复目录，因此没有写入候选或发布笔记：{}",
+                error.message
             ));
+            return Err(error);
         }
     };
-    let lock = match acquire_save_lock(&recovery, &target.path) {
+
+    let snapshot = match create_recovery_snapshot(&recovery, package) {
+        Ok(snapshot) => snapshot,
+        Err(mut error) => {
+            if error.recovery_path.is_none() {
+                error.recovery_error = Some(format!(
+                    "保存前恢复快照未能完成，原笔记没有进入发布阶段：{}",
+                    error.message
+                ));
+            }
+            return Err(error);
+        }
+    };
+    if let Err(error) =
+        crate::storage_faults::checkpoint("recovery_snapshot_persisted", &target.path, None)
+    {
+        return Err(fail_with_snapshot(error, &snapshot, None, false));
+    }
+
+    let _lock = match acquire_save_lock(&recovery, &target.path) {
         Ok(lock) => lock,
         Err(error) => {
-            return Err(preserve_draft(
+            return Err(fail_with_snapshot(
                 StorageError::io("无法协调此笔记的保存", error),
+                &snapshot,
                 None,
-                &recovery,
-                package,
-                Some(&target.parent),
+                false,
             ));
         }
     };
-    let _lock = lock;
 
     let candidate = match create_candidate_path(&target.parent) {
         Ok((candidate, file)) => (candidate, file),
         Err(error) => {
-            return Err(preserve_draft(
-                error,
-                None,
-                &recovery,
-                package,
-                Some(&target.parent),
-            ));
+            return Err(fail_with_snapshot(error, &snapshot, None, false));
         }
     };
     let (candidate_path, candidate_file) = candidate;
-    let candidate_revision = match write_and_verify_package(candidate_file, package) {
-        Ok(revision) => revision,
-        Err(error) => {
-            return Err(preserve_draft(
-                error,
-                Some(&candidate_path),
-                &recovery,
-                package,
-                Some(&target.parent),
-            ));
-        }
-    };
+    if let Err(error) =
+        crate::storage_faults::checkpoint("candidate_created", &target.path, Some(&candidate_path))
+    {
+        return Err(fail_with_snapshot(
+            error,
+            &snapshot,
+            Some(&candidate_path),
+            false,
+        ));
+    }
+    let candidate_revision =
+        match write_and_verify_candidate(candidate_file, &candidate_path, &target.path, package) {
+            Ok(revision) => revision,
+            Err(error) => {
+                return Err(fail_with_snapshot(
+                    error,
+                    &snapshot,
+                    Some(&candidate_path),
+                    false,
+                ));
+            }
+        };
 
     let baseline = match inspect_note(&target) {
         Ok(baseline) => baseline,
         Err(error) => {
-            return Err(preserve_draft(
+            return Err(fail_with_snapshot(
                 error,
+                &snapshot,
                 Some(&candidate_path),
-                &recovery,
-                package,
-                Some(&target.parent),
+                false,
             ));
         }
     };
@@ -159,25 +189,23 @@ pub fn save_note(
         None => baseline.is_none(),
     };
     if !expected_matches {
-        return Err(preserve_draft(
+        return Err(fail_with_snapshot(
             StorageError::new(
                 "conflict",
                 "笔记已被其他操作创建、修改或删除，请保留当前版本并处理恢复草稿。",
             ),
+            &snapshot,
             Some(&candidate_path),
-            &recovery,
-            package,
-            Some(&target.parent),
+            false,
         ));
     }
     if let Some(baseline) = &baseline {
         if baseline.package.document.note_id != note_id {
-            return Err(preserve_draft(
+            return Err(fail_with_snapshot(
                 StorageError::new("conflict", "笔记身份与保存路径中的现有笔记身份不一致。"),
+                &snapshot,
                 Some(&candidate_path),
-                &recovery,
-                package,
-                Some(&target.parent),
+                false,
             ));
         }
     }
@@ -186,41 +214,59 @@ pub fn save_note(
         match preserve_history_version(&target.path, &recovery, &note_id, old_revision) {
             Ok(path) => Some(path),
             Err(error) => {
-                return Err(preserve_draft(
+                return Err(fail_with_snapshot(
                     error,
+                    &snapshot,
                     Some(&candidate_path),
-                    &recovery,
-                    package,
-                    Some(&target.parent),
+                    false,
                 ));
             }
         }
     } else {
         None
     };
+    if let Err(error) =
+        crate::storage_faults::checkpoint("history_persisted", &target.path, Some(&candidate_path))
+    {
+        return Err(fail_with_snapshot(
+            error,
+            &snapshot,
+            Some(&candidate_path),
+            false,
+        ));
+    }
 
     let current_again = match inspect_note(&target) {
         Ok(current) => current,
         Err(error) => {
-            return Err(preserve_draft(
+            return Err(fail_with_snapshot(
                 error,
+                &snapshot,
                 Some(&candidate_path),
-                &recovery,
-                package,
-                Some(&target.parent),
+                false,
             ));
         }
     };
     if current_again.as_ref().map(|note| note.revision.as_str()) != baseline_revision {
-        return Err(preserve_draft(
+        return Err(fail_with_snapshot(
             StorageError::new(
                 "conflict",
                 "笔记在保存期间发生变化；原版本和恢复草稿均已保留。",
             ),
+            &snapshot,
             Some(&candidate_path),
-            &recovery,
-            package,
-            Some(&target.parent),
+            false,
+        ));
+    }
+
+    if let Err(error) =
+        crate::storage_faults::checkpoint("publish_before", &target.path, Some(&candidate_path))
+    {
+        return Err(fail_with_snapshot(
+            error,
+            &snapshot,
+            Some(&candidate_path),
+            false,
         ));
     }
 
@@ -237,65 +283,145 @@ pub fn save_note(
     if let Err(error) = publish_result {
         #[cfg(windows)]
         if baseline.is_some() {
-            return Err(preserve_draft_keep_candidate(
+            return Err(fail_with_snapshot(
                 error,
+                &snapshot,
                 Some(&candidate_path),
-                &recovery,
-                package,
-                Some(&target.parent),
+                true,
             ));
         }
-        return Err(preserve_draft(
+        return Err(fail_with_snapshot(
             error,
+            &snapshot,
             Some(&candidate_path),
-            &recovery,
-            package,
-            Some(&target.parent),
+            false,
+        ));
+    }
+
+    if let Err(error) =
+        crate::storage_faults::checkpoint("publish_after", &target.path, Some(&candidate_path))
+    {
+        let mut error = error;
+        error.message = format!("发布已经完成，后续步骤发生故障：{}", error.message);
+        return Err(fail_with_snapshot(
+            error,
+            &snapshot,
+            Some(&candidate_path),
+            false,
         ));
     }
 
     if let Err(error) = sync_parent_directory(&target.parent) {
-        return Err(preserve_draft(
+        return Err(fail_with_snapshot(
             StorageError::io("笔记已发布，但无法同步所在目录", error),
+            &snapshot,
             Some(&candidate_path),
-            &recovery,
-            package,
-            Some(&target.parent),
+            false,
         ));
     }
 
     let published = match inspect_note(&target) {
         Ok(Some(published)) if published.revision == candidate_revision => published,
         Ok(_) => {
-            return Err(preserve_draft(
+            return Err(fail_with_snapshot(
                 StorageError::new(
                     "publish",
                     "发布后的笔记校验与候选版本不一致；已保留恢复草稿。",
                 ),
+                &snapshot,
                 Some(&candidate_path),
-                &recovery,
-                package,
-                Some(&target.parent),
+                false,
             ));
         }
         Err(error) => {
-            return Err(preserve_draft(
+            return Err(fail_with_snapshot(
                 StorageError::new(
                     "publish",
                     format!("发布后无法重新读取笔记：{}", error.message),
                 ),
+                &snapshot,
                 Some(&candidate_path),
-                &recovery,
-                package,
-                Some(&target.parent),
+                false,
             ));
         }
     };
     let _ = published;
 
     rotate_history(&history_directory(&recovery, &note_id));
-    let _ = fs::remove_file(&candidate_path);
+    if let Err(error) = remove_owned_save_candidate(&candidate_path) {
+        let mut storage_error = StorageError::io("笔记已保存，但无法清理同目录候选文件", error);
+        storage_error.recovery_error = Some(format!(
+            "已验证恢复快照仍保留于 {}；候选清理路径为 {}",
+            snapshot.path.display(),
+            candidate_path.display()
+        ));
+        storage_error.recovery_path = Some(snapshot.path.to_string_lossy().into_owned());
+        return Err(storage_error);
+    }
+    if let Err(mut error) = remove_recovery_snapshot(&recovery, &snapshot) {
+        error.message = format!("笔记已保存，但无法确认清理本次恢复快照：{}", error.message);
+        if fs::symlink_metadata(&snapshot.path).is_ok() {
+            error.recovery_path = Some(snapshot.path.to_string_lossy().into_owned());
+        } else {
+            error.recovery_path = None;
+        }
+        return Err(error);
+    }
     Ok(candidate_revision)
+}
+
+fn preserve_snapshot_for_unresolved_target(
+    mut error: StorageError,
+    requested_path: &Path,
+    recovery_root: &Path,
+    package: &NotePackage,
+) -> StorageError {
+    let requested_parent = requested_path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let note_parent = match resolve_recovery_path(requested_parent) {
+        Ok((parent, _)) => parent,
+        Err(recovery_error) => {
+            error.recovery_error = Some(format!(
+                "无法验证目标目录与恢复目录的分离关系；未写入恢复快照：{}",
+                recovery_error.message
+            ));
+            return error;
+        }
+    };
+    let recovery = match prepare_recovery_root(recovery_root, &note_parent) {
+        Ok(recovery) => recovery,
+        Err(recovery_error) => {
+            error.recovery_error = Some(format!(
+                "目标笔记不可访问，且无法准备独立恢复目录：{}",
+                recovery_error.message
+            ));
+            return error;
+        }
+    };
+    let snapshot = match create_recovery_snapshot(&recovery, package) {
+        Ok(snapshot) => snapshot,
+        Err(snapshot_error) => {
+            error.recovery_path = snapshot_error.recovery_path.clone();
+            error.recovery_error = Some(format!(
+                "目标笔记不可访问，保存前恢复快照未能完成：{}",
+                snapshot_error.message
+            ));
+            return error;
+        }
+    };
+    if let Err(checkpoint_error) =
+        crate::storage_faults::checkpoint("recovery_snapshot_persisted", requested_path, None)
+    {
+        error.recovery_error = Some(format!(
+            "目标笔记不可访问；恢复快照已保留于 {}，随后发生故障：{}",
+            snapshot.path.display(),
+            checkpoint_error.message
+        ));
+    }
+    error.recovery_path = Some(snapshot.path.to_string_lossy().into_owned());
+    error
 }
 
 pub fn probe_directory(path: &Path) -> Result<(), StorageError> {
@@ -626,6 +752,10 @@ fn resolve_target(path: &Path) -> Result<ResolvedTarget, StorageError> {
     })
 }
 
+pub(crate) fn resolve_output_path(path: &Path) -> Result<PathBuf, StorageError> {
+    resolve_target(path).map(|target| target.path)
+}
+
 fn canonical_directory(path: &Path) -> Result<PathBuf, StorageError> {
     let metadata =
         fs::symlink_metadata(path).map_err(|error| StorageError::io("无法读取所选目录", error))?;
@@ -699,6 +829,88 @@ fn write_and_verify_package(mut file: File, package: &NotePackage) -> Result<Str
         ));
     }
     Ok(opened.revision)
+}
+
+fn write_and_verify_candidate(
+    mut file: File,
+    candidate: &Path,
+    target: &Path,
+    package: &NotePackage,
+) -> Result<String, StorageError> {
+    write_package(&mut file, package).map_err(StorageError::format)?;
+    file.flush()
+        .map_err(|error| StorageError::io("无法写入完整候选笔记", error))?;
+    file.sync_all()
+        .map_err(|error| StorageError::io("无法同步候选笔记", error))?;
+    crate::storage_faults::checkpoint(
+        "candidate_synced_before_validation",
+        target,
+        Some(candidate),
+    )?;
+    file.seek(SeekFrom::Start(0))
+        .map_err(|error| StorageError::io("无法重新读取候选笔记", error))?;
+    let opened = read_validated_file(&mut file)?;
+    if opened.package.document.note_id != package.document.note_id {
+        return Err(StorageError::new(
+            "invalid_document",
+            "候选笔记校验后身份与请求保存的笔记不一致。",
+        ));
+    }
+    crate::storage_faults::checkpoint("candidate_validated", target, Some(candidate))?;
+    Ok(opened.revision)
+}
+
+fn fail_with_snapshot(
+    mut error: StorageError,
+    snapshot: &RecoverySnapshot,
+    candidate: Option<&Path>,
+    keep_candidate: bool,
+) -> StorageError {
+    error.recovery_path = Some(snapshot.path.to_string_lossy().into_owned());
+    if let Some(candidate) = candidate {
+        if keep_candidate {
+            if fs::symlink_metadata(candidate).is_ok() {
+                error.recovery_error = Some(format!(
+                    "保存前恢复快照保留于 {}；同目录候选文件也保留于 {}，其完整性未能确认",
+                    snapshot.path.display(),
+                    candidate.display()
+                ));
+            }
+        } else if let Err(cleanup_error) = remove_owned_save_candidate(candidate) {
+            error.recovery_error = Some(format!(
+                "保存前恢复快照保留于 {}；无法清理同目录候选文件 {}：{cleanup_error}",
+                snapshot.path.display(),
+                candidate.display()
+            ));
+        }
+    }
+    error
+}
+
+fn remove_owned_save_candidate(path: &Path) -> io::Result<()> {
+    match fs::symlink_metadata(path) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(error),
+        Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_file() => Err(
+            io::Error::new(io::ErrorKind::InvalidData, "候选路径类型已变化，未删除"),
+        ),
+        Ok(_) => fs::remove_file(path),
+    }
+}
+
+fn is_link_or_reparse(metadata: &Metadata) -> bool {
+    if metadata.file_type().is_symlink() {
+        return true;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        return metadata.file_attributes() & 0x0000_0400 != 0;
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
 }
 
 fn create_candidate_path(parent: &Path) -> Result<(PathBuf, File), StorageError> {
@@ -811,27 +1023,6 @@ fn resolve_recovery_path(path: &Path) -> Result<(PathBuf, bool), StorageError> {
             Err(error) => return Err(StorageError::io("无法检查本机恢复目录", error)),
         }
     }
-}
-
-fn prepare_recovery_root_without_target(root: &Path) -> Result<PathBuf, StorageError> {
-    let (root, existed) = resolve_recovery_path(root)?;
-    if !existed {
-        fs::create_dir_all(&root).map_err(|error| StorageError::io("无法准备恢复目录", error))?;
-    }
-    let metadata =
-        fs::symlink_metadata(&root).map_err(|error| StorageError::io("无法检查恢复目录", error))?;
-    if metadata.file_type().is_symlink() || !metadata.is_dir() {
-        return Err(StorageError::new(
-            "unsafePath",
-            "恢复位置必须是实际目录，不能通过符号链接访问。",
-        ));
-    }
-    let root =
-        fs::canonicalize(&root).map_err(|error| StorageError::io("无法解析恢复目录", error))?;
-    sync_directory_chain(&root).map_err(|error| {
-        StorageError::io(&format!("无法同步恢复目录链 {}", root.display()), error)
-    })?;
-    Ok(root)
 }
 
 fn acquire_save_lock(recovery_root: &Path, target: &Path) -> io::Result<File> {
@@ -974,12 +1165,6 @@ fn history_directory(recovery_root: &Path, note_id: &str) -> PathBuf {
         .join(digest_bytes(note_id.as_bytes()))
 }
 
-fn draft_directory(recovery_root: &Path, note_id: &str) -> PathBuf {
-    recovery_root
-        .join("drafts")
-        .join(digest_bytes(note_id.as_bytes()))
-}
-
 fn digest_bytes(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
@@ -1001,115 +1186,6 @@ fn copy_at_most_package_size<R: Read, W: Write>(
         ));
     }
     Ok(copied)
-}
-
-fn preserve_draft(
-    error: StorageError,
-    candidate: Option<&Path>,
-    recovery_root: &Path,
-    package: &NotePackage,
-    note_parent: Option<&Path>,
-) -> StorageError {
-    preserve_draft_internal(error, candidate, recovery_root, package, note_parent, false)
-}
-
-fn preserve_draft_keep_candidate(
-    error: StorageError,
-    candidate: Option<&Path>,
-    recovery_root: &Path,
-    package: &NotePackage,
-    note_parent: Option<&Path>,
-) -> StorageError {
-    preserve_draft_internal(error, candidate, recovery_root, package, note_parent, true)
-}
-
-fn preserve_draft_internal(
-    mut error: StorageError,
-    candidate: Option<&Path>,
-    recovery_root: &Path,
-    package: &NotePackage,
-    note_parent: Option<&Path>,
-    keep_candidate: bool,
-) -> StorageError {
-    let recovery = match note_parent {
-        Some(parent) => prepare_recovery_root(recovery_root, parent),
-        None => prepare_recovery_root_without_target(recovery_root),
-    };
-    let recovery = match recovery {
-        Ok(path) => path,
-        Err(recovery_error) => {
-            error.recovery_error = Some(with_candidate_retention_note(
-                recovery_error.message,
-                candidate,
-            ));
-            return error;
-        }
-    };
-    let directory = draft_directory(&recovery, &package.document.note_id);
-    if let Err(io_error) = fs::create_dir_all(&directory) {
-        error.recovery_error = Some(with_candidate_retention_note(
-            format!("无法创建恢复草稿目录：{io_error}"),
-            candidate,
-        ));
-        return error;
-    }
-    if let Err(io_error) = sync_directory_chain(&directory) {
-        error.recovery_error = Some(with_candidate_retention_note(
-            format!("无法同步恢复草稿目录链 {}：{io_error}", directory.display()),
-            candidate,
-        ));
-        return error;
-    }
-    let destination = directory.join(format!("draft-{}.cuenote", Uuid::new_v4().simple()));
-    let saved = match candidate {
-        Some(candidate) if candidate.exists() => {
-            match copy_verified_note(candidate, &destination, &package.document.note_id) {
-                Ok(revision) => Ok(revision),
-                Err(copy_error) => match create_new_package(&destination, package) {
-                    Ok(revision) => Ok(revision),
-                    Err(write_error) => {
-                        error.recovery_error = Some(with_candidate_retention_note(
-                            format!(
-                                "无法复制候选草稿（{}），也无法从内存内容写入恢复副本（{}）",
-                                copy_error.message, write_error.message
-                            ),
-                            Some(candidate),
-                        ));
-                        return error;
-                    }
-                },
-            }
-        }
-        _ => match create_new_package(&destination, package) {
-            Ok(revision) => Ok(revision),
-            Err(write_error) => Err(write_error),
-        },
-    };
-    match saved {
-        Ok(_) => {
-            error.recovery_path = Some(destination.to_string_lossy().into_owned());
-            if let Some(candidate) = candidate.filter(|_| !keep_candidate) {
-                let _ = fs::remove_file(candidate);
-            }
-        }
-        Err(recovery_error) => {
-            error.recovery_error = Some(with_candidate_retention_note(
-                recovery_error.message,
-                candidate,
-            ));
-        }
-    }
-    error
-}
-
-fn with_candidate_retention_note(message: String, candidate: Option<&Path>) -> String {
-    match candidate.filter(|path| fs::symlink_metadata(path).is_ok()) {
-        Some(path) => format!(
-            "{message}；同目录候选文件仍保留于 {}，其完整性未能确认",
-            path.display()
-        ),
-        None => message,
-    }
 }
 
 fn copy_verified_note(
@@ -1183,36 +1259,6 @@ fn copy_verified_note(
         )
     })?;
     Ok(verified.revision)
-}
-
-fn create_new_package(path: &Path, package: &NotePackage) -> Result<String, StorageError> {
-    let file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create_new(true)
-        .open(path)
-        .map_err(|error| StorageError::io("无法创建恢复草稿", error))?;
-    match write_and_verify_package(file, package) {
-        Ok(revision) => {
-            let parent = path
-                .parent()
-                .ok_or_else(|| StorageError::new("unsafePath", "恢复草稿路径缺少父目录。"))?;
-            sync_directory_chain(parent).map_err(|error| {
-                StorageError::io(
-                    &format!(
-                        "恢复草稿已校验但无法同步目录链；文件保留于 {}",
-                        path.display()
-                    ),
-                    error,
-                )
-            })?;
-            Ok(revision)
-        }
-        Err(error) => {
-            let _ = fs::remove_file(path);
-            Err(error)
-        }
-    }
 }
 
 fn rotate_history(directory: &Path) {

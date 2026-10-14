@@ -9,6 +9,12 @@ fn main() {
             "new_note",
             "open_note",
             "save_note_text",
+            "activate_close_guard",
+            "complete_close",
+            "list_recovery_drafts",
+            "restore_recovery_as_copy",
+            "save_current_as",
+            "save_recovery_as",
         ]));
 
     tauri_build::try_build(attributes).expect("failed to build Tauri application metadata");

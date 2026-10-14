@@ -185,6 +185,32 @@ fn successful_saves_rotate_history_to_the_most_recent_thirty_versions() {
 }
 
 #[test]
+fn unavailable_recovery_storage_stops_before_changing_the_existing_note() {
+    let temp = tempdir();
+    let (library, recovery) = paths(&temp);
+    let path = library.join("blocked-recovery.cuenote");
+    let id = note_id();
+    let initial = package(&id, "恢复不可用", "已有原件");
+    let original_revision = save_note(&path, &recovery, &initial, None).unwrap();
+    let blocked_recovery = temp.path().join("recovery-is-a-file");
+    fs::write(&blocked_recovery, b"not a directory").unwrap();
+
+    let error = save_note(
+        &path,
+        &blocked_recovery,
+        &package(&id, "恢复不可用", "不能发布的新内容"),
+        Some(&original_revision),
+    )
+    .unwrap_err();
+
+    assert!(error.recovery_path.is_none());
+    assert!(error.recovery_error.is_some());
+    let current = open_note(&path).unwrap();
+    assert_eq!(current.revision, original_revision);
+    assert_eq!(current.package.text_projection().content, "已有原件");
+}
+
+#[test]
 fn malformed_existing_file_is_never_treated_as_a_blank_note_or_overwritten() {
     let temp = tempdir();
     let (library, recovery) = paths(&temp);
@@ -330,9 +356,7 @@ fn failed_windows_replace_keeps_the_old_file_and_a_reopenable_draft() {
 
 #[cfg(windows)]
 #[test]
-fn failed_windows_replace_reports_unavailable_recovery_and_retains_candidate() {
-    use std::os::windows::fs::OpenOptionsExt;
-
+fn unusable_recovery_snapshot_stops_before_candidate_or_publish() {
     let temp = tempdir();
     let (library, recovery) = paths(&temp);
     let path = library.join("locked-with-blocked-recovery.cuenote");
@@ -343,42 +367,32 @@ fn failed_windows_replace_reports_unavailable_recovery_and_retains_candidate() {
     let blocked_recovery = recovery
         .join("drafts")
         .join(format!("{:x}", Sha256::digest(id.as_bytes())));
-    fs::create_dir_all(blocked_recovery.parent().unwrap()).unwrap();
+    fs::remove_dir(&blocked_recovery).unwrap();
     fs::write(&blocked_recovery, b"block recovery directory").unwrap();
 
-    let lock = OpenOptions::new()
-        .read(true)
-        .share_mode(0x0000_0001)
-        .open(&path)
-        .unwrap();
     let draft = package(&id, "恢复不可用", "仍保留的候选内容");
     let error = save_note(&path, &recovery, &draft, Some(&old_revision)).unwrap_err();
-    drop(lock);
 
-    assert_eq!(error.kind, "publish");
+    assert_eq!(error.kind, "unsafePath");
     assert!(error.recovery_path.is_none());
     let recovery_error = error
         .recovery_error
         .expect("unavailable recovery is reported");
-    assert!(recovery_error.contains("无法创建恢复草稿目录"));
-    let retained = recovery_error
-        .split_once("；同目录候选文件仍保留于 ")
-        .expect("candidate location is reported")
-        .1
-        .strip_suffix("，其完整性未能确认")
-        .unwrap();
-    let retained_path = Path::new(retained);
-    assert_eq!(
-        open_note(retained_path)
-            .unwrap()
-            .package
-            .text_projection()
-            .content,
-        "仍保留的候选内容"
-    );
+    assert!(recovery_error.contains("保存前恢复快照未能完成"));
     assert_eq!(open_note(&path).unwrap().revision, old_revision);
     assert_eq!(
         fs::read(&blocked_recovery).unwrap(),
         b"block recovery directory"
+    );
+    assert_eq!(
+        fs::read_dir(&library)
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter(|entry| entry
+                .file_name()
+                .to_string_lossy()
+                .starts_with(".cuenote-candidate-"))
+            .count(),
+        0
     );
 }

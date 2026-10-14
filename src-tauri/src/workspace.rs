@@ -69,6 +69,30 @@ pub struct SaveReceipt {
     pub library: LibraryView,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RecoveryDraftSummary {
+    pub recovery_id: String,
+    pub note_id: String,
+    pub title: String,
+    pub saved_at: String,
+    pub revision: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RecoveryList {
+    pub drafts: Vec<RecoveryDraftSummary>,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SavedCopy {
+    pub path: String,
+    pub revision: String,
+}
+
 /// A persisted notebook is intentionally independent of every `.cuenote` file.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -355,11 +379,193 @@ impl Workspace {
         })
     }
 
+    pub fn list_recovery_drafts(&mut self) -> Result<RecoveryList, WorkspaceError> {
+        let (drafts, warnings) = storage::list_recovery_drafts(&self.recovery_root)?;
+        Ok(RecoveryList {
+            drafts: drafts
+                .into_iter()
+                .map(|draft| RecoveryDraftSummary {
+                    recovery_id: draft.recovery_id,
+                    note_id: draft.note_id,
+                    title: draft.title,
+                    saved_at: draft.saved_at,
+                    revision: draft.revision,
+                })
+                .collect(),
+            warnings,
+        })
+    }
+
+    pub fn restore_recovery_as_copy(
+        &mut self,
+        recovery_id: &str,
+    ) -> Result<SaveReceipt, WorkspaceError> {
+        let (library_path, default_notebook_id) = self
+            .library
+            .as_ref()
+            .map(|library| (library.path.clone(), library.default_notebook_id.clone()))
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        let source = storage::open_recovery_draft(&self.recovery_root, recovery_id)?;
+        let mut package = source.package;
+        assign_copy_identity(&mut package, &default_notebook_id);
+        let note_id = package.document.note_id.clone();
+        let path = library_path
+            .join("notes")
+            .join(format!("{note_id}.cuenote"));
+        let revision = storage::save_note(&path, &self.recovery_root, &package, None)?;
+        let restored = match storage::open_note(&path) {
+            Ok(opened) if opened.revision == revision && opened.package == package => opened,
+            Ok(_) => {
+                let mut error = StorageError::new(
+                    "publish",
+                    "恢复副本已写入，但重新读取后的内容与请求不一致；源恢复草稿仍保留。",
+                );
+                error.recovery_path = Some(source.snapshot.path.to_string_lossy().into_owned());
+                return Err(error);
+            }
+            Err(mut error) => {
+                error.message = format!(
+                    "恢复副本已写入，但无法重新读取；源恢复草稿仍保留：{}",
+                    error.message
+                );
+                error.recovery_path = Some(source.snapshot.path.to_string_lossy().into_owned());
+                return Err(error);
+            }
+        };
+        if let Err(mut error) =
+            storage::remove_recovery_snapshot(&self.recovery_root, &source.snapshot)
+        {
+            error.message = format!(
+                "恢复副本已验证并保存，但无法清理已处理的源恢复草稿：{}",
+                error.message
+            );
+            error.recovery_path = Some(source.snapshot.path.to_string_lossy().into_owned());
+            return Err(error);
+        }
+
+        let library = self.library.as_mut().expect("library checked above");
+        let read_only_reason = read_only_reason(
+            &restored.package,
+            restored
+                .package
+                .document
+                .organization
+                .notebook_id
+                .as_deref(),
+            &library.notebooks,
+        );
+        let session = note_session_from_opened(&note_id, &restored, read_only_reason);
+        self.session = Some(ActiveNoteSession {
+            view: session.clone(),
+            path,
+            package: restored.package,
+            baseline_revision: Some(restored.revision),
+            notebook_id: Some(default_notebook_id.clone()),
+        });
+        let receipt_library = match scan_library(
+            &library_path,
+            &library.notebooks,
+            &library.default_notebook_id,
+        ) {
+            Ok(view) => {
+                library.view = view.clone();
+                view
+            }
+            Err(error) => {
+                let mut view = library.view.clone();
+                push_warning(
+                    &mut view.warnings,
+                    format!("恢复副本已保存，但无法刷新列表：{}", error.message),
+                );
+                library.view = view.clone();
+                view
+            }
+        };
+        Ok(SaveReceipt {
+            session,
+            library: receipt_library,
+        })
+    }
+
+    pub fn save_current_as(
+        &mut self,
+        session_id: &str,
+        text: PlainText,
+        path: PathBuf,
+    ) -> Result<SavedCopy, WorkspaceError> {
+        let (mut package, default_notebook_id) = {
+            let library = self
+                .library
+                .as_ref()
+                .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+            let session = self
+                .session
+                .as_ref()
+                .ok_or_else(|| StorageError::new("noSession", "当前没有可另存的笔记会话。"))?;
+            if session.view.session_id != session_id {
+                return Err(StorageError::new(
+                    "staleSession",
+                    "笔记会话已切换；请重新打开笔记后再另存。",
+                ));
+            }
+            (session.package.clone(), library.default_notebook_id.clone())
+        };
+        replace_plain_text_for_copy(&mut package, text)?;
+        assign_copy_identity(&mut package, &default_notebook_id);
+        let destination = self.resolve_copy_destination(&path)?;
+        let (saved_path, revision) = storage::save_copy(&destination, &package)?;
+        Ok(SavedCopy {
+            path: display_path(&saved_path),
+            revision,
+        })
+    }
+
+    pub fn save_recovery_as(
+        &mut self,
+        recovery_id: &str,
+        path: PathBuf,
+    ) -> Result<SavedCopy, WorkspaceError> {
+        let default_notebook_id = self
+            .library
+            .as_ref()
+            .map(|library| library.default_notebook_id.clone());
+        let source = storage::open_recovery_draft(&self.recovery_root, recovery_id)?;
+        let mut package = source.package;
+        if let Some(default_notebook_id) = default_notebook_id.as_deref() {
+            assign_copy_identity(&mut package, default_notebook_id);
+        } else {
+            assign_copy_identity_preserving_organization(&mut package);
+        }
+        let destination = self.resolve_copy_destination(&path)?;
+        let (saved_path, revision) = storage::save_copy(&destination, &package)?;
+        Ok(SavedCopy {
+            path: display_path(&saved_path),
+            revision,
+        })
+    }
+
     pub fn library_path(&self) -> Result<PathBuf, WorkspaceError> {
         self.library
             .as_ref()
             .map(|library| library.path.clone())
             .ok_or_else(|| StorageError::new("noLibrary", "当前没有已打开的笔记库。"))
+    }
+
+    fn resolve_copy_destination(&self, path: &Path) -> Result<PathBuf, WorkspaceError> {
+        let destination = storage::resolve_output_path(path)?;
+        let recovery = resolve_future_path(&self.recovery_root)?;
+        if destination.starts_with(&recovery)
+            || self
+                .library
+                .as_ref()
+                .is_some_and(|library| destination.starts_with(&library.path))
+        {
+            return Err(StorageError::new(
+                "unsafePath",
+                "另存目标必须位于当前笔记库和本机恢复目录之外。",
+            ));
+        }
+        Ok(destination)
     }
 
     fn view(&self) -> WorkspaceView {
@@ -860,6 +1066,61 @@ fn new_default_notebook() -> NotebookMetadata {
             modified_at: now,
         },
     }
+}
+
+fn assign_copy_identity(package: &mut NotePackage, default_notebook_id: &str) {
+    let created_at = next_timestamp_after(&package.document.timestamps.created_at);
+    let organization_modified_at =
+        next_timestamp_after(&package.document.timestamps.organization_modified_at);
+    package.document.note_id = Uuid::new_v4().to_string();
+    package.document.organization.notebook_id = Some(default_notebook_id.to_owned());
+    package.document.organization.pinned = false;
+    package.document.organization.trashed_at = None;
+    package.document.timestamps.created_at = created_at;
+    package.document.timestamps.organization_modified_at = organization_modified_at;
+}
+
+fn assign_copy_identity_preserving_organization(package: &mut NotePackage) {
+    let created_at = next_timestamp_after(&package.document.timestamps.created_at);
+    let organization_modified_at =
+        next_timestamp_after(&package.document.timestamps.organization_modified_at);
+    package.document.note_id = Uuid::new_v4().to_string();
+    package.document.timestamps.created_at = created_at;
+    package.document.timestamps.organization_modified_at = organization_modified_at;
+}
+
+fn next_timestamp_after(previous: &str) -> String {
+    let now = Utc::now();
+    let previous = chrono::DateTime::parse_from_rfc3339(previous)
+        .ok()
+        .map(|value| value.with_timezone(&Utc));
+    let timestamp = match previous {
+        Some(previous) if now.timestamp_millis() <= previous.timestamp_millis() => previous
+            .timestamp_millis()
+            .checked_add(1)
+            .and_then(chrono::DateTime::<Utc>::from_timestamp_millis)
+            .unwrap_or(now),
+        _ => now,
+    };
+    timestamp.to_rfc3339_opts(SecondsFormat::Millis, true)
+}
+
+fn replace_plain_text_for_copy(
+    package: &mut NotePackage,
+    text: PlainText,
+) -> Result<(), WorkspaceError> {
+    if package.plain_text().is_none() {
+        if package.text_projection() == text {
+            return Ok(());
+        }
+        return Err(StorageError::new(
+            "readOnly",
+            "当前笔记包含富内容，无法用纯文本编辑内容后另存；可以按原内容另存为完整副本。",
+        ));
+    }
+    package
+        .replace_plain_text(text)
+        .map_err(|error| StorageError::new("format", error.to_string()))
 }
 
 fn publish_notebook_metadata(

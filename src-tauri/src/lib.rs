@@ -1,10 +1,26 @@
 mod commands;
 pub mod note_format;
 pub mod storage;
+mod storage_faults;
 pub mod workspace;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
+
+/// Editing is enabled only after the frontend has subscribed to close requests
+/// and armed this gate. Native close and application quit share the same path.
+#[derive(Default)]
+pub(crate) struct CloseGate {
+    armed: AtomicBool,
+    approved: AtomicBool,
+}
+
+impl CloseGate {
+    fn needs_confirmation(&self) -> bool {
+        self.armed.load(Ordering::Acquire) && !self.approved.load(Ordering::Acquire)
+    }
+}
 
 #[tauri::command]
 fn get_app_version() -> &'static str {
@@ -42,10 +58,19 @@ fn create_workspace(app: &tauri::App) -> Result<workspace::Workspace, Box<dyn st
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .manage(CloseGate::default())
         .setup(|app| {
             let workspace: commands::WorkspaceState = Arc::new(Mutex::new(create_workspace(app)?));
             app.manage(workspace);
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.state::<CloseGate>().needs_confirmation() {
+                    api.prevent_close();
+                    let _ = window.emit("cuenote:close-requested", ());
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             get_app_version,
@@ -56,7 +81,23 @@ pub fn run() {
             commands::new_note,
             commands::open_note,
             commands::save_note_text,
+            commands::activate_close_guard,
+            commands::complete_close,
+            commands::list_recovery_drafts,
+            commands::restore_recovery_as_copy,
+            commands::save_current_as,
+            commands::save_recovery_as,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running CueNote");
+        .build(tauri::generate_context!())
+        .expect("error while building CueNote")
+        .run(|app, event| {
+            // Includes application-level quit (for example macOS Cmd+Q), which
+            // does not have to arrive as a window close request.
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                if app.state::<CloseGate>().needs_confirmation() {
+                    api.prevent_exit();
+                    let _ = app.emit("cuenote:close-requested", ());
+                }
+            }
+        });
 }
