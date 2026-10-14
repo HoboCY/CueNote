@@ -52,4 +52,4 @@ Windows 需要 C++ 构建工具和 Windows SDK；macOS 需要 Xcode 命令行工
 
 ## 验证状态
 
-具体运行结果记录在 `OBSERVATIONS.md`。构建、浏览器操作、Windows 桌面操作及 macOS 人工试用分别记录；没有运行的项目不会标为通过。真实中文输入法、跨应用剪贴板和用户 M1 Pro Mac 的体验仍需人工反馈。
+具体运行结果记录在 `OBSERVATIONS.md`。构建、浏览器操作、Windows 桌面操作及 macOS 人工试用分别记录；没有运行的项目不会标为通过。Windows 中文输入法、跨应用图片粘贴和编辑/保存人工试用已获用户“体验正常”的反馈；用户 M1 Pro Mac 与 OneDrive 双端仍待验证。
