@@ -4,6 +4,7 @@ import { Editor, getSchema } from '@tiptap/core';
 import { EditorState } from '@tiptap/pm/state';
 import type { Block } from '../src/generated/note-format.ts';
 import { createEditorExtensions, TABLE_HEADER_NORMALIZATION_META } from '../src/editor-extensions.ts';
+import { CODE_LANGUAGES } from '../src/code-languages.ts';
 import { fromEditorDocument, toEditorDocument } from '../src/editor-model.ts';
 
 test('round-trips paragraphs, headings, inline marks, links, and hard breaks through the editor schema', () => {
@@ -52,6 +53,93 @@ test('round-trips paragraphs, headings, inline marks, links, and hard breaks thr
     ],
   });
   assert.deepEqual(fromEditorDocument(document.toJSON(), false), blocks);
+});
+
+test('round-trips inline code without dropping compatible marks', () => {
+  const blocks: Block[] = [{
+    type: 'paragraph',
+    children: [{ type: 'text', text: 'const x', marks: [{ type: 'bold' }, { type: 'code' }] }],
+  }];
+  const schema = getSchema(createEditorExtensions(false));
+  const document = schema.nodeFromJSON(toEditorDocument(blocks, false));
+
+  assert.deepEqual(JSON.parse(JSON.stringify(document.toJSON())), {
+    type: 'doc',
+    content: [{
+      type: 'paragraph',
+      content: [{ type: 'text', text: 'const x', marks: [{ type: 'bold' }, { type: 'code' }] }],
+    }],
+  });
+  assert.deepEqual(fromEditorDocument(document.toJSON(), false), blocks);
+});
+
+test('round-trips raw code and custom language labels without normalizing content', () => {
+  const sourceCode = 'const label = "中文 $`<tag>";\n\t  keep indent\n\n';
+  const blocks: Block[] = [
+    { type: 'codeBlock', language: 'custom-lang', code: sourceCode },
+    { type: 'codeBlock', language: null, code: '' },
+  ];
+  const document = {
+    type: 'doc',
+    content: [
+      { type: 'codeBlock', attrs: { language: 'custom-lang' }, content: [{ type: 'text', text: sourceCode }] },
+      { type: 'codeBlock', attrs: { language: null } },
+    ],
+  };
+
+  assert.deepEqual(toEditorDocument(blocks, false), document);
+  assert.deepEqual(fromEditorDocument(document, false), blocks);
+});
+
+test('round-trips code blocks through the public ProseMirror schema without reformatting text', () => {
+  const sourceCode = 'let title = "中文 $`<div>";\r\n\tkeep tabs\r\n\r\n';
+  const blocks: Block[] = [{ type: 'codeBlock', language: 'c#', code: sourceCode }];
+  const schema = getSchema(createEditorExtensions(false));
+  const document = schema.nodeFromJSON(toEditorDocument(blocks, false));
+
+  assert.deepEqual(JSON.parse(JSON.stringify(document.toJSON())), {
+    type: 'doc',
+    content: [{
+      type: 'codeBlock',
+      attrs: { language: 'c#' },
+      content: [{ type: 'text', text: sourceCode }],
+    }],
+  });
+  assert.deepEqual(fromEditorDocument(document.toJSON(), false), blocks);
+});
+
+test('keeps bold when inline code is applied through editor commands', () => {
+  const editor = new Editor({
+    element: null,
+    extensions: createEditorExtensions(false),
+    content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'const x' }] }] },
+  });
+
+  try {
+    assert.equal(editor.chain()
+      .setTextSelection({ from: 1, to: 8 })
+      .toggleBold()
+      .toggleCode()
+      .run(), true);
+    assert.deepEqual(fromEditorDocument(editor.getJSON(), false), [{
+      type: 'paragraph',
+      children: [{ type: 'text', text: 'const x', marks: [{ type: 'bold' }, { type: 'code' }] }],
+    }]);
+  } finally {
+    editor.destroy();
+  }
+});
+
+test('exposes the seven code-language choices with stable UI values', () => {
+  assert.deepEqual(CODE_LANGUAGES, [
+    { value: 'javascript', label: 'JavaScript' },
+    { value: 'typescript', label: 'TypeScript' },
+    { value: 'python', label: 'Python' },
+    { value: 'rust', label: 'Rust' },
+    { value: 'csharp', label: 'C#' },
+    { value: 'sql', label: 'SQL' },
+    { value: 'json', label: 'JSON' },
+  ]);
 });
 
 test('round-trips nested list blocks, task state, block quotes, rules, and basic tables', () => {
@@ -160,7 +248,10 @@ test('rejects unsupported v1 content and ProseMirror semantics instead of droppi
   const schema = getSchema(createEditorExtensions(false));
   assert.throws(() => toEditorDocument([
     { type: 'codeBlock', language: null, code: 'const value = 1;' },
-  ], false), /code blocks are not supported/);
+  ], true), /code blocks are not supported in this section/);
+  assert.throws(() => toEditorDocument([
+    { type: 'paragraph', children: [{ type: 'text', text: 'inline', marks: [{ type: 'code' }] }] },
+  ], true), /code is not supported in this section/);
   assert.throws(() => toEditorDocument([
     { type: 'paragraph', children: [{ type: 'mathInline', latex: 'x^2' }] },
   ], false), /inline math is not supported/);
@@ -186,6 +277,18 @@ test('rejects unsupported v1 content and ProseMirror semantics instead of droppi
     type: 'doc',
     content: [{ type: 'paragraph', content: [{ type: 'text', text: 'x', marks: [{ type: 'underline' }] }] }],
   }, false), /unsupported mark: underline/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'codeBlock', attrs: { language: 'custom-lang', executable: true }, content: [] }],
+  }, false), /unsupported field: executable/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'codeBlock', attrs: { language: 'javascript' }, content: [{ type: 'text', text: 'x', marks: [] }] }],
+  }, false), /unsupported field: marks/);
+  assert.throws(() => fromEditorDocument({
+    type: 'doc',
+    content: [{ type: 'codeBlock', attrs: { language: 'javascript' }, content: [{ type: 'hardBreak' }] }],
+  }, false), /code blocks contain plain text only/);
   assert.throws(() => fromEditorDocument({
     type: 'doc',
     content: [{ type: 'orderedList', attrs: { start: 1, type: 'a' }, content: [] }],
@@ -230,6 +333,9 @@ test('keeps the simple-section schema and adapter to text, bold, lists, and basi
   assert.throws(() => toEditorDocument([
     { type: 'paragraph', children: [{ type: 'text', text: 'Italic', marks: [{ type: 'italic' }] }] },
   ], true), /italic is not supported in this section/);
+  assert.throws(() => toEditorDocument([
+    { type: 'paragraph', children: [{ type: 'text', text: 'Code', marks: [{ type: 'code' }] }] },
+  ], true), /code is not supported in this section/);
   assert.throws(() => toEditorDocument([{ type: 'horizontalRule' }], true), /horizontal rules are not supported in this section/);
 });
 

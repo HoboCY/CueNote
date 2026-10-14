@@ -1941,6 +1941,7 @@ fn supports_editable_blocks(blocks: &[Block], side_section: bool) -> bool {
             .iter()
             .all(|item| supports_editable_blocks(&item.blocks, side_section)),
         Block::Blockquote { blocks } if !side_section => supports_editable_blocks(blocks, false),
+        Block::CodeBlock { .. } if !side_section => true,
         Block::HorizontalRule if !side_section => true,
         Block::Table { rows } if !side_section => rows.iter().all(|row| {
             let cells = match row {
@@ -1959,7 +1960,7 @@ fn supports_editable_inlines(inlines: &[Inline], side_section: bool) -> bool {
         Inline::Text { marks, .. } => marks.iter().all(|mark| match mark {
             Mark::Bold => true,
             Mark::Italic | Mark::Strike | Mark::Link { .. } => !side_section,
-            Mark::Code => false,
+            Mark::Code => !side_section,
         }),
         Inline::HardBreak => true,
         Inline::MathInline { .. } => false,

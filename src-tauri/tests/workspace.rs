@@ -325,9 +325,8 @@ fn rich_and_unknown_notebook_sessions_cannot_be_forced_through_plain_text_save()
             summary: String::new(),
         },
     );
-    rich.document.sections.content = vec![Block::CodeBlock {
-        language: None,
-        code: "保留的结构".into(),
+    rich.document.sections.content = vec![Block::MathBlock {
+        latex: "保留的结构".into(),
     }];
     let rich_id = rich.document.note_id.clone();
     let rich_path = library.join("notes").join(format!("{rich_id}.cuenote"));

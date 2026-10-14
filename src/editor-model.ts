@@ -10,7 +10,7 @@ const LINK_DEFAULTS = {
 
 type JsonObject = Record<string, unknown>;
 type EditorMarkJSON =
-  | { type: 'bold' | 'italic' | 'strike' }
+  | { type: 'bold' | 'italic' | 'strike' | 'code' }
   | { type: 'link'; attrs: { href: string } };
 
 function fail(path: string, message: string): never {
@@ -72,6 +72,9 @@ function toMark(mark: unknown, simple: boolean, path: string): EditorMarkJSON {
   switch (value.type) {
     case 'bold':
       return { type: 'bold' };
+    case 'code':
+      if (simple) return fail(path, 'code is not supported in this section');
+      return { type: 'code' };
     case 'italic':
     case 'strike':
       if (simple) return fail(path, `${value.type} is not supported in this section`);
@@ -82,8 +85,6 @@ function toMark(mark: unknown, simple: boolean, path: string): EditorMarkJSON {
       if (!validLink(href)) return fail(`${path}.href`, 'links must use http, https, or mailto');
       return { type: 'link', attrs: { href } };
     }
-    case 'code':
-      return fail(path, 'code marks are not supported by this editor');
     default:
       return fail(path, `unsupported mark: ${String(value.type)}`);
   }
@@ -225,7 +226,18 @@ function toBlock(block: Block, simple: boolean, path: string): JSONContent {
       };
     }
     case 'codeBlock':
-      return fail(path, 'code blocks are not supported by this editor');
+      exactKeys(value, ['type', 'language', 'code'], path);
+      if (simple) return fail(path, 'code blocks are not supported in this section');
+      if (value.language !== null && typeof value.language !== 'string') {
+        return fail(`${path}.language`, 'expected a language label or null');
+      }
+      return {
+        type: 'codeBlock',
+        attrs: { language: value.language },
+        ...(stringAt(value.code, `${path}.code`).length > 0
+          ? { content: [{ type: 'text', text: value.code as string }] }
+          : {}),
+      };
     case 'mathBlock':
       return fail(path, 'math blocks are not supported by this editor');
     case 'image':
@@ -252,6 +264,10 @@ function fromMark(mark: unknown, simple: boolean, path: string): Mark {
     case 'bold':
       optionalAttrs(value, [], path);
       return { type: 'bold' };
+    case 'code':
+      optionalAttrs(value, [], path);
+      if (simple) return fail(path, 'code is not supported in this section');
+      return { type: 'code' };
     case 'italic':
     case 'strike':
       optionalAttrs(value, [], path);
@@ -384,6 +400,24 @@ function fromBlock(value: unknown, simple: boolean, path: string): Block {
       if (level === 2) return { type: 'heading2', children: fromInlines(node.content, simple, `${path}.content`) };
       if (level === 3) return { type: 'heading3', children: fromInlines(node.content, simple, `${path}.content`) };
       return fail(`${path}.attrs.level`, 'only heading levels 1 through 3 are supported');
+    }
+    case 'codeBlock': {
+      if (simple) return fail(path, 'code blocks are not supported in this section');
+      exactKeys(node, ['type', 'attrs', 'content'], path);
+      const attrs = optionalAttrs(node, ['language'], path);
+      const languageValue = Object.hasOwn(attrs, 'language') ? attrs.language : null;
+      if (languageValue !== null && typeof languageValue !== 'string') {
+        return fail(`${path}.attrs.language`, 'expected a language label or null');
+      }
+      const textNodes = node.content === undefined ? [] : arrayAt(node.content, `${path}.content`);
+      const code = textNodes.map((textNode, index) => {
+        const textPath = `${path}.content[${index}]`;
+        const textValue = objectAt(textNode, textPath);
+        exactKeys(textValue, ['type', 'text'], textPath);
+        if (textValue.type !== 'text') fail(`${textPath}.type`, 'code blocks contain plain text only');
+        return stringAt(textValue.text, `${textPath}.text`);
+      }).join('');
+      return { type: 'codeBlock', language: languageValue, code };
     }
     case 'orderedList': {
       exactKeys(node, ['type', 'attrs', 'content'], path);

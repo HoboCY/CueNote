@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type MouseEvent } from 'react';
 import type { JSONContent } from '@tiptap/core';
 import { EditorContent, useEditor, useEditorState } from '@tiptap/react';
+import { closeHistory } from '@tiptap/pm/history';
 import { TextSelection } from '@tiptap/pm/state';
 import type { Block } from './generated/note-format';
+import { CODE_LANGUAGES } from './code-languages';
 import { fromEditorDocument, toEditorDocument } from './editor-model';
 import { createEditorExtensions, TABLE_HEADER_NORMALIZATION_META } from './editor-extensions';
 
@@ -32,6 +34,7 @@ function errorMessage(cause: unknown) {
 
 const initialConversionMessage = '无法安全转换当前内容，已停止编辑并显示只读文字投影。';
 const editConversionMessage = '暂时无法保存此编辑内容，请撤销刚才的操作或修复后再继续。';
+const customCodeLanguageOption = '__cuenote_custom_language__';
 
 function makeInitialDocument(blocks: Block[], simple: boolean): ConversionResult {
   try {
@@ -76,6 +79,7 @@ export function RichTextEditor({
   const [linkLabel, setLinkLabel] = useState('');
   const [linkHref, setLinkHref] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [codeLanguageDraft, setCodeLanguageDraft] = useState('');
   const linkInputRef = useRef<HTMLInputElement | null>(null);
   const savedSelectionRef = useRef<{ from: number; to: number } | null>(null);
   const lastReportedErrorRef = useRef<string | null | undefined>(undefined);
@@ -127,6 +131,9 @@ export function RichTextEditor({
         bold: current.isActive('bold'),
         italic: current.isActive('italic'),
         strike: current.isActive('strike'),
+        inlineCode: current.isActive('code'),
+        codeBlock: current.isActive('codeBlock'),
+        codeLanguage: current.getAttributes('codeBlock').language ?? null,
         paragraph: current.isActive('paragraph'),
         heading1: current.isActive('heading', { level: 1 }),
         heading2: current.isActive('heading', { level: 2 }),
@@ -145,6 +152,10 @@ export function RichTextEditor({
       };
     },
   });
+
+  useEffect(() => {
+    setCodeLanguageDraft(selectionState?.codeLanguage ?? '');
+  }, [selectionState?.codeBlock, selectionState?.codeLanguage]);
 
   useEffect(() => {
     if (editor) editor.setEditable(editable && initial.document !== null, false);
@@ -172,10 +183,34 @@ export function RichTextEditor({
     const current = TextSelection.between(state.doc.resolve(anchor), state.doc.resolve(head));
     if (!current.eq(state.selection)) view.dispatch(state.tr.setSelection(current));
   };
+  const captureEditorSelection = () => {
+    if (!editor) return;
+    synchronizeTextSelection();
+    const { selection } = editor.state;
+    if (selection instanceof TextSelection) {
+      savedSelectionRef.current = { from: selection.from, to: selection.to };
+    } else {
+      // A whole-block selection must not restore a prior text selection.
+      savedSelectionRef.current = null;
+    }
+  };
   const run = (command: () => boolean) => {
     if (!editor || !editable || conversionError) return;
     synchronizeTextSelection();
     command();
+  };
+  const applyCodeLanguage = (language: string | null) => {
+    if (!editor || !editable || conversionError || !editor.isActive('codeBlock')) return;
+    const savedSelection = savedSelectionRef.current;
+    const chain = editor.chain();
+    if (savedSelection) chain.setTextSelection(savedSelection);
+    // Language selection is one undoable action, separate from nearby typing.
+    chain.command(({ tr }) => {
+      closeHistory(tr);
+      return true;
+    }).updateAttributes('codeBlock', { language }).focus().run();
+    editor.view.dispatch(closeHistory(editor.state.tr));
+    savedSelectionRef.current = null;
   };
   const restoreEditorSelection = () => {
     if (!editor || !savedSelectionRef.current) return;
@@ -273,13 +308,18 @@ export function RichTextEditor({
   }
 
   const active = selectionState ?? {
-    bold: false, italic: false, strike: false, paragraph: false,
+    bold: false, italic: false, strike: false, inlineCode: false, codeBlock: false, codeLanguage: null, paragraph: false,
     heading1: false, heading2: false, heading3: false,
     bulletList: false, orderedList: false, taskList: false,
     blockquote: false, link: false, table: false,
     canAddRow: false, canDeleteRow: false, canAddColumn: false,
     canDeleteColumn: false, canDeleteTable: false,
   };
+  const formattingDisabled = active.inlineCode || active.codeBlock;
+  const knownCodeLanguage = CODE_LANGUAGES.some(language => language.value === active.codeLanguage);
+  const codeLanguageSelectValue = active.codeLanguage === null
+    ? ''
+    : knownCodeLanguage ? active.codeLanguage : customCodeLanguageOption;
 
   return (
     <div
@@ -290,17 +330,19 @@ export function RichTextEditor({
     >
       {!readOnly && (
         <div className="rich-editor-toolbar" role="toolbar" aria-label={`${section === 'cue' ? '线索区' : section === 'content' ? '内容区' : '总结区'}格式工具`}>
-          {tool('paragraph', '段落', () => editor?.chain().focus().setParagraph().run() ?? false, active.paragraph)}
-          {tool('heading-1', '一级标题', () => editor?.chain().focus().toggleHeading({ level: 1 }).run() ?? false, active.heading1)}
-          {tool('heading-2', '二级标题', () => editor?.chain().focus().toggleHeading({ level: 2 }).run() ?? false, active.heading2)}
-          {tool('heading-3', '三级标题', () => editor?.chain().focus().toggleHeading({ level: 3 }).run() ?? false, active.heading3)}
-          {tool('bold', '加粗', () => editor?.chain().focus().toggleBold().run() ?? false, active.bold)}
-              {!simple && tool('italic', '斜体', () => editor?.chain().focus().toggleItalic().run() ?? false, active.italic)}
-          {!simple && tool('strike', '删除线', () => editor?.chain().focus().toggleStrike().run() ?? false, active.strike)}
-          {tool('bullet-list', '项目符号列表', () => editor?.chain().focus().toggleBulletList().run() ?? false, active.bulletList)}
-          {tool('ordered-list', '编号列表', () => editor?.chain().focus().toggleOrderedList().run() ?? false, active.orderedList)}
-          {tool('task-list', '任务列表', () => editor?.chain().focus().toggleTaskList().run() ?? false, active.taskList)}
-          {!simple && tool('blockquote', '引用', () => editor?.chain().focus().toggleBlockquote().run() ?? false, active.blockquote)}
+          {tool('paragraph', '段落', () => editor?.chain().focus().setParagraph().run() ?? false, active.paragraph, formattingDisabled)}
+          {tool('heading-1', '一级标题', () => editor?.chain().focus().toggleHeading({ level: 1 }).run() ?? false, active.heading1, formattingDisabled)}
+          {tool('heading-2', '二级标题', () => editor?.chain().focus().toggleHeading({ level: 2 }).run() ?? false, active.heading2, formattingDisabled)}
+          {tool('heading-3', '三级标题', () => editor?.chain().focus().toggleHeading({ level: 3 }).run() ?? false, active.heading3, formattingDisabled)}
+          {tool('bold', '加粗', () => editor?.chain().focus().toggleBold().run() ?? false, active.bold, formattingDisabled)}
+          {!simple && tool('italic', '斜体', () => editor?.chain().focus().toggleItalic().run() ?? false, active.italic, formattingDisabled)}
+          {!simple && tool('strike', '删除线', () => editor?.chain().focus().toggleStrike().run() ?? false, active.strike, formattingDisabled)}
+          {tool('bullet-list', '项目符号列表', () => editor?.chain().focus().toggleBulletList().run() ?? false, active.bulletList, formattingDisabled)}
+          {tool('ordered-list', '编号列表', () => editor?.chain().focus().toggleOrderedList().run() ?? false, active.orderedList, formattingDisabled)}
+          {tool('task-list', '任务列表', () => editor?.chain().focus().toggleTaskList().run() ?? false, active.taskList, formattingDisabled)}
+          {!simple && tool('blockquote', '引用', () => editor?.chain().focus().toggleBlockquote().run() ?? false, active.blockquote, formattingDisabled)}
+          {!simple && tool('code', '行内代码', () => editor?.chain().focus().toggleCode().run() ?? false, active.inlineCode, active.codeBlock)}
+          {!simple && tool('code-block', '代码块', () => editor?.chain().focus().toggleCodeBlock().run() ?? false, active.codeBlock, active.inlineCode)}
           {!simple && (
             <button
               type="button"
@@ -309,13 +351,13 @@ export function RichTextEditor({
               aria-label="插入链接"
               aria-pressed={active.link}
               title="插入链接"
-              disabled={!editable || Boolean(conversionError)}
+              disabled={!editable || Boolean(conversionError) || formattingDisabled}
               onMouseDown={preventToolbarFocus}
               onClick={openLinkForm}
             >插入链接</button>
           )}
-          {!simple && tool('horizontal-rule', '分隔线', () => editor?.chain().focus().setHorizontalRule().run() ?? false)}
-          {!simple && tool('insert-table', '插入表格', () => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run() ?? false, active.table)}
+          {!simple && tool('horizontal-rule', '分隔线', () => editor?.chain().focus().setHorizontalRule().run() ?? false, false, formattingDisabled)}
+          {!simple && tool('insert-table', '插入表格', () => editor?.chain().focus().insertTable({ rows: 2, cols: 2, withHeaderRow: true }).run() ?? false, active.table, formattingDisabled)}
           {!simple && active.table && (
             <>
               {tool('add-row-before', '上方插行', () => editor?.chain().focus().addRowBefore().command(({ tr }) => {
@@ -332,6 +374,64 @@ export function RichTextEditor({
               {tool('delete-column', '删除列', () => editor?.chain().focus().deleteColumn().run() ?? false, false, !active.canDeleteColumn)}
               {tool('delete-table', '删除表格', () => editor?.chain().focus().deleteTable().run() ?? false, false, !active.canDeleteTable)}
             </>
+          )}
+          {!simple && active.codeBlock && (
+            <div className="rich-editor-code-controls" role="group" aria-label="代码块语言和退出操作">
+              <label className="code-language-control">
+                <span>代码语言</span>
+                <select
+                  data-testid="code-language-select-content"
+                  aria-label="代码语言"
+                  value={codeLanguageSelectValue}
+                  disabled={!editable || Boolean(conversionError)}
+                  onMouseDown={captureEditorSelection}
+                  onFocus={captureEditorSelection}
+                  onChange={event => {
+                    const value = event.currentTarget.value;
+                    if (value === customCodeLanguageOption) return;
+                    const language = value || null;
+                    setCodeLanguageDraft(language ?? '');
+                    applyCodeLanguage(language);
+                  }}
+                >
+                  <option value="">纯文本</option>
+                  {CODE_LANGUAGES.map(language => <option key={language.value} value={language.value}>{language.label}</option>)}
+                  {!knownCodeLanguage && active.codeLanguage !== null && (
+                    <option value={customCodeLanguageOption}>保留原标记：{active.codeLanguage}</option>
+                  )}
+                </select>
+              </label>
+              <label className="code-language-control code-language-custom">
+                <span>自定义标记</span>
+                <input
+                  data-testid="code-language-input-content"
+                  aria-label="自定义语言标记"
+                  value={codeLanguageDraft}
+                  disabled={!editable || Boolean(conversionError)}
+                  onMouseDown={captureEditorSelection}
+                  onFocus={captureEditorSelection}
+                  onChange={event => setCodeLanguageDraft(event.currentTarget.value)}
+                  onKeyDown={event => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      applyCodeLanguage(codeLanguageDraft === '' ? null : codeLanguageDraft);
+                    }
+                  }}
+                />
+              </label>
+              <button
+                className="rich-editor-tool is-primary"
+                data-testid="code-language-apply-content"
+                type="button"
+                disabled={!editable || Boolean(conversionError)}
+                onMouseDown={event => {
+                  captureEditorSelection();
+                  preventToolbarFocus(event);
+                }}
+                onClick={() => applyCodeLanguage(codeLanguageDraft === '' ? null : codeLanguageDraft)}
+              >应用标记</button>
+              {tool('exit-code', '退出代码块', () => editor?.chain().focus().exitCode().run() ?? false)}
+            </div>
           )}
         </div>
       )}
@@ -372,7 +472,9 @@ export function RichTextEditor({
         <p className="markdown-editor-help" data-testid={`markdown-help-${section}`}>
           {simple
             ? 'Markdown：# / ## / ### 标题，**加粗**，- 列表，1. 编号，- [ ] 待办；Ctrl/⌘+B 加粗。'
-            : 'Markdown：# / ## / ### 标题，**加粗**，*斜体*，~~删除线~~，- 列表，1. 编号，- [ ] 待办，> 引用，--- 分隔线，[文字](https://…) 链接；Ctrl/⌘+B 加粗，Ctrl/⌘+I 斜体。'}
+            : active.codeBlock
+              ? '代码块会保留缩进与空行；按 Ctrl/⌘+Enter，或点击“退出代码块”继续编辑普通文字。'
+              : 'Markdown：# / ## / ### 标题，**加粗**，*斜体*，~~删除线~~，- 列表，1. 编号，- [ ] 待办，> 引用，--- 分隔线，[文字](https://…) 链接；反引号包住行内代码；输入 ```语言 后按空格或回车进入代码块，按 Ctrl/⌘+Enter 或点击“退出代码块”退出；Ctrl/⌘+B 加粗，Ctrl/⌘+I 斜体。'}
         </p>
       )}
 

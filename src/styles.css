@@ -530,6 +530,21 @@ button:focus-visible {
 .rich-editor-prose ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 7px; }
 .rich-editor-prose ul[data-type="taskList"] li > label { display: inline-flex; flex: none; align-items: center; padding-top: 4px; }
 .rich-editor-prose ul[data-type="taskList"] li > label input { accent-color: var(--teal); }
+.rich-editor-prose code { padding: 1px 4px; border-radius: 4px; background: #edf1e9; color: #76583d; font: .94em/1.6 "Cascadia Code", Consolas, "SFMono-Regular", monospace; }
+.rich-editor-prose pre { max-width: 100%; overflow-x: auto; margin: .75em 0; padding: 11px 13px; border: 1px solid #dfe6dc; border-radius: 8px; background: #f2f4ed; color: #354b44; font: 11px/1.65 "Cascadia Code", Consolas, "SFMono-Regular", monospace; tab-size: 4; white-space: pre; overflow-wrap: normal; }
+.rich-editor-prose pre code { display: block; min-width: max-content; padding: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; white-space: inherit; }
+.content-panel .rich-editor-prose .hljs-comment, .content-panel .rich-editor-prose .hljs-quote, .content-panel .rich-editor-prose .hljs-meta { color: #839188; font-style: italic; }
+.content-panel .rich-editor-prose .hljs-keyword, .content-panel .rich-editor-prose .hljs-selector-tag, .content-panel .rich-editor-prose .hljs-name, .content-panel .rich-editor-prose .hljs-built_in, .content-panel .rich-editor-prose .hljs-attribute { color: #9b6341; }
+.content-panel .rich-editor-prose .hljs-string, .content-panel .rich-editor-prose .hljs-char, .content-panel .rich-editor-prose .hljs-addition, .content-panel .rich-editor-prose .hljs-selector-class { color: #527b66; }
+.content-panel .rich-editor-prose .hljs-number, .content-panel .rich-editor-prose .hljs-literal, .content-panel .rich-editor-prose .hljs-symbol, .content-panel .rich-editor-prose .hljs-bullet { color: #9a7547; }
+.content-panel .rich-editor-prose .hljs-title, .content-panel .rich-editor-prose .hljs-function, .content-panel .rich-editor-prose .hljs-class { color: #456f87; }
+.content-panel .rich-editor-prose .hljs-operator, .content-panel .rich-editor-prose .hljs-punctuation { color: #667b70; }
+.content-panel .rich-editor-prose .hljs-deletion { color: #985e57; background: #f7e9e3; }
+.rich-editor-code-controls { display: flex; min-width: 0; flex-wrap: wrap; align-items: end; gap: 5px; padding-left: 4px; }
+.code-language-control { display: grid; min-width: 0; gap: 3px; color: #75867c; font-size: 8px; line-height: 1.2; }
+.code-language-control select, .code-language-control input { min-height: 27px; max-width: 190px; padding: 3px 7px; border: 1px solid #d6dfd6; border-radius: 6px; background: #fffdf7; color: #50665c; font: 9px "Segoe UI", "Microsoft YaHei UI", sans-serif; }
+.code-language-custom input { width: 126px; }
+.code-language-control select:disabled, .code-language-control input:disabled { cursor: not-allowed; opacity: .55; }
 .markdown-editor-help { margin: 0; color: #87958c; font-size: 8px; line-height: 1.55; }
 .rich-link-form { display: grid; grid-template-columns: minmax(100px, .7fr) minmax(160px, 1.3fr) auto; align-items: end; gap: 7px; padding: 8px; border: 1px solid #dfe5dc; border-radius: 8px; background: #f8f8f2; }
 .rich-link-form label { display: grid; min-width: 0; gap: 4px; color: #75867c; font-size: 8px; }
@@ -621,6 +636,8 @@ button:focus-visible {
   .content-textarea { min-height: 200px; }
   .rich-editor-toolbar { gap: 3px; padding: 5px; }
   .rich-editor-tool { min-height: 25px; padding: 3px 5px; font-size: 8px; }
+  .rich-editor-code-controls { width: 100%; padding: 4px 0 0; }
+  .code-language-control select { max-width: 150px; }
   .rich-link-form { grid-template-columns: 1fr; }
   .rich-link-actions { justify-content: flex-start; }
   .content-panel .rich-editor-prose { min-height: 200px; }
