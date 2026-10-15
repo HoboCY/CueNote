@@ -1,4 +1,4 @@
-use cuenote_lib::note_format::PlainText;
+use cuenote_lib::note_format::{Block, Inline, NoteContent, PlainText, Sections};
 use cuenote_lib::storage;
 use cuenote_lib::workspace::Workspace;
 use std::path::Path;
@@ -30,6 +30,22 @@ fn text(content: &str) -> PlainText {
         cue: "线索".into(),
         content: content.into(),
         summary: "总结".into(),
+    }
+}
+
+fn rich_content(content: &str) -> NoteContent {
+    NoteContent {
+        title: "独立富内容副本".into(),
+        sections: Sections {
+            cue: Vec::new(),
+            content: vec![Block::Paragraph {
+                children: vec![Inline::Text {
+                    text: content.into(),
+                    marks: Vec::new(),
+                }],
+            }],
+            summary: Vec::new(),
+        },
     }
 }
 
@@ -119,6 +135,14 @@ fn missing_library_and_unavailable_recovery_still_allow_a_verified_independent_c
         "两个位置均不可达时的最新输入"
     );
     assert_ne!(opened.package.document.note_id, note_id);
+    let rich = rich_content("恢复区不可用时仍可另存的富内容");
+    let rich_destination = outside.join("独立富内容副本.cuenote");
+    workspace
+        .save_current_content_as(&session_id, rich.clone(), rich_destination.clone())
+        .unwrap();
+    let rich_copy = storage::open_note(&rich_destination).unwrap();
+    assert_eq!(rich_copy.package.content(), rich);
+    assert_ne!(rich_copy.package.document.note_id, note_id);
     let untouched = root
         .join("library-away/notes")
         .join(format!("{note_id}.cuenote"));
@@ -134,4 +158,20 @@ fn missing_library_and_unavailable_recovery_still_allow_a_verified_independent_c
         storage::open_note(&destination).unwrap().revision,
         opened.revision
     );
+}
+
+#[test]
+fn can_switch_away_from_a_missing_library_without_a_restore_pointer() {
+    let (temp, mut workspace, _session_id, _note_id) = setup();
+    let root = temp.path();
+    let library = workspace.library_path().unwrap();
+    std::fs::rename(&library, root.join("library-away")).unwrap();
+
+    let selected = root.join("replacement-library");
+    workspace.select_library(selected.clone()).unwrap();
+    assert_eq!(
+        workspace.library_path().unwrap(),
+        std::fs::canonicalize(&selected).unwrap()
+    );
+    assert!(selected.join("notes").is_dir());
 }

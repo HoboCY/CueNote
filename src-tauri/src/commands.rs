@@ -1,4 +1,5 @@
 //! Desktop commands accept session/note identities, never frontend filesystem paths.
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use tauri::{
@@ -11,14 +12,16 @@ use crate::note_format::{AssetManifestEntry, NoteContent, PlainText};
 use crate::workspace::{
     BackupCatalog, BackupContext, BackupControl, BackupJob, BackupKind, BackupNoteList,
     BackupOutcome, BackupPhase, BackupProgress, BackupRestoreReceipt, ExternalProbe,
-    ExternalReconciliation, LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy,
-    SearchResults, VersionList, Workspace, WorkspaceError, WorkspaceView,
+    ExternalReconciliation, LibraryRestoreAction, LibraryRestorePreview, LibraryRestoreReceipt,
+    LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy, SearchResults, VersionList,
+    Workspace, WorkspaceError, WorkspaceView,
 };
 
 #[derive(Clone)]
 pub struct WorkspaceState {
     workspace: Arc<Mutex<Workspace>>,
     backups: BackupControl,
+    restore_running: Arc<AtomicBool>,
 }
 
 impl WorkspaceState {
@@ -26,11 +29,41 @@ impl WorkspaceState {
         Self {
             workspace: Arc::new(Mutex::new(workspace)),
             backups: BackupControl::default(),
+            restore_running: Arc::new(AtomicBool::new(false)),
         }
     }
 
     pub(crate) fn cancel_backup(&self) {
         self.backups.cancel();
+    }
+
+    pub(crate) fn cancel_backup_for_file_change(&self) {
+        self.backups.cancel_for_file_change();
+    }
+
+    fn ensure_not_restoring(&self) -> Result<(), WorkspaceError> {
+        if self.restore_running.load(Ordering::Acquire) {
+            return Err(command_error("整库恢复正在进行；普通笔记操作已暂停。"));
+        }
+        Ok(())
+    }
+}
+
+struct RestoreRunningGuard(Arc<AtomicBool>);
+
+impl RestoreRunningGuard {
+    fn begin(state: &WorkspaceState) -> Result<Self, WorkspaceError> {
+        state
+            .restore_running
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .map_err(|_| command_error("已有整库恢复正在进行。"))?;
+        Ok(Self(Arc::clone(&state.restore_running)))
+    }
+}
+
+impl Drop for RestoreRunningGuard {
+    fn drop(&mut self) {
+        self.0.store(false, Ordering::Release);
     }
 }
 
@@ -48,9 +81,12 @@ async fn work<T: Send + 'static>(
     action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
 ) -> Result<T, WorkspaceError> {
     tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
         let mut workspace = state.workspace.lock().map_err(|_| {
             command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
         })?;
+        state.ensure_not_restoring()?;
+        let _access = workspace.acquire_library_access()?;
         let _policy = crate::storage::NoCloudDownload::enter()?;
         action(&mut workspace)
     })
@@ -66,15 +102,120 @@ async fn mutate<T: Send + 'static>(
     action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
 ) -> Result<T, WorkspaceError> {
     tauri::async_runtime::spawn_blocking(move || {
-        let _mutation = state.backups.begin_mutation();
+        state.ensure_not_restoring()?;
+        let _mutation = state.backups.begin_mutation()?;
         let mut workspace = state.workspace.lock().map_err(|_| {
             command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
         })?;
+        state.ensure_not_restoring()?;
+        let _access = workspace.acquire_library_access()?;
         let _policy = crate::storage::NoCloudDownload::enter()?;
         action(&mut workspace)
     })
     .await
     .map_err(|error| command_error(format!("笔记操作未完成：{error}")))?
+}
+
+/// Note saves build a candidate from the cached editor session before touching
+/// the library. Let Workspace acquire the local library lease itself so it can
+/// preserve that candidate if the selected library is unavailable.
+async fn save_mutation<T: Send + 'static>(
+    state: WorkspaceState,
+    action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
+) -> Result<T, WorkspaceError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
+        let _mutation = state.backups.begin_mutation()?;
+        let mut workspace = state.workspace.lock().map_err(|_| {
+            command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
+        })?;
+        state.ensure_not_restoring()?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        action(&mut workspace)
+    })
+    .await
+    .map_err(|error| command_error(format!("笔记操作未完成：{error}")))?
+}
+
+/// Recovery catalog reads use only the local recovery directory.
+async fn recovery_read<T: Send + 'static>(
+    state: WorkspaceState,
+    action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
+) -> Result<T, WorkspaceError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
+        let mut workspace = state.workspace.lock().map_err(|_| {
+            command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
+        })?;
+        state.ensure_not_restoring()?;
+        workspace.ensure_library_transition_allowed()?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        action(&mut workspace)
+    })
+    .await
+    .map_err(|error| command_error(format!("恢复目录读取未完成：{error}")))?
+}
+
+/// Opening a recovery preview changes the active cached session, so require a
+/// clear restore identity while still avoiding a lease on an unavailable old
+/// library.
+async fn recovery_session_work<T: Send + 'static>(
+    state: WorkspaceState,
+    action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
+) -> Result<T, WorkspaceError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
+        let mut workspace = state.workspace.lock().map_err(|_| {
+            command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
+        })?;
+        state.ensure_not_restoring()?;
+        workspace.ensure_library_transition_allowed()?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        action(&mut workspace)
+    })
+    .await
+    .map_err(|error| command_error(format!("恢复预览未完成：{error}")))?
+}
+
+/// Explicit exports use only a cached session or a local recovery package and
+/// publish outside the selected library. They remain available while a known
+/// restore pointer blocks ordinary library operations.
+async fn cached_export<T: Send + 'static>(
+    state: WorkspaceState,
+    action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
+) -> Result<T, WorkspaceError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
+        let mut workspace = state.workspace.lock().map_err(|_| {
+            command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
+        })?;
+        state.ensure_not_restoring()?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        action(&mut workspace)
+    })
+    .await
+    .map_err(|error| command_error(format!("独立副本导出未完成：{error}")))?
+}
+
+/// Library transitions do not need to acquire the old library lease. The
+/// Workspace validates its persistent restore identity and the target is
+/// opened under its own shared lease before it becomes selected.
+async fn switch_library<T: Send + 'static>(
+    state: WorkspaceState,
+    action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
+) -> Result<T, WorkspaceError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
+        let _mutation = state.backups.begin_mutation()?;
+        let mut workspace = state.workspace.lock().map_err(|_| {
+            command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
+        })?;
+        state.ensure_not_restoring()?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        action(&mut workspace)
+    })
+    .await
+    .map_err(|error| command_error(format!("笔记库切换未完成：{error}")))?
 }
 
 #[derive(Clone, serde::Serialize)]
@@ -106,7 +247,16 @@ fn begin_desktop_backup_job(
     state: &WorkspaceState,
     request_id: String,
 ) -> Result<BackupJob, WorkspaceError> {
-    state.backups.begin_job(Some(Arc::new(move |progress| {
+    state
+        .backups
+        .begin_job(Some(desktop_backup_progress(app, request_id)))
+}
+
+fn desktop_backup_progress(
+    app: AppHandle,
+    request_id: String,
+) -> Arc<dyn Fn(BackupProgress) + Send + Sync> {
+    Arc::new(move |progress| {
         let _ = app.emit(
             "cuenote:backup-progress",
             DesktopBackupProgress {
@@ -114,7 +264,7 @@ fn begin_desktop_backup_job(
                 progress,
             },
         );
-    })))
+    })
 }
 
 async fn backup_work<T: Send + 'static>(
@@ -127,16 +277,20 @@ async fn backup_work<T: Send + 'static>(
 ) -> Result<T, WorkspaceError> {
     validate_backup_request_id(&request_id)?;
     tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
         let _policy = crate::storage::NoCloudDownload::enter()?;
         // Directory changes invalidate a job just like a library transition.
         let mutation = selected_directory
             .as_ref()
-            .map(|_| state.backups.begin_mutation());
+            .map(|_| state.backups.begin_mutation())
+            .transpose()?;
         let mut workspace = state
             .workspace
             .lock()
             .map_err(|_| command_error("笔记服务已中断，请重新启动 CueNote 后重试备份。"))?;
         require_backup_library(&workspace, &expected_library_path)?;
+        state.ensure_not_restoring()?;
+        let _access = workspace.acquire_library_access()?;
         let context = if let Some(directory) = selected_directory {
             workspace.set_backup_directory(directory)?
         } else {
@@ -204,12 +358,15 @@ pub async fn list_backup_notes(
     validate_backup_request_id(&request_id)?;
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
         let _policy = crate::storage::NoCloudDownload::enter()?;
         let mut workspace = state
             .workspace
             .lock()
             .map_err(|_| command_error("笔记服务已中断，请重新启动 CueNote 后重试备份。"))?;
         require_backup_library(&workspace, &expected_library_path)?;
+        state.ensure_not_restoring()?;
+        let _access = workspace.acquire_library_access()?;
         let context = workspace.backup_context()?;
         let job = begin_desktop_backup_job(app, &state, request_id)?;
         let available_notebook_ids = workspace.backup_restore_notebook_ids()?;
@@ -239,16 +396,19 @@ pub async fn restore_backup_note(
     validate_backup_request_id(&request_id)?;
     let state = state.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
         let _policy = crate::storage::NoCloudDownload::enter()?;
-        let (context, job) = {
+        let (context, job, _access) = {
             let workspace = state
                 .workspace
                 .lock()
                 .map_err(|_| command_error("笔记服务已中断，请重新启动 CueNote 后重试恢复。"))?;
             require_backup_library(&workspace, &expected_library_path)?;
+            state.ensure_not_restoring()?;
+            let access = workspace.acquire_library_access()?;
             let context = workspace.backup_context()?;
             let job = begin_desktop_backup_job(app.clone(), &state, request_id.clone())?;
-            (context, job)
+            (context, job, access)
         };
         let source = context.load_note_entry(&backup_id, &entry_id, &expected_revision, &job)?;
         let prepared = {
@@ -288,6 +448,103 @@ pub async fn restore_backup_note(
     })
     .await
     .map_err(|error| command_error(format!("备份恢复操作未完成：{error}")))?
+}
+
+#[tauri::command]
+pub async fn preview_library_restore(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    backup_id: String,
+    request_id: String,
+    expected_library_path: String,
+) -> Result<LibraryRestorePreview, WorkspaceError> {
+    validate_backup_request_id(&request_id)?;
+    let owned = state.inner().clone();
+    work(owned.clone(), move |workspace| {
+        require_backup_library(workspace, &expected_library_path)?;
+        let job = begin_desktop_backup_job(app, &owned, request_id)?;
+        workspace.preview_library_restore(&backup_id, &job)
+    })
+    .await
+}
+
+async fn library_restore_work(
+    app: AppHandle,
+    state: WorkspaceState,
+    request_id: String,
+    expected_library_path: String,
+    action: impl FnOnce(&mut Workspace, &BackupJob) -> Result<LibraryRestoreReceipt, WorkspaceError>
+        + Send
+        + 'static,
+) -> Result<LibraryRestoreReceipt, WorkspaceError> {
+    validate_backup_request_id(&request_id)?;
+    let progress_app = app.clone();
+    let mut receipt = tauri::async_runtime::spawn_blocking(move || {
+        let _running = RestoreRunningGuard::begin(&state)?;
+        let job = state
+            .backups
+            .begin_restore_job(Some(desktop_backup_progress(progress_app, request_id)))?;
+        let mut workspace = state
+            .workspace
+            .lock()
+            .map_err(|_| command_error("笔记服务已中断。"))?;
+        require_backup_library(&workspace, &expected_library_path)?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        job.checkpoint()?;
+        action(&mut workspace, &job)
+    })
+    .await
+    .map_err(|error| {
+        command_error(format!(
+            "整库恢复任务已中断，请读取恢复记录后继续或回退：{error}"
+        ))
+    })??;
+    crate::file_watch::configure(&app, receipt.workspace.library.as_mut());
+    Ok(receipt)
+}
+
+#[tauri::command]
+pub async fn restore_library_from_backup(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    backup_id: String,
+    expected_manifest_revision: String,
+    request_id: String,
+    expected_library_path: String,
+) -> Result<LibraryRestoreReceipt, WorkspaceError> {
+    library_restore_work(
+        app,
+        state.inner().clone(),
+        request_id,
+        expected_library_path,
+        move |workspace, job| {
+            workspace.restore_library_from_backup(
+                &backup_id,
+                &expected_manifest_revision,
+                &chrono::Local::now().format("%Y-%m-%d").to_string(),
+                job,
+            )
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn resume_library_restore(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    action: LibraryRestoreAction,
+    request_id: String,
+    expected_library_path: String,
+) -> Result<LibraryRestoreReceipt, WorkspaceError> {
+    library_restore_work(
+        app,
+        state.inner().clone(),
+        request_id,
+        expected_library_path,
+        move |workspace, job| workspace.resume_library_restore(action, job),
+    )
+    .await
 }
 
 #[tauri::command]
@@ -339,8 +596,25 @@ pub async fn get_workspace(
     app: AppHandle,
     state: State<'_, WorkspaceState>,
 ) -> Result<WorkspaceView, WorkspaceError> {
-    let mut view = mutate(state.inner().clone(), Workspace::snapshot).await?;
-    crate::file_watch::configure(&app, view.library.as_mut());
+    let state = state.inner().clone();
+    let mut view = tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
+        let mut workspace = state
+            .workspace
+            .lock()
+            .map_err(|_| command_error("笔记服务已中断。"))?;
+        state.ensure_not_restoring()?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        workspace.snapshot()
+    })
+    .await
+    .map_err(|error| command_error(format!("无法读取工作区：{error}")))??;
+    let watched = if view.library_restore.is_none() {
+        view.library.as_mut()
+    } else {
+        None
+    };
+    crate::file_watch::configure(&app, watched);
     Ok(view)
 }
 
@@ -372,7 +646,8 @@ pub async fn use_default_library(
     app: AppHandle,
     state: State<'_, WorkspaceState>,
 ) -> Result<WorkspaceView, WorkspaceError> {
-    let mut view = mutate(state.inner().clone(), |workspace| {
+    let mut view = switch_library(state.inner().clone(), |workspace| {
+        workspace.ensure_library_transition_allowed()?;
         workspace.mark_backup_check_due(&chrono::Local::now().format("%Y-%m-%d").to_string())?;
         workspace.use_default_library()
     })
@@ -417,7 +692,8 @@ pub async fn choose_library(
     let path = selected
         .into_path()
         .map_err(|error| command_error(format!("请选择本机文件夹：{error}")))?;
-    let mut view = mutate(state.inner().clone(), move |workspace| {
+    let mut view = switch_library(state.inner().clone(), move |workspace| {
+        workspace.ensure_library_transition_allowed()?;
         workspace.mark_backup_check_due(&chrono::Local::now().format("%Y-%m-%d").to_string())?;
         workspace.select_library(path).map(Some)
     })
@@ -558,7 +834,7 @@ pub async fn save_note_text(
     session_id: String,
     text: PlainText,
 ) -> Result<SaveReceipt, WorkspaceError> {
-    mutate(state.inner().clone(), move |workspace| {
+    save_mutation(state.inner().clone(), move |workspace| {
         workspace.save_note_text(&session_id, text)
     })
     .await
@@ -570,7 +846,7 @@ pub async fn save_note_content(
     session_id: String,
     content: NoteContent,
 ) -> Result<SaveReceipt, WorkspaceError> {
-    mutate(state.inner().clone(), move |workspace| {
+    save_mutation(state.inner().clone(), move |workspace| {
         workspace.save_note_content(&session_id, content)
     })
     .await
@@ -650,14 +926,24 @@ pub async fn complete_close(
 ) -> Result<(), WorkspaceError> {
     // The frontend freezes new transitions and flushes its latest text before
     // requesting this. Wait for any existing host operation to release its lock.
-    mutate(state.inner().clone(), |workspace| {
+    state.cancel_backup();
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut workspace = state
+            .workspace
+            .lock()
+            .map_err(|_| command_error("笔记服务已中断。"))?;
         // Preserve a bounded handoff when a quick close beats the automatic
         // backup debounce. Do this before releasing the editing session so a
         // local settings failure leaves the existing close-retry path usable.
-        workspace.mark_backup_check_due(&chrono::Local::now().format("%Y-%m-%d").to_string())?;
+        if workspace.ensure_library_available().is_ok() {
+            workspace
+                .mark_backup_check_due(&chrono::Local::now().format("%Y-%m-%d").to_string())?;
+        }
         workspace.close()
     })
-    .await?;
+    .await
+    .map_err(|error| command_error(format!("无法完成关闭：{error}")))??;
     app.state::<crate::CloseGate>()
         .approved
         .store(true, std::sync::atomic::Ordering::Release);
@@ -669,7 +955,7 @@ pub async fn complete_close(
 pub async fn list_recovery_drafts(
     state: State<'_, WorkspaceState>,
 ) -> Result<RecoveryList, WorkspaceError> {
-    work(state.inner().clone(), Workspace::list_recovery_drafts).await
+    recovery_read(state.inner().clone(), Workspace::list_recovery_drafts).await
 }
 
 #[tauri::command]
@@ -732,7 +1018,7 @@ pub async fn reconcile_external_changes(
 pub async fn list_preserved_versions(
     state: State<'_, WorkspaceState>,
 ) -> Result<VersionList, WorkspaceError> {
-    work(state.inner().clone(), Workspace::list_preserved_versions).await
+    recovery_read(state.inner().clone(), Workspace::list_preserved_versions).await
 }
 
 #[tauri::command]
@@ -740,7 +1026,7 @@ pub async fn open_preserved_version(
     state: State<'_, WorkspaceState>,
     version_id: String,
 ) -> Result<NoteSession, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    recovery_session_work(state.inner().clone(), move |workspace| {
         workspace.open_preserved_version(&version_id)
     })
     .await
@@ -777,7 +1063,7 @@ pub async fn save_preserved_as(
     let Some(path) = pick_copy_path(app).await? else {
         return Ok(None);
     };
-    mutate(state.inner().clone(), move |workspace| {
+    cached_export(state.inner().clone(), move |workspace| {
         workspace.save_preserved_as(&version_id, path).map(Some)
     })
     .await
@@ -793,7 +1079,7 @@ pub async fn save_current_as(
     let Some(path) = pick_copy_path(app).await? else {
         return Ok(None);
     };
-    mutate(state.inner().clone(), move |workspace| {
+    cached_export(state.inner().clone(), move |workspace| {
         workspace.save_current_as(&session_id, text, path).map(Some)
     })
     .await
@@ -809,7 +1095,7 @@ pub async fn save_current_content_as(
     let Some(path) = pick_copy_path(app).await? else {
         return Ok(None);
     };
-    mutate(state.inner().clone(), move |workspace| {
+    cached_export(state.inner().clone(), move |workspace| {
         workspace
             .save_current_content_as(&session_id, content, path)
             .map(Some)
@@ -826,8 +1112,257 @@ pub async fn save_recovery_as(
     let Some(path) = pick_copy_path(app).await? else {
         return Ok(None);
     };
-    mutate(state.inner().clone(), move |workspace| {
+    cached_export(state.inner().clone(), move |workspace| {
         workspace.save_recovery_as(&recovery_id, path).map(Some)
     })
     .await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::note_format::{Block, Inline, Sections};
+    use std::path::Path;
+
+    fn fixture() -> (tempfile::TempDir, Workspace, String, String) {
+        let parent = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
+        std::fs::create_dir_all(&parent).unwrap();
+        let temp = tempfile::Builder::new()
+            .prefix("command-save-failures-")
+            .tempdir_in(parent)
+            .unwrap();
+        let root = temp.path();
+        let mut workspace = Workspace::new(
+            root.join("settings"),
+            root.join("recovery"),
+            root.join("library"),
+        );
+        workspace.use_default_library().unwrap();
+        let session = workspace.new_note().unwrap();
+        workspace
+            .save_note_text(&session.session_id, test_text("saved source"))
+            .unwrap();
+        (temp, workspace, session.session_id, session.note_id)
+    }
+
+    fn test_text(content: &str) -> PlainText {
+        PlainText {
+            title: "host save test".into(),
+            cue: String::new(),
+            content: content.into(),
+            summary: String::new(),
+        }
+    }
+
+    fn test_content(content: &str) -> NoteContent {
+        NoteContent {
+            title: "host rich copy".into(),
+            sections: Sections {
+                cue: Vec::new(),
+                content: vec![Block::Paragraph {
+                    children: vec![Inline::Text {
+                        text: content.into(),
+                        marks: Vec::new(),
+                    }],
+                }],
+                summary: Vec::new(),
+            },
+        }
+    }
+
+    #[test]
+    fn host_save_preserves_draft_and_cached_exports_work_with_unavailable_library() {
+        let (temp, workspace, session_id, note_id) = fixture();
+        let root = temp.path();
+        let library = workspace.library_path().unwrap();
+        let source = library.join("notes").join(format!("{note_id}.cuenote"));
+        let before = crate::storage::open_note(&source).unwrap();
+        std::fs::rename(&library, root.join("library-away")).unwrap();
+        std::fs::rename(
+            root.join("recovery/drafts"),
+            root.join("recovery/drafts-away"),
+        )
+        .unwrap();
+        std::fs::write(
+            root.join("recovery/drafts"),
+            b"unavailable drafts directory",
+        )
+        .unwrap();
+        let state = WorkspaceState::new(workspace);
+
+        let draft = test_text("latest host plain draft");
+        let session_id_for_save = session_id.clone();
+        let error =
+            tauri::async_runtime::block_on(save_mutation(state.clone(), move |workspace| {
+                workspace.save_note_text(&session_id_for_save, draft)
+            }))
+            .unwrap_err();
+        assert!(error.recovery_path.is_none());
+        assert!(error.recovery_error.is_some(), "{error:?}");
+
+        let destination = root.join("outside/plain-copy.cuenote");
+        std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        let text = test_text("latest host plain draft");
+        let session_id_for_plain_copy = session_id.clone();
+        let plain_copy =
+            tauri::async_runtime::block_on(cached_export(state.clone(), move |workspace| {
+                workspace.save_current_as(&session_id_for_plain_copy, text, destination)
+            }))
+            .unwrap();
+        let plain = crate::storage::open_note(&root.join("outside/plain-copy.cuenote")).unwrap();
+        assert_eq!(plain.revision, plain_copy.revision);
+        assert_eq!(
+            plain.package.text_projection().content,
+            "latest host plain draft"
+        );
+
+        let content = test_content("latest host rich draft");
+        let content_for_save = content.clone();
+        let session_id_for_rich_copy = session_id.clone();
+        let rich_destination = root.join("outside/rich-copy.cuenote");
+        tauri::async_runtime::block_on(cached_export(state.clone(), move |workspace| {
+            workspace.save_current_content_as(
+                &session_id_for_rich_copy,
+                content_for_save,
+                rich_destination,
+            )
+        }))
+        .unwrap();
+        let rich = crate::storage::open_note(&root.join("outside/rich-copy.cuenote")).unwrap();
+        assert_eq!(rich.package.content(), content);
+        assert_eq!(
+            crate::storage::open_note(
+                &root
+                    .join("library-away/notes")
+                    .join(format!("{note_id}.cuenote"))
+            )
+            .unwrap()
+            .revision,
+            before.revision
+        );
+    }
+
+    #[test]
+    fn missing_library_pointer_blocks_host_reads_and_mutations_but_allows_cached_export() {
+        let (temp, workspace, session_id, note_id) = fixture();
+        let root = temp.path();
+        let library = workspace.library_path().unwrap();
+        let pointer_directory = root.join("recovery/library-restores");
+        std::fs::create_dir_all(&pointer_directory).unwrap();
+        std::fs::write(
+            pointer_directory.join(format!(
+                "active-{}.json",
+                crate::storage::library_access::library_key(&library)
+            )),
+            b"pending restore",
+        )
+        .unwrap();
+        std::fs::rename(&library, root.join("library-away")).unwrap();
+        let state = WorkspaceState::new(workspace);
+
+        let replacement = root.join("blocked-replacement-library");
+        let switch_error =
+            tauri::async_runtime::block_on(switch_library(state.clone(), move |workspace| {
+                workspace.select_library(replacement)
+            }))
+            .unwrap_err();
+        assert_eq!(switch_error.kind, "libraryRestorePending");
+
+        let read_error = tauri::async_runtime::block_on(work(state.clone(), move |workspace| {
+            workspace.open_note(&note_id)
+        }))
+        .unwrap_err();
+        assert_eq!(read_error.kind, "libraryRestorePending");
+
+        let mutation_error =
+            tauri::async_runtime::block_on(mutate(state.clone(), |workspace| workspace.new_note()))
+                .unwrap_err();
+        assert_eq!(mutation_error.kind, "libraryRestorePending");
+
+        let recovery_list_error = tauri::async_runtime::block_on(recovery_read(
+            state.clone(),
+            Workspace::list_recovery_drafts,
+        ))
+        .unwrap_err();
+        assert_eq!(recovery_list_error.kind, "libraryRestorePending");
+
+        let preserved_preview_error =
+            tauri::async_runtime::block_on(recovery_session_work(state.clone(), |workspace| {
+                workspace.open_preserved_version("not-a-real-version")
+            }))
+            .unwrap_err();
+        assert_eq!(preserved_preview_error.kind, "libraryRestorePending");
+
+        assert!(!library.exists());
+
+        let destination = root.join("outside/pending-cached-copy.cuenote");
+        std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        tauri::async_runtime::block_on(cached_export(state, move |workspace| {
+            workspace.save_current_as(
+                &session_id,
+                test_text("cached export while pending"),
+                destination,
+            )
+        }))
+        .unwrap();
+        let copied =
+            crate::storage::open_note(&root.join("outside/pending-cached-copy.cuenote")).unwrap();
+        assert_eq!(
+            copied.package.text_projection().content,
+            "cached export while pending"
+        );
+        assert!(!library.exists());
+    }
+
+    #[test]
+    fn cached_export_does_not_require_the_library_access_lock() {
+        let (temp, workspace, session_id, note_id) = fixture();
+        let root = temp.path();
+        let library = workspace.library_path().unwrap();
+        let source = library.join("notes").join(format!("{note_id}.cuenote"));
+        let before = crate::storage::open_note(&source).unwrap();
+        let _exclusive =
+            crate::storage::library_access::lock_exclusive(&root.join("recovery"), &library)
+                .unwrap();
+
+        let state = WorkspaceState::new(workspace);
+        let destination = root.join("outside/library-lock-copy.cuenote");
+        std::fs::create_dir_all(destination.parent().unwrap()).unwrap();
+        let session_for_copy = session_id.clone();
+        tauri::async_runtime::block_on(cached_export(state, move |workspace| {
+            workspace.save_current_as(
+                &session_for_copy,
+                test_text("copy while old library lock is unavailable"),
+                destination,
+            )
+        }))
+        .unwrap();
+
+        let copied =
+            crate::storage::open_note(&root.join("outside/library-lock-copy.cuenote")).unwrap();
+        assert_eq!(
+            copied.package.text_projection().content,
+            "copy while old library lock is unavailable"
+        );
+        assert_eq!(
+            crate::storage::open_note(&source).unwrap().revision,
+            before.revision
+        );
+    }
+
+    #[test]
+    fn host_library_switch_can_leave_missing_library_without_pointer() {
+        let (temp, workspace, _session_id, _note_id) = fixture();
+        let root = temp.path();
+        let old_library = workspace.library_path().unwrap();
+        std::fs::rename(&old_library, root.join("library-away")).unwrap();
+        let selected_path = root.join("replacement-library");
+        let selected = tauri::async_runtime::block_on(switch_library(
+            WorkspaceState::new(workspace),
+            move |workspace| workspace.select_library(selected_path),
+        ))
+        .unwrap();
+        assert!(selected.library.unwrap().notes.is_empty());
+        assert!(root.join("replacement-library/notes").is_dir());
+    }
 }

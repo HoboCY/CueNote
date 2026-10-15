@@ -8,11 +8,13 @@ import { createSearchCoordinator, type SearchCoordinatorState } from './search-c
 import { continueFromVerifiedCopyOrProtect } from './conflict-transition';
 import { RichTextEditor, type RichTextSection } from './RichTextEditor';
 import { BackupPanel } from './BackupPanel';
+import { LibraryRestorePanel } from './LibraryRestorePanel';
 import type { ImageEditorBridge } from './image-session';
 import type { MindMapEditorBridge } from './mindmap-session';
 import {
   workspaceApi,
   type BackupRestoreReceipt,
+  type LibraryRestoreReceipt,
   type NoteSession,
   type NoteContent,
   type ExternalChangeProbe,
@@ -171,6 +173,12 @@ function App() {
   const [trashDialog, setTrashDialog] = useState<TrashDialogState | null>(null);
   const [isNotebookBusy, setIsNotebookBusy] = useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceView | null>(null);
+  const [libraryRestoreBackupId, setLibraryRestoreBackupId] = useState<string | null>(null);
+  const [libraryRestoreBusy, setLibraryRestoreBusy] = useState(false);
+  const [backupPanelBusy, setBackupPanelBusy] = useState(false);
+  const libraryRestoreSuspendedRef = useRef(false);
+  const libraryRestoreSuspended = Boolean(libraryRestoreBackupId || workspace?.libraryRestore || libraryRestoreBusy);
+  libraryRestoreSuspendedRef.current = libraryRestoreSuspended;
   const [session, setSession] = useState<NoteSession | null>(null);
   const [metadataReadOnlySessionId, setMetadataReadOnlySessionId] = useState<string | null>(null);
   const [draft, setDraft] = useState<NoteContent | null>(null);
@@ -269,6 +277,7 @@ function App() {
     || [...editorFlushersRef.current.values()].some(registeredSessionId => registeredSessionId === sessionId);
 
   const handleSearchProgress = (progress: SearchProgress) => {
+    if (libraryRestoreSuspendedRef.current) return;
     searchProgressRef.current = progress;
     setSearchProgress(progress);
     if (progress.libraryPath !== workspaceRef.current?.library?.path) return;
@@ -310,12 +319,19 @@ function App() {
     const nextLibrary = value?.library ?? null;
     workspaceRef.current = value;
     setWorkspace(value);
+    if (value?.libraryRestore) {
+      libraryRestoreSuspendedRef.current = true;
+      searchCoordinatorRef.current?.setEnabled(false);
+      externalChangesCoordinatorRef.current?.dispose();
+      void saveCoordinatorRef.current?.pauseAutomaticSavingAndWait();
+      return;
+    }
     const preferredNotebookId = viewPreferencesRef.current.selectedNotebookId;
     // Preserve the preference ID while search follows a notebook that is currently visible.
     searchCoordinatorRef.current?.setScope(resolveSearchScope(preferredNotebookId, nextLibrary));
     if ((previousLibrary?.path ?? null) !== (nextLibrary?.path ?? null)) {
       searchCoordinatorRef.current?.setLibraryPath(nextLibrary?.path ?? null);
-      if (nextLibrary) externalChangesCoordinatorRef.current?.schedule();
+      if (nextLibrary && !libraryRestoreSuspendedRef.current) externalChangesCoordinatorRef.current?.schedule();
       const progress = searchProgressRef.current;
       if (progress && progress.libraryPath === nextLibrary?.path) {
         handleSearchProgress(progress);
@@ -457,6 +473,14 @@ function App() {
     );
   };
 
+  const applyLibraryRestoreWorkspace = (value: WorkspaceView) => {
+    applyWorkspace(value);
+    if (!value.libraryRestore) {
+      void refreshRecoveryDrafts();
+      void refreshPreservedVersions();
+    }
+  };
+
   if (saveCoordinatorRef.current === null) {
     saveCoordinatorRef.current = createSaveCoordinator<NoteContent, SaveReceipt>({
       save: (sessionId, snapshot) => workspaceApi.save(sessionId, snapshot),
@@ -514,6 +538,7 @@ function App() {
   const resumeAutomaticSavingWhenSafe = () => {
     void savingPauseRef.current.then(() => {
       if (!isComposingRef.current && !hasEditorIssue() && !isAbandoningRef.current && !externalConflictRef.current
+        && !libraryRestoreSuspendedRef.current && !workspaceRef.current?.libraryRestore
         && !externalReconcilePendingRef.current && !operationInProgressRef.current
         && !pendingTransitionRef.current && !transitionAttemptRef.current && !activeTransitionRef.current) {
         saveCoordinator.resumeAutomaticSaving();
@@ -619,6 +644,7 @@ function App() {
   };
 
   const handleExternalProbeResult = (result: ExternalChangeProbe) => {
+    if (libraryRestoreSuspendedRef.current || workspaceRef.current?.libraryRestore) return;
     updateLibraryFromExternalResult(result.library);
     const currentSession = sessionRef.current;
     if (!currentSession || result.sessionId !== currentSession.sessionId) return;
@@ -673,7 +699,7 @@ function App() {
     _token: ExternalChangeToken,
     isCurrent: () => boolean,
   ) => {
-    if (!isCurrent()) return;
+    if (!isCurrent() || libraryRestoreSuspendedRef.current || workspaceRef.current?.libraryRestore) return;
     updateLibraryFromExternalResult(result.library);
     const initialSession = sessionRef.current;
     if (!initialSession || result.sessionId !== initialSession.sessionId) {
@@ -862,6 +888,7 @@ function App() {
   };
 
   const requestTransition = (transition: PendingTransition, queueWhileBusy = false) => {
+    if (libraryRestoreSuspendedRef.current && !transition.close) return;
     if (pendingTransitionRef.current) return;
     if (externalReconcilePendingRef.current) {
       if (!queueWhileBusy) return;
@@ -914,6 +941,7 @@ function App() {
   }, [pendingTransition, isInitializing, isOperationBusy]);
 
   const saveCurrent = async () => {
+    if (libraryRestoreSuspendedRef.current) return;
     const currentSession = sessionRef.current;
     if (!desktopRuntime || isInitializing || operationInProgressRef.current || externalReconcilePendingRef.current
       || manualSaveInProgressRef.current || externalConflictRef.current || hasEditorIssue()
@@ -994,6 +1022,49 @@ function App() {
           message: `笔记已恢复并重新读取，但界面刷新未完成：${toWorkspaceError(cause).message} 请重新打开笔记。`,
           recoveryPath: receipt.preRestoreBackup.path,
         });
+      }
+      return receipt;
+    } finally {
+      operationInProgressRef.current = false;
+      setIsOperationBusy(false);
+      resumeAutomaticSavingWhenSafe();
+    }
+  };
+
+  const runLibraryRestoreWithSavedEditor = async (
+    run: () => Promise<LibraryRestoreReceipt>,
+    resume: boolean,
+  ): Promise<LibraryRestoreReceipt | null> => {
+    const libraryPath = workspaceRef.current?.library?.path;
+    if (!libraryPath || operationInProgressRef.current) return null;
+    if (!resume && !await prepareManualBackup()) return null;
+    if (workspaceRef.current?.library?.path !== libraryPath || operationInProgressRef.current
+      || pendingTransitionRef.current || externalReconcilePendingRef.current
+      || (!resume && (externalConflictRef.current || saveCoordinator.getState().isDirty
+        || isComposingRef.current || pendingEditorOperationsRef.current.size > 0 || hasBlockingEditorIssue()))) return null;
+    operationInProgressRef.current = true;
+    flushSync(() => setIsOperationBusy(true));
+    externalChangesCoordinator.dispose();
+    searchCoordinator.setEnabled(false);
+    setError(null);
+    try {
+      await pauseAutomaticSaving();
+      // Complete any queued preference write before the host takes the library lease.
+      await viewPreferencesWriteQueueRef.current;
+      if (workspaceRef.current?.library?.path !== libraryPath || pendingTransitionRef.current
+        || externalReconcilePendingRef.current
+        || (!resume && saveCoordinator.getState().isDirty)) return null;
+      const receipt = await run();
+      try {
+        setTrashView(false);
+        setSearchInput('');
+        searchCoordinator.setQuery('');
+        applyLibraryRestoreWorkspace(receipt.workspace);
+        clearSearchProgress();
+      } catch (cause) {
+        setError({ kind: 'restoreViewRefresh',
+          message: `整库操作已完成，但界面刷新未完成：${toWorkspaceError(cause).message} 请重新打开应用。`,
+          recoveryPath: receipt.preRestoreBackup.path });
       }
       return receipt;
     } finally {
@@ -1326,6 +1397,10 @@ function App() {
 
   const requestClose = () => {
     if (!desktopRuntime) return;
+    if (workspaceRef.current?.libraryRestore && !operationInProgressRef.current) {
+      void workspaceApi.completeClose().catch((cause: unknown) => setError(toWorkspaceError(cause)));
+      return;
+    }
     setNotebookDialog(null);
     setTrashDialog(null);
     if (pendingTransitionRef.current?.close || activeTransitionRef.current?.close) return;
@@ -1402,8 +1477,11 @@ function App() {
       });
 
     const externalChanges = externalChangesCoordinatorRef.current;
-    const scheduleExternalProbe = () => externalChanges?.schedule();
+    const scheduleExternalProbe = () => {
+      if (!libraryRestoreSuspendedRef.current) externalChanges?.schedule();
+    };
     const handleFilesChanged = () => {
+      if (libraryRestoreSuspendedRef.current) return;
       searchCoordinator.invalidate();
       scheduleExternalProbe();
     };
@@ -1423,7 +1501,7 @@ function App() {
       .catch((cause: unknown) => {
         if (active) setError(toWorkspaceError(cause));
       });
-    externalChanges?.schedule();
+    scheduleExternalProbe();
 
     return () => {
       active = false;
@@ -1444,6 +1522,21 @@ function App() {
     externalChangesCoordinator.resume();
     return () => externalChangesCoordinator.dispose();
   }, [externalChangesCoordinator]);
+
+  useEffect(() => {
+    if (libraryRestoreSuspended) {
+      externalChangesCoordinator.dispose();
+      searchCoordinator.setEnabled(false);
+      void pauseAutomaticSaving();
+    } else {
+      externalChangesCoordinator.resume();
+      externalChangesCoordinator.schedule();
+      searchCoordinator.setEnabled(!isTrashViewRef.current);
+      searchCoordinator.setLibraryPath(workspaceRef.current?.library?.path ?? null);
+      searchCoordinator.refresh();
+      resumeAutomaticSavingWhenSafe();
+    }
+  }, [libraryRestoreSuspended]);
 
   useEffect(() => () => searchCoordinator.dispose(), [searchCoordinator]);
 
@@ -2173,11 +2266,11 @@ function App() {
       ? saveState.isDirty
       : session.revision === null || !sameContent(draft, savedContent))
   ));
-  const navigationLocked = isInitializing || isOperationBusy || isReconcilingExternalChange || isNotebookBusy || pendingTransition !== null || trashDialog !== null;
-  const editingLocked = !desktopRuntime || isInitializing || isOperationBusy || isAbandoning || !closeGuardReady || isTrashView || isTrashSession || !sessionMatchesView || hasAnyEditorIssue;
+  const navigationLocked = libraryRestoreSuspended || isInitializing || isOperationBusy || isReconcilingExternalChange || isNotebookBusy || pendingTransition !== null || trashDialog !== null;
+  const editingLocked = libraryRestoreSuspended || !desktopRuntime || isInitializing || isOperationBusy || isAbandoning || !closeGuardReady || isTrashView || isTrashSession || !sessionMatchesView || hasAnyEditorIssue;
   const sectionCanEdit = (section: RichTextSection) => {
     const ownIssue = editorIssues[section];
-    return desktopRuntime && !isInitializing && !isOperationBusy && !isAbandoning && closeGuardReady
+    return desktopRuntime && !libraryRestoreSuspended && !isInitializing && !isOperationBusy && !isAbandoning && closeGuardReady
       && !isTrashView && !isTrashSession && sessionMatchesView && !isReadOnly
       && (!hasAnyEditorIssue || Boolean(ownIssue && !ownIssue.initial && !hasInitialIssue));
   };
@@ -2777,12 +2870,30 @@ function App() {
         )}
 
         {desktopRuntime && (
+          <LibraryRestorePanel
+            libraryPath={library?.path ?? null}
+            backupId={libraryRestoreBackupId}
+            pending={workspace?.libraryRestore ?? null}
+            allowed={!backupPanelBusy && !isInitializing && !isReconcilingExternalChange && !isNotebookBusy
+              && pendingTransition === null && trashDialog === null && !externalConflict
+              && !hasAnyEditorIssue && closeGuardReady}
+            runWithSavedEditor={runLibraryRestoreWithSavedEditor}
+            onWorkspace={applyLibraryRestoreWorkspace}
+            onDismiss={() => setLibraryRestoreBackupId(null)}
+            onBusyChange={setLibraryRestoreBusy}
+          />
+        )}
+
+        {desktopRuntime && (
           <BackupPanel
             libraryPath={library?.path ?? null}
             changeToken={library}
             notebooks={library?.notebooks ?? []}
             restoreAllowed={!navigationLocked && !externalConflict && !hasAnyEditorIssue && closeGuardReady}
             runRestoreWithSavedEditor={runRestoreWithSavedEditor}
+            onRestoreLibrary={setLibraryRestoreBackupId}
+            suspended={libraryRestoreSuspended}
+            onBusyChange={setBackupPanelBusy}
             automaticAllowed={!navigationLocked && !isDirty && !isSaving && !saveFailed
               && !isComposing && !hasAnyEditorIssue && !externalConflict
               && pendingEditorOperationCount === 0 && closeGuardReady}

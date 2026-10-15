@@ -73,7 +73,7 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 
 三分区编辑能力、Markdown 输入、基础表格与文档转换边界见[富文本编辑契约](docs/rich-editor-contract.md)。文件使用应用原生结构，编辑器内部 JSON 不作为磁盘协议。
 
-正文支持反引号行内代码、围栏代码块，以及 JavaScript、TypeScript、Python、Rust、C#、SQL、JSON 的离线高亮。代码块可选择或填写语言；未知语言保留标记并显示纯文本。缩进和空行按原文保存，连续回车留在代码块内，通过工具栏或 Ctrl/⌘+Enter 离开。详见[代码编辑契约](docs/code-editing-contract.md)；全文搜索与 Markdown 导出仍由后续任务实现。
+正文支持反引号行内代码、围栏代码块，以及 JavaScript、TypeScript、Python、Rust、C#、SQL、JSON 的离线高亮。代码块可选择或填写语言；未知语言保留标记并显示纯文本。缩进和空行按原文保存，连续回车留在代码块内，通过工具栏或 Ctrl/⌘+Enter 离开。详见[代码编辑契约](docs/code-editing-contract.md)与[全文搜索契约](docs/search-contract.md)；Markdown 导出仍由后续任务实现。
 
 正文支持 `$...$` 行内公式和独占行 `$$` 围起的公式块，也可从工具栏插入，点击公式修改 LaTeX 源码。公式使用随应用打包的 KaTeX 离线排版；语法错误或超出显示限制时显示源码提示，完整源码仍可编辑和保存。确认修改可通过正文撤销。详见[公式编辑契约](docs/math-editing-contract.md)。
 
@@ -82,6 +82,8 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 正文可插入思维导图内容块，展开后修改节点文字和层级，收起后更新预览并返回原位置。展开中的修改参加自动保存；导图内部历史独立，收起写回一次正文历史。单篇所有导图合计最多 5,000 个节点，完整结构保存在原生笔记文件内。详见[思维导图实现契约](docs/mindmap-editing-contract.md)。
 
 笔记本归属、置顶、排序和重启定位见[笔记本与列表契约](docs/notebook-management-contract.md)。这些组织信息属于原生事实文件；本项的本机验证不代表 OneDrive 组织信息同步验收已经完成。
+
+备份面板可创建和校验完整库快照，并从备份恢复单篇笔记或整个笔记库。恢复前先备份当前库；整库恢复中断后可继续或回退，完成前暂停普通库操作。此流程按文件记录进度，不提供整个目录的原子事务。详见[备份约定](docs/backup-contract.md)、[单篇恢复约定](docs/backup-restore-contract.md)与[整库恢复约定](docs/library-restore-contract.md)。
 
 ## 规格与计划
 
@@ -99,6 +101,12 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 - [公式编辑验证](docs/math-editing-validation.md)
 - [图片编辑验证](docs/image-editing-validation.md)
 - [思维导图验证](docs/mindmap-editing-validation.md)
+- [外部变化与冲突验证](docs/external-changes-validation.md)
+- [同步文件到达与按需文件验证](docs/sync-files-validation.md)
+- [全文搜索验证](docs/search-validation.md)
+- [备份验证](docs/backup-validation.md)
+- [单篇恢复验证](docs/backup-restore-validation.md)
+- [整库恢复验证](docs/library-restore-validation.md)
 
 Mac、真实 OneDrive 双端、完整编辑能力、容量与性能验收仍需后续实现与测试；当前版本不代表已达到日用标准。
 

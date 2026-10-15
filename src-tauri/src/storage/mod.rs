@@ -9,15 +9,18 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+pub(crate) mod library_access;
 mod local_files;
 mod publication;
 mod recovery;
+pub(crate) mod restore_facts;
 pub(crate) mod versions;
 
 pub(crate) use local_files::{
     ensure_local_directory, ensure_local_file, open_local_read, NoCloudDownload,
 };
-pub(crate) use publication::recover_pending_publications;
+pub(crate) use publication::StableDirectory;
+pub(crate) use publication::{ensure_no_pending_publications, recover_pending_publications};
 pub(crate) use recovery::{
     create_recovery_snapshot, list_recovery_drafts, open_recovery_draft, remove_recovery_snapshot,
     save_copy, RecoverySnapshot,
@@ -1485,6 +1488,12 @@ pub(crate) struct ResolvedTarget {
     directory: publication::StableDirectory,
 }
 
+impl ResolvedTarget {
+    pub(crate) fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
 fn resolve_target(path: &Path) -> Result<ResolvedTarget, StorageError> {
     let name = path
         .file_name()
@@ -1504,8 +1513,8 @@ fn resolve_target(path: &Path) -> Result<ResolvedTarget, StorageError> {
     })
 }
 
-pub(crate) fn resolve_output_path(path: &Path) -> Result<PathBuf, StorageError> {
-    resolve_target(path).map(|target| target.path)
+pub(crate) fn resolve_output_path(path: &Path) -> Result<ResolvedTarget, StorageError> {
+    resolve_target(path)
 }
 
 fn canonical_directory(path: &Path) -> Result<PathBuf, StorageError> {

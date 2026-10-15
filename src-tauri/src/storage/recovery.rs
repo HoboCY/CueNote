@@ -1,5 +1,6 @@
 use super::{
-    digest_bytes, inspect_recovery_note, publish_create, resolve_recovery_path, StorageError,
+    digest_bytes, inspect_recovery_note, publish_create, resolve_recovery_path, ResolvedTarget,
+    StorageError,
 };
 use crate::note_format::NotePackage;
 use chrono::{SecondsFormat, Utc};
@@ -438,31 +439,49 @@ pub(crate) fn remove_recovery_snapshot(
 }
 
 pub(crate) fn save_copy(
-    path: &Path,
+    target: &ResolvedTarget,
     package: &NotePackage,
 ) -> Result<(PathBuf, String), StorageError> {
-    let target = super::resolve_target(path)?;
-    let (candidate_path, candidate_file) = super::create_candidate_path(&target.parent)?;
+    target.directory.ensure_current()?;
+    let (candidate_path, candidate_file) = target.directory.create_candidate()?;
+    if let Err(error) = target.directory.ensure_current() {
+        return Err(preserve_copy_candidate(error, &candidate_path));
+    }
     let revision = match super::write_and_verify_package(candidate_file, package) {
         Ok(revision) => revision,
         Err(error) => {
-            let cleanup = remove_owned_candidate(&candidate_path);
-            return Err(append_candidate_cleanup(error, &candidate_path, cleanup));
+            return Err(preserve_copy_candidate(error, &candidate_path));
         }
     };
-    if let Err(error) = publish_create(&candidate_path, &target.path) {
-        let cleanup = remove_owned_candidate(&candidate_path);
-        return Err(append_candidate_cleanup(error, &candidate_path, cleanup));
+    if let Err(error) = target.directory.ensure_current() {
+        return Err(preserve_copy_candidate(error, &candidate_path));
     }
-    super::sync_parent_directory(&target.parent).map_err(|error| {
-        StorageError::io(
-            &format!(
-                "另存文件已发布，但无法同步所在目录 {}",
-                target.parent.display()
-            ),
-            error,
-        )
-    })?;
+    if let Err(error) = target
+        .directory
+        .move_no_replace(&candidate_path, &target.path)
+    {
+        let error = if error.kind() == io::ErrorKind::AlreadyExists
+            || matches!(error.raw_os_error(), Some(80 | 183))
+        {
+            StorageError::new("conflict", "另存目标已存在；没有覆盖该文件。")
+        } else {
+            StorageError::io("无法无覆盖原子发布另存文件", error)
+        };
+        return Err(preserve_copy_candidate(error, &candidate_path));
+    }
+    target
+        .directory
+        .sync_publication_directory()
+        .map_err(|error| {
+            StorageError::io(
+                &format!(
+                    "另存文件已发布，但无法同步所在目录 {}",
+                    target.parent.display()
+                ),
+                error,
+            )
+        })?;
+    target.directory.ensure_current()?;
     let opened = inspect_recovery_note(&target.path)?
         .ok_or_else(|| StorageError::new("publish", "另存文件发布后无法重新读取。"))?;
     if opened.revision != revision || opened.package.document.note_id != package.document.note_id {
@@ -471,7 +490,19 @@ pub(crate) fn save_copy(
             "另存文件发布后的身份或内容指纹与候选不匹配。",
         ));
     }
-    Ok((target.path, revision))
+    target.directory.ensure_current()?;
+    Ok((target.path.clone(), revision))
+}
+
+fn preserve_copy_candidate(mut error: StorageError, candidate: &Path) -> StorageError {
+    // A directory handle prevents redirection, but does not establish ownership
+    // of a child name after another process may have replaced that child.
+    // Leave all failure artifacts untouched instead of deleting by name.
+    error.recovery_error = Some(format!(
+        "另存候选未执行清理；若尚未发布，文件保留在原固定目录中。创建时路径：{}。目录变化时需先核对实际位置。",
+        candidate.display()
+    ));
+    error
 }
 
 fn ensure_child_directory(parent: &Path, name: &str) -> Result<PathBuf, StorageError> {
@@ -651,5 +682,97 @@ fn is_link_or_reparse(metadata: &Metadata) -> bool {
     #[cfg(not(windows))]
     {
         false
+    }
+}
+
+#[cfg(test)]
+mod copy_target_tests {
+    use super::*;
+    use crate::note_format::PlainText;
+
+    fn package() -> NotePackage {
+        NotePackage::new_plain(
+            uuid::Uuid::new_v4().to_string(),
+            PlainText {
+                title: "retained copy target".to_owned(),
+                cue: String::new(),
+                content: "copy payload".to_owned(),
+                summary: String::new(),
+            },
+        )
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn retained_copy_target_blocks_ancestor_rename_and_publishes_safely() {
+        let root = tempfile::tempdir().unwrap();
+        let selected = root.path().join("selected");
+        let moved = root.path().join("selected-moved");
+        let nested = selected.join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        let requested = nested.join("copy.cuenote");
+        let target = super::super::resolve_output_path(&requested).unwrap();
+
+        assert!(fs::rename(&selected, &moved).is_err());
+
+        let (saved, revision) = save_copy(&target, &package()).unwrap();
+        assert_eq!(saved.file_name(), requested.file_name());
+        assert!(nested.join("copy.cuenote").is_file());
+        let opened = inspect_recovery_note(&saved).unwrap().unwrap();
+        assert_eq!(opened.revision, revision);
+        assert!(opened.package.document.title == "retained copy target");
+        assert!(!moved.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn retained_copy_target_rejects_ancestor_redirect_without_library_publish() {
+        let root = tempfile::tempdir().unwrap();
+        let selected = root.path().join("selected");
+        let moved = root.path().join("selected-moved");
+        let library = root.path().join("library");
+        let nested = selected.join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        fs::create_dir_all(library.join("nested")).unwrap();
+        let requested = nested.join("copy.cuenote");
+        let target = super::super::resolve_output_path(&requested).unwrap();
+
+        fs::rename(&selected, &moved).unwrap();
+        std::os::unix::fs::symlink(&library, &selected).unwrap();
+
+        let _error = save_copy(&target, &package()).unwrap_err();
+        assert!(!library.join("nested").join("copy.cuenote").exists());
+        assert!(!moved.join("nested").join("copy.cuenote").exists());
+        assert_eq!(fs::read_dir(library.join("nested")).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn retained_copy_target_keeps_no_overwrite_behavior() {
+        let root = tempfile::tempdir().unwrap();
+        let nested = root.path().join("nested");
+        fs::create_dir_all(&nested).unwrap();
+        let requested = nested.join("copy.cuenote");
+        let target = super::super::resolve_output_path(&requested).unwrap();
+        let foreign_bytes = b"created by another process";
+        fs::write(target.path(), foreign_bytes).unwrap();
+
+        let error = save_copy(&target, &package()).unwrap_err();
+        assert_eq!(fs::read(target.path()).unwrap(), foreign_bytes);
+        assert!(error.recovery_error.is_some());
+        let retained = fs::read_dir(&nested)
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.extension().is_some_and(|extension| extension == "tmp"))
+            .collect::<Vec<_>>();
+        assert_eq!(retained.len(), 1);
+        assert_eq!(
+            inspect_recovery_note(&retained[0])
+                .unwrap()
+                .unwrap()
+                .package
+                .document
+                .title,
+            "retained copy target"
+        );
     }
 }

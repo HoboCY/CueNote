@@ -22,6 +22,7 @@ use uuid::Uuid;
 mod backup_restore;
 mod backups;
 mod external;
+mod library_restore;
 mod search;
 pub use crate::storage::versions::{PreservedVersionSummary, VersionList};
 pub use backup_restore::{
@@ -33,6 +34,9 @@ pub use backups::{
     VerifiedBackupNote,
 };
 pub use external::{ExternalProbe, ExternalReconciliation};
+pub use library_restore::{
+    LibraryRestoreAction, LibraryRestorePreview, LibraryRestoreReceipt, LibraryRestoreStatus,
+};
 pub use search::{SearchHit, SearchResults, SearchSection, SearchSnippet, SearchStatus};
 
 pub type WorkspaceError = StorageError;
@@ -112,6 +116,7 @@ pub struct WorkspaceView {
     pub session: Option<NoteSession>,
     pub preferences: ViewPreferences,
     pub notice: Option<String>,
+    pub library_restore: Option<LibraryRestoreStatus>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -266,6 +271,7 @@ pub struct Workspace {
     asset_run: AssetRun,
     search_generation: Arc<AtomicU64>,
     search_progress: Option<Arc<dyn Fn(SearchProgress) + Send + Sync>>,
+    library_restore: Option<LibraryRestoreStatus>,
 }
 
 impl Workspace {
@@ -287,12 +293,14 @@ impl Workspace {
             asset_run: AssetRun::new(),
             search_generation: Arc::new(AtomicU64::new(0)),
             search_progress: None,
+            library_restore: None,
         }
     }
 
     /// Captures the selected library and its local backup destination for work
     /// that will continue after the workspace mutex is released.
     pub fn backup_context(&self) -> Result<BackupContext, WorkspaceError> {
+        self.ensure_library_available()?;
         let library_path = self
             .library
             .as_ref()
@@ -311,6 +319,7 @@ impl Workspace {
         &mut self,
         directory: PathBuf,
     ) -> Result<BackupContext, WorkspaceError> {
+        self.ensure_library_available()?;
         let library_path = self
             .library
             .as_ref()
@@ -353,6 +362,35 @@ impl Workspace {
     }
 
     pub fn snapshot(&mut self) -> Result<WorkspaceView, WorkspaceError> {
+        let pending_path = self
+            .library
+            .as_ref()
+            .map(|library| library.path.clone())
+            .or_else(|| {
+                self.read_latest_preference()
+                    .ok()
+                    .flatten()
+                    .map(|preference| PathBuf::from(preference.library_path))
+            });
+        let mut _startup_access = None;
+        if let Some(path) = pending_path {
+            let was_pending = self.library_restore.is_some();
+            if self.install_pending_library_restore(&path)? {
+                self.initialized = true;
+                return Ok(self.view());
+            }
+            if storage::ensure_local_directory(&path).is_ok() {
+                _startup_access = Some(storage::library_access::lock_shared(
+                    &self.recovery_root,
+                    &path,
+                )?);
+            }
+            if was_pending {
+                self.library = Some(self.load_existing_library(&path)?);
+                self.session = None;
+                self.last_note_id = None;
+            }
+        }
         let mut recovery_warnings = Vec::new();
         if !self.initialized {
             recovery_warnings = storage::recover_pending_publications(&self.recovery_root)?;
@@ -485,6 +523,13 @@ impl Workspace {
     }
 
     pub fn select_library(&mut self, path: PathBuf) -> Result<WorkspaceView, WorkspaceError> {
+        self.ensure_library_transition_allowed()?;
+        let candidate = resolve_candidate_directory(&path, true)?;
+        if self.install_pending_library_restore(&candidate)? {
+            self.persist_preference(&candidate, None, &self.preferences)?;
+            self.initialized = true;
+            return Ok(self.view());
+        }
         // Construct the complete candidate before changing the visible workspace.
         let library = self.prepare_library(&path, true)?;
         let mut preferences = self.preferences.clone();
@@ -616,6 +661,7 @@ impl Workspace {
     }
 
     pub fn initialize_selected_library(&mut self) -> Result<WorkspaceView, WorkspaceError> {
+        self.ensure_library_available()?;
         let path = self
             .library
             .as_ref()
@@ -826,6 +872,7 @@ impl Workspace {
         session_id: &str,
         bytes: &[u8],
     ) -> Result<AssetManifestEntry, WorkspaceError> {
+        self.ensure_library_available()?;
         self.refresh_library_metadata()?;
         let session = self
             .session
@@ -1261,46 +1308,77 @@ impl Workspace {
         session_id: &str,
         text: PlainText,
     ) -> Result<SaveReceipt, WorkspaceError> {
-        self.refresh_library_metadata()?;
-        let (library_path, notebooks) = self
+        let library_path = self
             .library
             .as_ref()
-            .map(|library| (library.path.clone(), library.notebooks.clone()))
+            .map(|library| library.path.clone())
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
-        let session = self
-            .session
-            .as_ref()
-            .ok_or_else(|| StorageError::new("noSession", "当前没有可保存的笔记会话。"))?;
-        if session.view.session_id != session_id {
-            return Err(StorageError::new(
-                "staleSession",
-                "笔记会话已切换；请保留当前文字后重新打开笔记。",
-            ));
-        }
-        if session.package.plain_text().is_none() {
-            return Err(StorageError::new(
-                "readOnly",
-                "此笔记包含结构化内容，请使用富文本编辑器保存。",
-            ));
-        }
+        let (candidate, baseline_revision) = {
+            let session = self
+                .session
+                .as_ref()
+                .ok_or_else(|| StorageError::new("noSession", "当前没有可保存的笔记会话。"))?;
+            if session.view.session_id != session_id {
+                return Err(StorageError::new(
+                    "staleSession",
+                    "笔记会话已切换；请保留当前文字后重新打开笔记。",
+                ));
+            }
+            if session.package.plain_text().is_none() {
+                return Err(StorageError::new(
+                    "readOnly",
+                    "此笔记包含结构化内容，请使用富文本编辑器保存。",
+                ));
+            }
 
-        let mut candidate = session.package.clone();
-        candidate
-            .replace_plain_text(text.clone())
-            .map_err(|error| StorageError::new("format", error.to_string()))?;
-        if candidate.document.note_id != session.view.note_id
-            || candidate.document.organization.notebook_id != session.notebook_id
-        {
-            return Err(StorageError::new(
-                "format",
-                "简易编辑器不能更改笔记身份或笔记本归属。",
+            let mut candidate = session.package.clone();
+            candidate
+                .replace_plain_text(text.clone())
+                .map_err(|error| StorageError::new("format", error.to_string()))?;
+            if candidate.document.note_id != session.view.note_id
+                || candidate.document.organization.notebook_id != session.notebook_id
+            {
+                return Err(StorageError::new(
+                    "format",
+                    "简易编辑器不能更改笔记身份或笔记本归属。",
+                ));
+            }
+            (candidate, session.baseline_revision.clone())
+        };
+
+        let _access = match self.acquire_library_access() {
+            Ok(access) => access,
+            Err(error) => {
+                let session = self.session.as_ref().expect("session validated above");
+                return Err(preserve_draft_after_save_access_failure(
+                    error,
+                    session,
+                    &self.recovery_root,
+                    &candidate,
+                ));
+            }
+        };
+        if let Err(error) = self.refresh_library_metadata() {
+            let session = self.session.as_ref().expect("session validated above");
+            return Err(preserve_draft_after_save_access_failure(
+                error,
+                session,
+                &self.recovery_root,
+                &candidate,
             ));
         }
+        let notebooks = self
+            .library
+            .as_ref()
+            .expect("library validated above")
+            .notebooks
+            .clone();
+        let session = self.session.as_ref().expect("session validated above");
         if let Some(reason) =
             read_only_reason(&session.package, session.notebook_id.as_deref(), &notebooks)
         {
             let error = StorageError::new("readOnly", reason);
-            let library = self.library.as_ref().expect("library checked above");
+            let library = self.library.as_ref().expect("library validated above");
             return Err(preserve_draft_after_metadata_loss(
                 error,
                 session,
@@ -1313,7 +1391,7 @@ impl Workspace {
             &session.path,
             &self.recovery_root,
             &candidate,
-            session.baseline_revision.as_deref(),
+            baseline_revision.as_deref(),
         )
         .map_err(|error| self.retain_save_conflict(error))?;
 
@@ -1502,11 +1580,10 @@ impl Workspace {
         session_id: &str,
         content: NoteContent,
     ) -> Result<SaveReceipt, WorkspaceError> {
-        self.refresh_library_metadata()?;
-        let (library_path, notebooks) = self
+        let library_path = self
             .library
             .as_ref()
-            .map(|library| (library.path.clone(), library.notebooks.clone()))
+            .map(|library| library.path.clone())
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
         let (candidate, note_path, baseline_revision, note_id) = {
             let session = self
@@ -1529,19 +1606,6 @@ impl Workspace {
                     "结构化编辑器不能更改笔记身份或组织信息。",
                 ));
             }
-            if let Some(reason) =
-                read_only_reason(&session.package, session.notebook_id.as_deref(), &notebooks)
-            {
-                let error = StorageError::new("readOnly", reason);
-                let library = self.library.as_ref().expect("library checked above");
-                return Err(preserve_draft_after_metadata_loss(
-                    error,
-                    session,
-                    library,
-                    &self.recovery_root,
-                    &candidate,
-                ));
-            }
             (
                 candidate,
                 session.path.clone(),
@@ -1549,6 +1613,48 @@ impl Workspace {
                 session.view.note_id.clone(),
             )
         };
+
+        let _access = match self.acquire_library_access() {
+            Ok(access) => access,
+            Err(error) => {
+                let session = self.session.as_ref().expect("session validated above");
+                return Err(preserve_draft_after_save_access_failure(
+                    error,
+                    session,
+                    &self.recovery_root,
+                    &candidate,
+                ));
+            }
+        };
+        if let Err(error) = self.refresh_library_metadata() {
+            let session = self.session.as_ref().expect("session validated above");
+            return Err(preserve_draft_after_save_access_failure(
+                error,
+                session,
+                &self.recovery_root,
+                &candidate,
+            ));
+        }
+        let notebooks = self
+            .library
+            .as_ref()
+            .expect("library validated above")
+            .notebooks
+            .clone();
+        let session = self.session.as_ref().expect("session validated above");
+        if let Some(reason) =
+            read_only_reason(&session.package, session.notebook_id.as_deref(), &notebooks)
+        {
+            let error = StorageError::new("readOnly", reason);
+            let library = self.library.as_ref().expect("library validated above");
+            return Err(preserve_draft_after_metadata_loss(
+                error,
+                session,
+                library,
+                &self.recovery_root,
+                &candidate,
+            ));
+        }
 
         self.preserve_removed_assets(session_id, &candidate)?;
 
@@ -2057,6 +2163,7 @@ impl Workspace {
         session_id: &str,
         confirmed: bool,
     ) -> Result<WorkspaceView, WorkspaceError> {
+        self.ensure_library_available()?;
         if !confirmed {
             return Err(StorageError::new(
                 "confirmationRequired",
@@ -2350,7 +2457,6 @@ impl Workspace {
         text: PlainText,
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
-        self.refresh_library_metadata()?;
         let (mut package, default_notebook_id) = {
             let library = self
                 .library
@@ -2388,7 +2494,6 @@ impl Workspace {
         content: NoteContent,
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
-        self.refresh_library_metadata()?;
         let (mut package, default_notebook_id) = {
             let library = self
                 .library
@@ -2436,7 +2541,6 @@ impl Workspace {
         recovery_id: &str,
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
-        self.refresh_library_metadata()?;
         let default_notebook_id = self
             .library
             .as_ref()
@@ -2463,14 +2567,17 @@ impl Workspace {
             .ok_or_else(|| StorageError::new("noLibrary", "当前没有已打开的笔记库。"))
     }
 
-    fn resolve_copy_destination(&self, path: &Path) -> Result<PathBuf, WorkspaceError> {
+    fn resolve_copy_destination(
+        &self,
+        path: &Path,
+    ) -> Result<storage::ResolvedTarget, WorkspaceError> {
         let destination = storage::resolve_output_path(path)?;
         let recovery = resolve_future_path(&self.recovery_root)?;
-        if destination.starts_with(&recovery)
+        if destination.path().starts_with(&recovery)
             || self
                 .library
                 .as_ref()
-                .is_some_and(|library| destination.starts_with(&library.path))
+                .is_some_and(|library| destination.path().starts_with(&library.path))
         {
             return Err(StorageError::new(
                 "unsafePath",
@@ -2501,7 +2608,194 @@ impl Workspace {
             session,
             preferences: self.preferences.clone(),
             notice: self.notice.clone(),
+            library_restore: self.library_restore.clone(),
         }
+    }
+
+    pub(crate) fn ensure_library_available(&self) -> Result<(), WorkspaceError> {
+        if self.library_restore.is_some() {
+            return Err(StorageError::new(
+                "libraryRestorePending",
+                "请先继续或回退未完成的整库恢复。",
+            ));
+        }
+        if let Some(library) = self.library.as_ref() {
+            storage::library_access::ensure_no_restore_pending(&self.recovery_root, &library.path)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn ensure_library_transition_allowed(&self) -> Result<(), WorkspaceError> {
+        if self.library_restore.is_some() {
+            return Err(StorageError::new(
+                "libraryRestorePending",
+                "请先继续或回退未完成的整库恢复。",
+            ));
+        }
+        let library_path = match self.library.as_ref() {
+            Some(library) => Some(library.path.clone()),
+            None => self
+                .read_latest_preference()?
+                .map(|preference| PathBuf::from(preference.library_path)),
+        };
+        let Some(library_path) = library_path else {
+            return Ok(());
+        };
+        storage::library_access::ensure_no_restore_pointer(&self.recovery_root, &library_path)?;
+        match fs::symlink_metadata(&library_path) {
+            Ok(_) => storage::library_access::ensure_no_restore_marker(&library_path),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(StorageError::new(
+                "io",
+                format!("无法确认当前笔记库恢复状态：{error}"),
+            )),
+        }
+    }
+
+    pub(crate) fn acquire_library_access(
+        &self,
+    ) -> Result<Option<storage::library_access::LibraryAccessGuard>, WorkspaceError> {
+        self.ensure_library_available()?;
+        self.library
+            .as_ref()
+            .map(|library| storage::library_access::lock_shared(&self.recovery_root, &library.path))
+            .transpose()
+    }
+
+    fn install_pending_library_restore(
+        &mut self,
+        requested: &Path,
+    ) -> Result<bool, WorkspaceError> {
+        match storage::library_access::restore_pointer_present(&self.recovery_root, requested) {
+            Ok(true) => {
+                let path =
+                    resolve_future_path(requested).unwrap_or_else(|_| requested.to_path_buf());
+                let status = self
+                    .pending_library_restore(requested)
+                    .ok()
+                    .flatten()
+                    .unwrap_or_else(|| {
+                        blocked_restore_status(
+                            &path,
+                            "本机存在此笔记库的整库恢复指针；无法确认其完整性，已暂停普通访问。",
+                        )
+                    });
+                self.install_pending_library_restore_shell(path, status);
+                return Ok(true);
+            }
+            Ok(false) => {}
+            Err(error) => {
+                let status = blocked_restore_status(
+                    requested,
+                    &format!(
+                        "无法检查本机整库恢复指针；已暂停普通访问：{}",
+                        error.message
+                    ),
+                );
+                self.install_pending_library_restore_shell(requested.to_path_buf(), status);
+                return Ok(true);
+            }
+        }
+
+        let resolved_identity = resolve_future_path(requested)?;
+        let path = match fs::symlink_metadata(requested) {
+            Ok(_) => resolve_candidate_directory(requested, false)?,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => resolved_identity,
+            Err(error) => {
+                return Err(StorageError::new(
+                    "io",
+                    format!("无法检查整库恢复笔记库：{error}"),
+                ));
+            }
+        };
+        let pointer_exists =
+            match storage::library_access::restore_pointer_present(&self.recovery_root, &path) {
+                Ok(exists) => exists,
+                Err(error) => {
+                    let status = blocked_restore_status(
+                        &path,
+                        &format!(
+                            "无法检查本机整库恢复指针；已暂停普通访问：{}",
+                            error.message
+                        ),
+                    );
+                    self.install_pending_library_restore_shell(path, status);
+                    return Ok(true);
+                }
+            };
+        let marker = path.join(storage::library_access::RESTORE_MARKER);
+        let marker_exists = match fs::symlink_metadata(&marker) {
+            Ok(_) => true,
+            Err(error) if error.kind() == io::ErrorKind::NotFound => false,
+            Err(error) => {
+                let status = blocked_restore_status(
+                    &path,
+                    &format!("无法检查笔记库整库恢复标记；已暂停普通访问：{error}"),
+                );
+                self.install_pending_library_restore_shell(path, status);
+                return Ok(true);
+            }
+        };
+        let possibly_pending = pointer_exists || marker_exists;
+        if !possibly_pending {
+            self.library_restore = None;
+            return Ok(false);
+        }
+        let status = match self.pending_library_restore(&path) {
+            Ok(Some(status)) => status,
+            Ok(None) => {
+                self.library_restore = None;
+                return Ok(false);
+            }
+            Err(error) => LibraryRestoreStatus {
+                restore_id: String::new(),
+                library_path: display_path(&path),
+                source_backup_id: String::new(),
+                pre_restore_backup: None,
+                phase: "blocked".into(),
+                completed_files: 0,
+                total_files: 0,
+                can_continue: false,
+                can_roll_back: false,
+                message: format!(
+                    "无法读取整库恢复记录；当前库保持停止访问：{}",
+                    error.message
+                ),
+            },
+        };
+        self.install_pending_library_restore_shell(path, status);
+        Ok(true)
+    }
+
+    fn install_pending_library_restore_shell(
+        &mut self,
+        path: PathBuf,
+        status: LibraryRestoreStatus,
+    ) {
+        let warnings = vec![status.message.clone()];
+        self.library = Some(LibraryState {
+            path: path.clone(),
+            notebooks: BTreeMap::new(),
+            default_notebook_id: None,
+            notebook_metadata_baselines: BTreeMap::new(),
+            metadata_warnings: warnings.clone(),
+            view: LibraryView {
+                path: display_path(&path),
+                default_notebook_name: String::new(),
+                default_notebook_id: None,
+                notebooks: Vec::new(),
+                notes: Vec::new(),
+                trash_notes: Vec::new(),
+                warnings: warnings.clone(),
+            },
+            search: SearchSnapshot::unavailable(
+                self.search_generation.load(Ordering::Acquire),
+                warnings,
+            ),
+        });
+        self.session = None;
+        self.last_note_id = None;
+        self.library_restore = Some(status);
     }
 
     pub(super) fn refresh_library_metadata(&mut self) -> Result<(), WorkspaceError> {
@@ -2512,6 +2806,7 @@ impl Workspace {
         &mut self,
         accept_visible_baseline: bool,
     ) -> Result<(), WorkspaceError> {
+        self.ensure_library_available()?;
         let Some(path) = self.library.as_ref().map(|library| library.path.clone()) else {
             return Ok(());
         };
@@ -2555,7 +2850,19 @@ impl Workspace {
     pub(super) fn refresh_selected_library(
         &mut self,
     ) -> Result<Option<LibraryView>, WorkspaceError> {
-        self.refresh_library_metadata_inner(true)?;
+        let selected_library_is_missing = self.library.as_ref().is_some_and(|library| {
+            matches!(
+                fs::symlink_metadata(&library.path),
+                Err(error) if error.kind() == io::ErrorKind::NotFound
+            )
+        });
+        if selected_library_is_missing {
+            // Keep the last visible list while a synchronized library directory
+            // is temporarily absent, but still honor its local restore pointer.
+            self.ensure_library_transition_allowed()?;
+        } else {
+            self.refresh_library_metadata_inner(true)?;
+        }
         let scan_context = self.search_scan_context();
         let Some(library) = self.library.as_mut() else {
             return Ok(None);
@@ -2604,6 +2911,8 @@ impl Workspace {
             ));
         }
 
+        // Selection can create a directory before acquiring its local lease;
+        // no native facts are initialized until the shared lease is held.
         if initialize_if_new && new_path {
             fs::create_dir_all(&path)
                 .map_err(|error| StorageError::new("io", format!("无法创建笔记库目录：{error}")))?;
@@ -2624,6 +2933,14 @@ impl Workspace {
                 "笔记库不能包含 CueNote 的本机设置目录；请选择其他位置。",
             ));
         }
+        let _selection_access = if initialize_if_new {
+            Some(storage::library_access::lock_shared(
+                &self.recovery_root,
+                &canonical,
+            )?)
+        } else {
+            None
+        };
         if initialize_if_new && new_path {
             storage::probe_directory(&canonical)?;
             let notes_path = canonical.join("notes");
@@ -3325,6 +3642,21 @@ fn read_only_reason(
     None
 }
 
+fn blocked_restore_status(path: &Path, message: &str) -> LibraryRestoreStatus {
+    LibraryRestoreStatus {
+        restore_id: String::new(),
+        library_path: display_path(path),
+        source_backup_id: String::new(),
+        pre_restore_backup: None,
+        phase: "blocked".into(),
+        completed_files: 0,
+        total_files: 0,
+        can_continue: false,
+        can_roll_back: false,
+        message: message.into(),
+    }
+}
+
 fn preserve_draft_after_metadata_loss(
     error: StorageError,
     session: &ActiveNoteSession,
@@ -3349,6 +3681,24 @@ fn preserve_draft_after_metadata_loss(
             .get(notebook_id)
             .and_then(Option::as_ref)
             .is_none()
+    {
+        return error;
+    }
+    storage::preserve_snapshot_for_unresolved_target(error, &session.path, recovery_root, candidate)
+}
+
+fn preserve_draft_after_save_access_failure(
+    error: StorageError,
+    session: &ActiveNoteSession,
+    recovery_root: &Path,
+    candidate: &NotePackage,
+) -> StorageError {
+    if !session.was_writable
+        || session.preserved_preview
+        || session.external_conflict
+        || session.package.document.organization.trashed_at.is_some()
+        || !supports_editable_content(&session.package.content())
+        || session.notebook_id.is_none()
     {
         return error;
     }

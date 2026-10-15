@@ -19,6 +19,9 @@ export interface BackupPanelProps {
   notebooks: NotebookSummary[];
   restoreAllowed: boolean;
   runRestoreWithSavedEditor: RunRestoreWithSavedEditor;
+  onRestoreLibrary?: (backupId: string) => void;
+  onBusyChange?: (busy: boolean) => void;
+  suspended?: boolean;
 }
 
 const desktopRuntime = isTauri();
@@ -99,6 +102,9 @@ export function BackupPanel({
   notebooks,
   restoreAllowed,
   runRestoreWithSavedEditor,
+  onRestoreLibrary,
+  onBusyChange,
+  suspended = false,
 }: BackupPanelProps) {
   const [state, setState] = useState<BackupCoordinatorState>(initialState);
   const [collapsed, setCollapsed] = useState(true);
@@ -108,8 +114,12 @@ export function BackupPanel({
   const coordinatorRef = useRef<ReturnType<typeof createBackupCoordinator> | null>(null);
   const propsRef = useRef<BackupPanelProps>({
     libraryPath, changeToken, automaticAllowed, beforeManualBackup, notebooks, restoreAllowed, runRestoreWithSavedEditor,
+    onRestoreLibrary, onBusyChange, suspended,
   });
-  propsRef.current = { libraryPath, changeToken, automaticAllowed, beforeManualBackup, notebooks, restoreAllowed, runRestoreWithSavedEditor };
+  propsRef.current = {
+    libraryPath, changeToken, automaticAllowed, beforeManualBackup, notebooks, restoreAllowed, runRestoreWithSavedEditor,
+    onRestoreLibrary, onBusyChange, suspended,
+  };
 
   if (coordinatorRef.current === null) {
     coordinatorRef.current = createBackupCoordinator({
@@ -126,7 +136,10 @@ export function BackupPanel({
           workspaceApi.chooseBackupDirectory(requestId, expectedLibraryPath),
         cancelBackup: () => workspaceApi.cancelBackup(),
       },
-      onState: setState,
+      onState: nextState => {
+        setState(nextState);
+        propsRef.current.onBusyChange?.(nextState.operation !== null || nextState.catalogLoading);
+      },
     });
   }
   const coordinator = coordinatorRef.current;
@@ -138,8 +151,28 @@ export function BackupPanel({
 
   useEffect(() => {
     if (!desktopRuntime) return;
-    coordinator.synchronize({ libraryPath, changeToken, automaticAllowed });
-  }, [coordinator, libraryPath, changeToken, automaticAllowed]);
+    if (suspended) {
+      const synchronizedPath = coordinator.getState().libraryPath;
+      if (synchronizedPath !== null) {
+        coordinator.synchronize({ libraryPath: synchronizedPath, changeToken, automaticAllowed: false });
+      }
+      const operation = coordinator.getState().operation;
+      if (operation === 'listing' || operation === 'listingNotes') coordinator.cancel();
+      return;
+    }
+    coordinator.synchronize({
+      libraryPath,
+      changeToken,
+      automaticAllowed,
+    });
+  }, [coordinator, libraryPath, changeToken, automaticAllowed, suspended]);
+
+  useEffect(() => {
+    const current = coordinator.getState();
+    propsRef.current.onBusyChange?.(current.operation !== null || current.catalogLoading);
+  }, [coordinator, onBusyChange]);
+
+  useEffect(() => () => propsRef.current.onBusyChange?.(false), []);
 
   useEffect(() => {
     setViewingBackupId(null);
@@ -181,6 +214,7 @@ export function BackupPanel({
     state.backupNotes?.availableNotebookIds.includes(notebook.notebookId));
 
   const createManualBackup = () => {
+    if (propsRef.current.suspended) return;
     const expectedLibraryPath = libraryPath;
     void coordinator.createManualBackup(async () => {
       if (propsRef.current.libraryPath !== expectedLibraryPath) return false;
@@ -190,6 +224,7 @@ export function BackupPanel({
   };
 
   const openBackupNotes = (backup: BackupSummary) => {
+    if (propsRef.current.suspended) return;
     setViewingBackupId(backup.backupId);
     setSelectedEntryId(null);
     setRestoreCandidate(null);
@@ -211,7 +246,7 @@ export function BackupPanel({
   const confirmRestore = () => {
     const candidate = restoreCandidate;
     const expectedLibraryPath = libraryPath;
-    if (!candidate || !expectedLibraryPath || !propsRef.current.restoreAllowed || busy) return;
+    if (!candidate || !expectedLibraryPath || !propsRef.current.restoreAllowed || propsRef.current.suspended || busy) return;
     const targetNotebookId = candidate.targetNotebookId;
     if (!targetNotebookId || !availableNotebooks.some(notebook => notebook.notebookId === targetNotebookId)) return;
     const selection: BackupNoteRestoreSelection = {
@@ -259,7 +294,7 @@ export function BackupPanel({
             <button
               className="backup-button backup-button-secondary"
               type="button"
-              disabled={state.operation === 'cancelling' || tooLateToCancelRestore}
+              disabled={suspended || state.operation === 'cancelling' || tooLateToCancelRestore}
               onClick={() => coordinator.cancel()}
             >
               {state.operation === 'listing' || state.operation === 'listingNotes'
@@ -267,7 +302,7 @@ export function BackupPanel({
                 : state.operation === 'restoring' || state.operation === 'preparingRestore' ? '取消恢复' : '取消'}
             </button>
           ) : (
-            <button className="backup-button backup-button-primary" type="button" disabled={busy || state.catalogLoading} onClick={createManualBackup}>
+            <button className="backup-button backup-button-primary" type="button" disabled={suspended || busy || state.catalogLoading} onClick={createManualBackup}>
               {state.operation === 'preparing' ? '正在准备…' : '立即备份'}
             </button>
           )}
@@ -280,6 +315,12 @@ export function BackupPanel({
           {catalog.warnings.length > 1 ? `（共 ${catalog.warnings.length} 条提示，展开查看）` : ''}
         </p>
       ) : null}
+
+      {suspended && (
+        <p className="backup-message is-warning" role="status">
+          整库恢复正在占用笔记库操作；普通备份、单篇恢复和备份位置变更已暂停。
+        </p>
+      )}
 
       {state.restoreReceipt && (
         <div className="backup-message backup-restore-result" role="status" aria-live="polite">
@@ -302,7 +343,7 @@ export function BackupPanel({
             <button
               className="backup-button backup-button-secondary"
               type="button"
-              disabled={busy || state.catalogLoading}
+              disabled={suspended || busy || state.catalogLoading}
               onClick={() => { void coordinator.changeDirectory(); }}
             >
               更改位置
@@ -311,6 +352,16 @@ export function BackupPanel({
 
           {state.error && <p className="backup-message is-error" role="alert">{state.error}</p>}
           {!state.error && state.notice && <p className="backup-message" role="status">{state.notice}</p>}
+          {!restoreAllowed && (
+            <p className="backup-message is-warning" role="status">
+              当前笔记库保护状态不允许恢复操作。受保护位置：<code>{libraryPath}</code>
+            </p>
+          )}
+          {!onRestoreLibrary && catalog?.backups.length ? (
+            <p className="backup-message is-warning" role="status">
+              整库恢复入口尚未连接；当前笔记库位置：<code>{libraryPath}</code>
+            </p>
+          ) : null}
           {catalog?.warnings.map((warning, index) => (
             <p className="backup-message is-warning" key={`${index}-${warning}`}>{warning}</p>
           ))}
@@ -320,7 +371,7 @@ export function BackupPanel({
             <button
               className="backup-refresh-button"
               type="button"
-              disabled={state.catalogLoading || busy}
+              disabled={suspended || state.catalogLoading || busy}
               onClick={() => { void coordinator.refresh(); }}
             >
               {state.catalogLoading ? '正在刷新…' : '刷新列表'}
@@ -342,18 +393,28 @@ export function BackupPanel({
                     <button
                       className="backup-refresh-button"
                       type="button"
-                      disabled={busy}
+                      disabled={suspended || busy}
                       onClick={() => openBackupNotes(backup)}
                     >
                       {state.operation === 'listingNotes' && viewingBackupId === backup.backupId
                         ? '正在读取…' : '查看笔记'}
                     </button>
+                    <button
+                      className="backup-refresh-button"
+                      type="button"
+                      disabled={suspended || busy || state.catalogLoading || !restoreAllowed || !onRestoreLibrary}
+                      onClick={() => onRestoreLibrary?.(backup.backupId)}
+                    >恢复整个笔记库…</button>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="backup-empty-state">{catalog ? '还没有备份记录。' : '备份列表尚未加载。'}</p>
+            <p className="backup-empty-state">
+              {catalog
+                ? `没有可用于整库恢复的备份记录。受保护笔记库位置：${libraryPath}`
+                : '备份列表尚未加载。'}
+            </p>
           )}
 
           {viewingBackupId && (
@@ -363,7 +424,7 @@ export function BackupPanel({
                 <button
                   className="backup-refresh-button"
                   type="button"
-                  disabled={busy}
+                  disabled={suspended || busy}
                   onClick={() => setViewingBackupId(null)}
                 >返回备份列表</button>
               </div>
@@ -381,7 +442,7 @@ export function BackupPanel({
                               name="backup-note-entry"
                               value={note.entryId}
                               checked={selectedEntryId === note.entryId}
-                              disabled={busy}
+                              disabled={suspended || busy}
                               onChange={() => setSelectedEntryId(note.entryId)}
                             />
                             <span className="backup-note-copy">
@@ -397,7 +458,7 @@ export function BackupPanel({
                     <button
                       className="backup-button backup-button-primary"
                       type="button"
-                      disabled={!selectedEntryId || busy}
+                      disabled={!selectedEntryId || suspended || busy}
                       onClick={() => {
                         const note = state.backupNotes?.notes.find(item => item.entryId === selectedEntryId);
                         if (note && state.backupNotes) selectRestoreCandidate(state.backupNotes, note);
@@ -413,7 +474,7 @@ export function BackupPanel({
                   <button
                     className="backup-refresh-button"
                     type="button"
-                    disabled={busy}
+                    disabled={suspended || busy}
                     onClick={() => { void coordinator.loadBackupNotes(viewingBackupId); }}
                   >重新读取</button>
                 </div>
@@ -435,7 +496,7 @@ export function BackupPanel({
                   <span>原笔记本不存在或有冲突，请选择当前有效笔记本</span>
                   <select
                     value={restoreCandidate.targetNotebookId ?? ''}
-                    disabled={!restoreAllowed || busy || availableNotebooks.length === 0}
+                    disabled={!restoreAllowed || suspended || busy || availableNotebooks.length === 0}
                     onChange={event => setRestoreCandidate(current => current
                       ? { ...current, targetNotebookId: event.target.value || null }
                       : null)}
@@ -455,12 +516,13 @@ export function BackupPanel({
                 <button
                   className="backup-button backup-button-secondary"
                   type="button"
+                  disabled={suspended || busy}
                   onClick={() => setRestoreCandidate(null)}
                 >取消</button>
                 <button
                   className="backup-button backup-button-primary"
                   type="button"
-                  disabled={!restoreAllowed || busy || !restoreCandidate.targetNotebookId
+                  disabled={!restoreAllowed || suspended || busy || !restoreCandidate.targetNotebookId
                     || !availableNotebooks.some(notebook => notebook.notebookId === restoreCandidate.targetNotebookId)}
                   onClick={confirmRestore}
                 >确认恢复此笔记</button>

@@ -369,7 +369,6 @@ impl Workspace {
         version_id: &str,
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
-        self.refresh_library_metadata()?;
         let source = versions::open_version(&self.recovery_root, version_id)?;
         let mut package = source.opened.package;
         let library = self

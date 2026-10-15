@@ -46,14 +46,14 @@ pub(super) struct PublicationReceipt {
 /// Windows intentionally omits FILE_SHARE_DELETE. macOS uses its descriptor
 /// for the relative swap operation and checks that the selected path still
 /// names the same directory after publication.
-pub(super) struct StableDirectory {
+pub(crate) struct StableDirectory {
     path: PathBuf,
     identity: String,
     handles: Vec<File>,
 }
 
 impl StableDirectory {
-    pub(super) fn open(path: &Path) -> Result<Self, StorageError> {
+    pub(crate) fn open(path: &Path) -> Result<Self, StorageError> {
         #[cfg(windows)]
         let (handles, identity) = {
             // Hold every directory component without FILE_SHARE_DELETE. This
@@ -82,7 +82,7 @@ impl StableDirectory {
         })
     }
 
-    pub(super) fn ensure_current(&self) -> Result<(), StorageError> {
+    pub(crate) fn ensure_current(&self) -> Result<(), StorageError> {
         super::ensure_local_directory(&self.path)?;
         let canonical = fs::canonicalize(&self.path)
             .map_err(|error| StorageError::io("无法验证笔记所在目录是否仍是原目录", error))?;
@@ -121,7 +121,7 @@ impl StableDirectory {
         }
     }
 
-    pub(super) fn sync_publication_directory(&self) -> io::Result<()> {
+    pub(crate) fn sync_publication_directory(&self) -> io::Result<()> {
         self.ensure_current()
             .map_err(|error| io::Error::new(io::ErrorKind::Other, error.message))?;
         self.sync()
@@ -130,7 +130,7 @@ impl StableDirectory {
     /// Moves a direct child of this pinned directory without replacing an
     /// existing destination. A post-operation identity error is ambiguous:
     /// callers must retain the destination and source paths for recovery.
-    pub(super) fn move_no_replace(&self, source: &Path, destination: &Path) -> io::Result<()> {
+    pub(crate) fn move_no_replace(&self, source: &Path, destination: &Path) -> io::Result<()> {
         self.ensure_current()
             .map_err(|error| io::Error::new(io::ErrorKind::Other, error.message))?;
         #[cfg(windows)]
@@ -191,6 +191,62 @@ impl StableDirectory {
                 "atomic no-replace move is unsupported on this platform",
             ));
         }
+    }
+
+    /// Creates a unique candidate as a direct child of the directory retained
+    /// by this handle. Unix uses openat so an ancestor rename cannot redirect
+    /// candidate creation; Windows keeps its pinned ancestors while using the
+    /// existing create-new path helper.
+    pub(crate) fn create_candidate(&self) -> Result<(PathBuf, File), StorageError> {
+        self.ensure_current()?;
+        #[cfg(windows)]
+        {
+            super::create_candidate_path(&self.path)
+        }
+        #[cfg(any(target_os = "macos", target_os = "linux"))]
+        {
+            self.create_candidate_at()
+        }
+        #[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
+        {
+            Err(StorageError::new(
+                "publish",
+                "当前平台不支持在固定目录中安全创建候选文件。",
+            ))
+        }
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    fn create_candidate_at(&self) -> Result<(PathBuf, File), StorageError> {
+        use std::ffi::CString;
+        use std::os::unix::io::{AsRawFd, FromRawFd};
+
+        for _ in 0..4 {
+            let file_name = format!(".cuenote-candidate-{}.tmp", Uuid::new_v4().simple());
+            let name = CString::new(file_name.as_bytes())
+                .expect("candidate filename contains no interior NUL");
+            let descriptor = unsafe {
+                openat(
+                    self.directory_handle().as_raw_fd(),
+                    name.as_ptr(),
+                    CANDIDATE_OPEN_FLAGS,
+                    0o600i32,
+                )
+            };
+            if descriptor >= 0 {
+                let file = unsafe { File::from_raw_fd(descriptor) };
+                return Ok((self.path.join(file_name), file));
+            }
+            let error = io::Error::last_os_error();
+            if error.kind() == io::ErrorKind::AlreadyExists {
+                continue;
+            }
+            return Err(StorageError::io("无法在固定目录中创建候选笔记", error));
+        }
+        Err(StorageError::new(
+            "io",
+            "多次尝试后仍无法创建唯一候选笔记。",
+        ))
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -764,7 +820,7 @@ pub(crate) fn recover_pending_publications(
 
     let mut warnings = Vec::new();
     for path in records {
-        match recover_intent_if_owned(&recovery_root, &path) {
+        match recover_intent_if_owned(&recovery_root, &path, false) {
             Ok(Some(message)) => warnings.push(message),
             Ok(None) => {}
             Err(error) => warnings.push(format!(
@@ -777,14 +833,99 @@ pub(crate) fn recover_pending_publications(
     Ok(warnings)
 }
 
+/// Settle this library's earlier single-note publications before a whole-library
+/// plan is captured. The caller holds the exclusive library lease. Records with
+/// unknown ownership remain blocking; no path in an invalid record is mutated.
+pub(crate) fn ensure_no_pending_publications(
+    recovery_root: &Path,
+    library: &Path,
+) -> Result<(), StorageError> {
+    let journal = recovery_root.join(JOURNAL_DIRECTORY);
+    match fs::symlink_metadata(&journal) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(StorageError::io("无法检查已有单篇发布记录", error)),
+        Ok(metadata) if super::is_link_or_reparse(&metadata) || !metadata.is_dir() => {
+            return Err(StorageError::new(
+                "unsafePath",
+                "单篇发布记录目录不安全，不能开始整库恢复。",
+            ));
+        }
+        Ok(_) => {}
+    }
+    let recovery_root = canonical_recovery_root(recovery_root)?;
+    let library = fs::canonicalize(library)
+        .map_err(|error| StorageError::io("无法解析待恢复笔记库", error))?;
+    let mut records = Vec::new();
+    for (index, entry) in fs::read_dir(&journal)
+        .map_err(|error| StorageError::io("无法列出已有单篇发布记录", error))?
+        .enumerate()
+    {
+        if index >= MAX_JOURNAL_ENTRIES {
+            return Err(StorageError::new(
+                "recoveryLimit",
+                "已有单篇发布记录过多，不能开始整库恢复。",
+            ));
+        }
+        let path = entry
+            .map_err(|error| StorageError::io("无法读取已有单篇发布记录", error))?
+            .path();
+        if path.extension().and_then(|value| value.to_str()) != Some("json") {
+            continue;
+        }
+        let intent = read_intent(&path)?.ok_or_else(|| {
+            StorageError::new(
+                "publicationPending",
+                "存在无法确认归属的单篇发布记录，请先处理后再恢复整库。",
+            )
+        })?;
+        validate_intent(&recovery_root, &path, &intent)?;
+        if intent.target.starts_with(&library) {
+            records.push(path);
+        }
+    }
+    for path in records {
+        recover_intent_if_owned(&recovery_root, &path, true)?;
+        match fs::symlink_metadata(&path) {
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(StorageError::io("无法复核单篇发布记录", error)),
+            Ok(_) => {
+                return Err(StorageError::new(
+                    "publicationPending",
+                    format!(
+                        "此笔记库仍有未解决的单篇发布记录，未开始整库恢复：{}",
+                        path.display()
+                    ),
+                ))
+            }
+        }
+    }
+    Ok(())
+}
+
 fn recover_intent_if_owned(
     recovery_root: &Path,
     intent_path: &Path,
+    library_exclusive: bool,
 ) -> Result<Option<String>, StorageError> {
     let Some(observed_intent) = read_intent(intent_path)? else {
         return Ok(None);
     };
     validate_intent(recovery_root, intent_path, &observed_intent)?;
+
+    // A whole-library journal owns any intermediate files in notes/. Never
+    // replay an older note intent into that transaction during app startup.
+    let mut _library_access = None;
+    if let Some(parent) = observed_intent.target.parent() {
+        if parent.file_name().and_then(|name| name.to_str()) == Some("notes") {
+            if let Some(library) = parent.parent() {
+                super::library_access::ensure_no_restore_pending(recovery_root, library)?;
+                if !library_exclusive {
+                    _library_access =
+                        Some(super::library_access::lock_shared(recovery_root, library)?);
+                }
+            }
+        }
+    }
 
     let _lock = match super::try_acquire_save_lock(recovery_root, &observed_intent.target)
         .map_err(|error| StorageError::io("无法协调待恢复的笔记发布", error))?
@@ -1348,9 +1489,18 @@ const RENAME_EXCHANGE: u32 = 0x0000_0002;
 const RENAME_EXCL: u32 = 0x0000_0004;
 #[cfg(target_os = "linux")]
 const RENAME_NOREPLACE: u32 = 0x0000_0001;
+// These open flags match the Linux and Darwin values in the installed libc
+// platform definitions; keeping them local avoids adding a production crate.
+#[cfg(target_os = "linux")]
+const CANDIDATE_OPEN_FLAGS: i32 =
+    0x0000_0002 | 0x0000_0040 | 0x0000_0080 | 0x0002_0000 | 0x0008_0000;
+#[cfg(target_os = "macos")]
+const CANDIDATE_OPEN_FLAGS: i32 =
+    0x0000_0002 | 0x0000_0200 | 0x0000_0800 | 0x0000_0100 | 0x0100_0000;
 
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
+    fn openat(directory: i32, path: *const std::ffi::c_char, flags: i32, ...) -> i32;
     fn renameatx_np(
         from_directory: i32,
         from_path: *const std::ffi::c_char,
@@ -1362,6 +1512,7 @@ unsafe extern "C" {
 
 #[cfg(target_os = "linux")]
 unsafe extern "C" {
+    fn openat(directory: i32, path: *const std::ffi::c_char, flags: i32, ...) -> i32;
     fn renameat2(
         from_directory: i32,
         from_path: *const std::ffi::c_char,

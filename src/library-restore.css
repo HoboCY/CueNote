@@ -1,0 +1,222 @@
+.library-restore-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #c5d2df;
+  border-radius: 12px;
+  background: #f8fbff;
+  color: #17283b;
+}
+
+.library-restore-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.library-restore-eyebrow {
+  margin: 0 0 4px;
+  color: #47647f;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.library-restore-heading h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.35;
+}
+
+.library-restore-state-tag {
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: #fff2d4;
+  color: #714d0d;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.library-restore-location,
+.library-restore-pending-message,
+.library-restore-progress-copy,
+.library-restore-source-copy,
+.library-restore-protection-copy {
+  margin: 0;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.library-restore-location {
+  color: #42566c;
+  font-size: 0.88rem;
+}
+
+.library-restore-panel code {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.88em;
+}
+
+.library-restore-pending {
+  display: grid;
+  gap: 9px;
+  padding: 14px;
+  border: 1px solid #e0bc69;
+  border-radius: 10px;
+  background: #fffaf0;
+}
+
+.library-restore-pending-message {
+  font-weight: 650;
+}
+
+.library-restore-progress-copy,
+.library-restore-source-copy,
+.library-restore-protection-copy {
+  color: #4e5e6c;
+  font-size: 0.86rem;
+}
+
+.library-restore-preview {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border-left: 3px solid #5a84ab;
+  border-radius: 6px;
+  background: #edf4fb;
+  font-size: 0.88rem;
+}
+
+.library-restore-preview span {
+  color: #53677c;
+}
+
+.library-restore-confirmation {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #d5a6a3;
+  border-radius: 10px;
+  background: #fff8f7;
+}
+
+.library-restore-confirmation > strong {
+  color: #7d2923;
+  font-size: 1rem;
+}
+
+.library-restore-confirmation p {
+  margin: 0;
+  color: #4d4342;
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.library-restore-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+
+.library-restore-button {
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 0.87rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.library-restore-button:focus-visible {
+  outline: 3px solid #7ba8d0;
+  outline-offset: 2px;
+}
+
+.library-restore-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.library-restore-primary {
+  background: #225d8b;
+  color: #fff;
+}
+
+.library-restore-secondary {
+  border-color: #aab9c7;
+  background: #fff;
+  color: #253a4f;
+}
+
+.library-restore-danger {
+  background: #9d302a;
+  color: #fff;
+}
+
+.library-restore-disabled-reason,
+.library-restore-error,
+.library-restore-status {
+  margin: 0;
+  font-size: 0.87rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.library-restore-disabled-reason {
+  color: #58697a;
+}
+
+.library-restore-error {
+  color: #9a2e28;
+}
+
+.library-restore-status {
+  color: #385e7d;
+}
+
+.library-restore-active-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px 12px;
+}
+
+.library-restore-active-actions small {
+  flex-basis: 100%;
+  color: #58697a;
+  line-height: 1.45;
+}
+
+.library-restore-receipt {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid #a7ceb3;
+  border-radius: 9px;
+  background: #f0faf2;
+  color: #245535;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 580px) {
+  .library-restore-panel {
+    padding: 14px;
+  }
+
+  .library-restore-heading {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .library-restore-actions > .library-restore-button {
+    flex: 1 1 100%;
+  }
+}

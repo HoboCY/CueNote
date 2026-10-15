@@ -89,6 +89,7 @@ export interface WorkspaceView {
   session: NoteSession | null;
   notice: string | null;
   preferences: ViewPreferences;
+  libraryRestore: LibraryRestoreStatus | null;
 }
 
 export interface SaveReceipt {
@@ -169,6 +170,32 @@ export interface BackupRestoreReceipt extends SaveReceipt {
   reassignedNotebook: boolean;
   message: string;
   warnings: string[];
+}
+
+export type LibraryRestoreAction = 'continue' | 'rollBack';
+
+export interface LibraryRestorePreview {
+  backup: BackupSummary;
+  manifestRevision: string;
+}
+
+export interface LibraryRestoreStatus {
+  restoreId: string;
+  libraryPath: string;
+  sourceBackupId: string;
+  preRestoreBackup: BackupSummary | null;
+  phase: 'paused' | 'rollingBack' | 'blocked';
+  completedFiles: number;
+  totalFiles: number;
+  canContinue: boolean;
+  canRollBack: boolean;
+  message: string;
+}
+
+export interface LibraryRestoreReceipt {
+  workspace: WorkspaceView;
+  preRestoreBackup: BackupSummary;
+  message: string;
 }
 
 export interface BackupProgress {
@@ -275,6 +302,12 @@ export const workspaceApi = {
   chooseBackupDirectory: (requestId: string, expectedLibraryPath: string) =>
     invoke<BackupCatalog | null>('choose_backup_directory', { requestId, expectedLibraryPath }),
   cancelBackup: () => invoke<void>('cancel_backup'),
+  previewLibraryRestore: (backupId: string, requestId: string, expectedLibraryPath: string) =>
+    invoke<LibraryRestorePreview>('preview_library_restore', { backupId, requestId, expectedLibraryPath }),
+  restoreLibraryFromBackup: (backupId: string, expectedManifestRevision: string, requestId: string, expectedLibraryPath: string) =>
+    invoke<LibraryRestoreReceipt>('restore_library_from_backup', { backupId, expectedManifestRevision, requestId, expectedLibraryPath }),
+  resumeLibraryRestore: (action: LibraryRestoreAction, requestId: string, expectedLibraryPath: string) =>
+    invoke<LibraryRestoreReceipt>('resume_library_restore', { action, requestId, expectedLibraryPath }),
   openPreservedVersion: (versionId: string) =>
     invoke<NoteSession>('open_preserved_version', { versionId }),
   restorePreservedAsCopy: (versionId: string) =>

@@ -53,6 +53,7 @@ pub enum BackupPhase {
     Verifying,
     Publishing,
     Restoring,
+    RollingBack,
     Complete,
 }
 
@@ -166,6 +167,13 @@ struct BackupControlState {
 struct ActiveJob {
     id: u64,
     epoch: u64,
+    kind: JobKind,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum JobKind {
+    Backup,
+    LibraryRestore,
 }
 
 impl Default for BackupControl {
@@ -181,14 +189,24 @@ impl Default for BackupControl {
 
 impl BackupControl {
     /// Registers a write-capable workspace operation before it waits for the
-    /// workspace mutex. Existing backup work is cancelled immediately.
-    pub fn begin_mutation(&self) -> BackupMutationGuard {
+    /// workspace mutex. Existing backup work is cancelled immediately. A
+    /// restore already owning the slot rejects ordinary writes atomically.
+    pub fn begin_mutation(&self) -> Result<BackupMutationGuard, WorkspaceError> {
         let mut state = lock_control(&self.inner);
+        if state
+            .active_job
+            .is_some_and(|job| job.kind == JobKind::LibraryRestore)
+        {
+            return Err(StorageError::new(
+                "libraryRestorePending",
+                "整库恢复正在进行；普通笔记操作已暂停。",
+            ));
+        }
         state.epoch = state.epoch.wrapping_add(1);
         state.pending_mutations = state.pending_mutations.saturating_add(1);
-        BackupMutationGuard {
+        Ok(BackupMutationGuard {
             control: self.clone(),
-        }
+        })
     }
 
     /// Cancels the active job without waiting for its filesystem work to stop.
@@ -197,10 +215,39 @@ impl BackupControl {
         state.epoch = state.epoch.wrapping_add(1);
     }
 
+    /// Watcher events are only hints: a restore generates its own events and
+    /// verifies exact native facts independently. Explicit cancellation still
+    /// uses `cancel`. Selection and invalidation share one lock to avoid a
+    /// hint racing the registration of a restore job.
+    pub fn cancel_for_file_change(&self) {
+        let mut state = lock_control(&self.inner);
+        if !state
+            .active_job
+            .is_some_and(|job| job.kind == JobKind::LibraryRestore)
+        {
+            state.epoch = state.epoch.wrapping_add(1);
+        }
+    }
+
+    pub fn begin_restore_job(
+        &self,
+        progress: Option<Arc<dyn Fn(BackupProgress) + Send + Sync>>,
+    ) -> Result<BackupJob, WorkspaceError> {
+        self.begin_job_kind(progress, JobKind::LibraryRestore)
+    }
+
     /// Starts one backup or catalog job if no library mutation is queued.
     pub fn begin_job(
         &self,
         progress: Option<Arc<dyn Fn(BackupProgress) + Send + Sync>>,
+    ) -> Result<BackupJob, WorkspaceError> {
+        self.begin_job_kind(progress, JobKind::Backup)
+    }
+
+    fn begin_job_kind(
+        &self,
+        progress: Option<ProgressCallback>,
+        kind: JobKind,
     ) -> Result<BackupJob, WorkspaceError> {
         let mut state = lock_control(&self.inner);
         if state.pending_mutations > 0 || state.active_job.is_some() {
@@ -215,7 +262,7 @@ impl BackupControl {
             .checked_add(1)
             .ok_or_else(|| StorageError::new("backupBusy", "备份任务序号已耗尽。"))?;
         let epoch = state.epoch;
-        state.active_job = Some(ActiveJob { id, epoch });
+        state.active_job = Some(ActiveJob { id, epoch, kind });
         Ok(BackupJob {
             control: self.clone(),
             id,
@@ -330,7 +377,7 @@ impl BackupJob {
         destination: &Path,
         parent: &Path,
     ) -> Result<(), WorkspaceError> {
-        let mut state = lock_control(&self.control.inner);
+        let state = lock_control(&self.control.inner);
         if !job_is_current(&state, self.id, self.epoch) {
             return Err(backup_cancelled());
         }
@@ -344,10 +391,6 @@ impl BackupJob {
             .map_err(|error| StorageError::new("io", format!("无法发布已校验备份：{error}")))?;
         // `state` remains locked across the atomic rename and directory sync,
         // so a queued write cannot pass the publication gate in between.
-        state.active_job = Some(ActiveJob {
-            id: self.id,
-            epoch: self.epoch,
-        });
         Ok(())
     }
 }
@@ -680,6 +723,198 @@ impl BackupContext {
         })
     }
 
+    /// Validates one complete immutable backup for whole-library restoration.
+    /// The manifest SHA is the confirmation token; every fact asset is already
+    /// re-read and package-validated by `validate_backup_directory`.
+    pub(super) fn verify_library_restore_backup(
+        &self,
+        backup_id: &str,
+        expected_manifest_revision: Option<&str>,
+        job: &BackupJob,
+    ) -> Result<VerifiedLibraryBackup, WorkspaceError> {
+        job.bind_library(&self.library_path);
+        job.checkpoint()?;
+        if !is_canonical_uuid_v4(backup_id) {
+            return Err(StorageError::new("backupNotFound", "备份身份无效。"));
+        }
+        if expected_manifest_revision.is_some_and(|revision| !is_sha256(revision)) {
+            return Err(StorageError::new(
+                "backupChanged",
+                "备份清单版本无效；请重新预览后重试。",
+            ));
+        }
+        self.validate_destination_now(false)?;
+        let backup_root = self
+            .library_backup_root(false)?
+            .ok_or_else(|| StorageError::new("backupNotFound", "指定备份不存在。"))?;
+        let _lock = acquire_backup_root_lock(&backup_root)?;
+        let directory = backup_root.join(backup_id);
+        let validated = validate_backup_directory(&directory, &self.source_key, job)?;
+        if validated.summary.backup_id != backup_id {
+            return Err(StorageError::new(
+                "backupIncomplete",
+                "指定备份身份与已验证清单不一致。",
+            ));
+        }
+        if expected_manifest_revision.is_some_and(|expected| expected != validated.manifest_sha256)
+        {
+            return Err(StorageError::new(
+                "backupChanged",
+                "备份清单已变化；请重新预览后再确认恢复。",
+            ));
+        }
+        let facts = validated
+            .inventory
+            .files
+            .values()
+            .map(|file| NativeLibraryFact {
+                path: file.path.clone(),
+                length: file.length,
+                sha256: file.sha256.clone(),
+            })
+            .collect();
+        job.checkpoint()?;
+        Ok(VerifiedLibraryBackup {
+            summary: validated.summary,
+            manifest_revision: validated.manifest_sha256,
+            directory,
+            facts,
+        })
+    }
+
+    /// Copies a previously validated backup into an independent recovery
+    /// stage, then checks both the staged set and original backup again.
+    pub(super) fn stage_library_restore_backup(
+        &self,
+        snapshot: &VerifiedLibraryBackup,
+        destination_root: &Path,
+        job: &BackupJob,
+    ) -> Result<(), WorkspaceError> {
+        job.bind_library(&self.library_path);
+        job.checkpoint()?;
+        let before = self.verify_library_restore_backup(
+            &snapshot.summary.backup_id,
+            Some(&snapshot.manifest_revision),
+            job,
+        )?;
+        if !snapshot.same_snapshot(&before) {
+            return Err(StorageError::new(
+                "backupChanged",
+                "备份文件集合已变化；未开始整库恢复。",
+            ));
+        }
+
+        let parent = destination_root
+            .parent()
+            .ok_or_else(|| StorageError::new("unsafePath", "恢复暂存目录缺少父目录。"))?;
+        let canonical_parent = super::ensure_real_directory(parent, None)?;
+        fs::create_dir(destination_root).map_err(|error| {
+            StorageError::new("io", format!("无法创建独立恢复暂存目录：{error}"))
+        })?;
+        let canonical_stage =
+            super::ensure_real_directory(destination_root, Some(&canonical_parent))?;
+        for name in REQUIRED_FACT_DIRECTORIES {
+            ensure_directory(&canonical_stage.join(name), true)?;
+        }
+
+        let total = snapshot.facts.len();
+        for (index, fact) in snapshot.facts.iter().enumerate() {
+            job.checkpoint()?;
+            let relative = relative_path(&fact.path)?;
+            let source = snapshot.directory.join(&relative);
+            let destination = canonical_stage.join(&relative);
+            job.report(BackupPhase::Copying, index, total);
+            let copied = copy_and_hash(&source, &destination, fact.length, job)?;
+            if copied.length != fact.length || copied.sha256 != fact.sha256 {
+                return Err(StorageError::new(
+                    "backupChanged",
+                    format!("恢复暂存副本与已验证备份不一致：{}", fact.path),
+                ));
+            }
+            job.report(BackupPhase::Copying, index + 1, total);
+        }
+        for name in REQUIRED_FACT_DIRECTORIES {
+            sync_directory(&canonical_stage.join(name)).map_err(|error| {
+                StorageError::new("io", format!("无法同步恢复暂存目录：{error}"))
+            })?;
+        }
+        sync_directory(&canonical_stage)
+            .map_err(|error| StorageError::new("io", format!("无法同步恢复暂存根目录：{error}")))?;
+
+        let staged = scan_fact_tree(&canonical_stage, job, BackupPhase::Verifying, false)?;
+        if !same_native_facts(&snapshot.facts, &staged) {
+            return Err(StorageError::new(
+                "backupIncomplete",
+                "恢复暂存文件集合或 SHA-256 与已验证备份不一致。",
+            ));
+        }
+        let after = self.verify_library_restore_backup(
+            &snapshot.summary.backup_id,
+            Some(&snapshot.manifest_revision),
+            job,
+        )?;
+        if !snapshot.same_snapshot(&after) {
+            return Err(StorageError::new(
+                "backupChanged",
+                "复制期间原备份文件集合发生变化；未开始整库恢复。",
+            ));
+        }
+        job.checkpoint()?;
+        Ok(())
+    }
+
+    /// Strictly observes all supported native files from the active library.
+    /// This deliberately bypasses the presentation scan, which may skip bad
+    /// facts while keeping an older index visible.
+    pub(super) fn inspect_library_restore_facts(
+        &self,
+        job: &BackupJob,
+    ) -> Result<Vec<NativeLibraryFact>, WorkspaceError> {
+        Self::inspect_library_restore_facts_at(&self.library_path, job)
+    }
+
+    /// Strictly observes native files at a caller-supplied, already selected
+    /// library path. Restore continuation uses this while the library marker
+    /// is active, so it cannot create a normal backup context through the
+    /// workspace availability gate.
+    pub(super) fn inspect_library_restore_facts_at(
+        library_path: &Path,
+        job: &BackupJob,
+    ) -> Result<Vec<NativeLibraryFact>, WorkspaceError> {
+        job.bind_library(library_path);
+        let inventory = scan_fact_tree(library_path, job, BackupPhase::CheckingSource, true)?;
+        Ok(inventory
+            .files
+            .values()
+            .map(|file| NativeLibraryFact {
+                path: file.path.clone(),
+                length: file.length,
+                sha256: file.sha256.clone(),
+            })
+            .collect())
+    }
+
+    /// Revalidates one independently staged snapshot. The path is supplied by
+    /// the restore coordinator from its fixed recovery-root layout; the scan
+    /// still rejects links, unrelated files, malformed packages, and missing
+    /// native directories.
+    pub(super) fn verify_library_restore_stage(
+        stage_root: &Path,
+        expected: &[NativeLibraryFact],
+        job: &BackupJob,
+    ) -> Result<(), WorkspaceError> {
+        verify_library_restore_stage_with(stage_root, expected, job)
+    }
+
+    /// Startup recovery has no active job, so it uses the same strict
+    /// validator with a no-op checkpoint adapter.
+    pub(super) fn verify_library_restore_stage_at_startup(
+        stage_root: &Path,
+        expected: &[NativeLibraryFact],
+    ) -> Result<(), WorkspaceError> {
+        verify_library_restore_stage_with(stage_root, expected, &NoopJob)
+    }
+
     fn catalog_locked(
         &self,
         backup_root: &Path,
@@ -748,6 +983,10 @@ impl BackupContext {
         job.bind_library(&self.library_path);
         validate_local_date(observed_local_date)?;
         job.checkpoint()?;
+        storage::library_access::ensure_no_restore_pending(
+            &self.recovery_root,
+            &self.library_path,
+        )?;
         self.validate_destination_now(true)?;
         let backup_root = self
             .library_backup_root(true)?
@@ -1048,6 +1287,10 @@ impl BackupContext {
                 ));
             }
 
+            storage::library_access::ensure_no_restore_pending(
+                &self.recovery_root,
+                &self.library_path,
+            )?;
             let final_path = backup_root.join(&backup_id);
             job.publish(&staged, &final_path, &backup_root)?;
             published = true;
@@ -1278,6 +1521,100 @@ impl FactInventory {
             })
             .collect()
     }
+}
+
+/// The exact relative filename and raw-byte identity of one native library
+/// fact. Only paths produced by the strict manifest/tree validator enter a
+/// restore plan.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(super) struct NativeLibraryFact {
+    pub(super) path: String,
+    pub(super) length: u64,
+    pub(super) sha256: String,
+}
+
+/// A fully package-validated backup bound to its exact manifest revision.
+/// `directory` is an internal path derived from BackupContext and is never
+/// serialized into a journal or exposed as caller input.
+#[derive(Debug, Clone)]
+pub(super) struct VerifiedLibraryBackup {
+    pub(super) summary: BackupSummary,
+    pub(super) manifest_revision: String,
+    pub(super) directory: PathBuf,
+    pub(super) facts: Vec<NativeLibraryFact>,
+}
+
+impl VerifiedLibraryBackup {
+    pub(super) fn same_snapshot(&self, other: &Self) -> bool {
+        self.summary.backup_id == other.summary.backup_id
+            && self.manifest_revision == other.manifest_revision
+            && self.facts == other.facts
+    }
+}
+
+fn same_native_facts(expected: &[NativeLibraryFact], actual: &FactInventory) -> bool {
+    expected.len() == actual.files.len()
+        && expected.iter().all(|fact| {
+            actual.files.get(&fact.path).is_some_and(|observed| {
+                observed.length == fact.length && observed.sha256 == fact.sha256
+            })
+        })
+}
+
+fn verify_library_restore_stage_with(
+    stage_root: &Path,
+    expected: &[NativeLibraryFact],
+    job: &impl BackupJobLike,
+) -> Result<(), WorkspaceError> {
+    validate_native_fact_list(expected)?;
+    let actual = scan_fact_tree(stage_root, job, BackupPhase::Verifying, false)?;
+    if !same_native_facts(expected, &actual) {
+        return Err(StorageError::new(
+            "restoreStageChanged",
+            "整库恢复暂存文件与已验证清单不一致。",
+        ));
+    }
+    Ok(())
+}
+
+fn validate_native_fact_list(facts: &[NativeLibraryFact]) -> Result<(), WorkspaceError> {
+    if facts.len() > MAX_NOTE_FILES.saturating_add(MAX_NOTEBOOKS) {
+        return Err(StorageError::new(
+            "backupTooLarge",
+            "整库恢复事实清单超过文件数量上限。",
+        ));
+    }
+    let mut folded = BTreeSet::new();
+    for fact in facts {
+        let relative = relative_path(&fact.path)?;
+        let name = relative
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| StorageError::new("backupIncomplete", "整库恢复事实文件名无效。"))?;
+        let directory = relative
+            .parent()
+            .and_then(Path::file_name)
+            .and_then(|name| name.to_str());
+        let extension = relative.extension().and_then(|value| value.to_str());
+        let native = matches!(
+            (directory, extension),
+            (Some("notes"), Some("cuenote")) | (Some("notebooks"), Some("json"))
+        );
+        if !native
+            || name.len() > 255
+            || name.contains(['/', '\\', ':'])
+            || fact.length > MAX_PACKAGE_BYTES
+            || !is_sha256(&fact.sha256)
+            || !folded.insert(fact.path.to_lowercase())
+        {
+            return Err(StorageError::new(
+                "backupIncomplete",
+                "整库恢复事实路径、摘要或大小无效。",
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug)]

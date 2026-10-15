@@ -87,7 +87,7 @@ pub(crate) fn configure(app: &AppHandle, library: Option<&mut crate::workspace::
                 // exact source collections and content hashes independently.
                 emitter
                     .state::<crate::commands::WorkspaceState>()
-                    .cancel_backup();
+                    .cancel_backup_for_file_change();
                 let _ = emitter.emit("cuenote:files-changed", ());
             }
         })?;

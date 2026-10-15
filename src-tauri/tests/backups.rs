@@ -324,7 +324,7 @@ fn source_mutation_during_copy_cancels_without_publishing_a_mixed_snapshot() {
                 && progress.checked == 0
                 && !callback_changed.swap(true, Ordering::AcqRel)
             {
-                let _mutation = callback_control.begin_mutation();
+                let _mutation = callback_control.begin_mutation().unwrap();
                 let path = callback_library
                     .join("notes")
                     .join(format!("{callback_note_id}.cuenote"));
