@@ -10,7 +10,7 @@ use tauri_plugin_dialog::DialogExt;
 use crate::note_format::{AssetManifestEntry, NoteContent, PlainText};
 use crate::workspace::{
     ExternalProbe, ExternalReconciliation, LibraryView, NoteSession, RecoveryList, SaveReceipt,
-    SavedCopy, VersionList, Workspace, WorkspaceError, WorkspaceView,
+    SavedCopy, SearchResults, VersionList, Workspace, WorkspaceError, WorkspaceView,
 };
 
 pub type WorkspaceState = Arc<Mutex<Workspace>>;
@@ -46,6 +46,29 @@ pub async fn get_workspace(
 ) -> Result<WorkspaceView, WorkspaceError> {
     let mut view = work(state.inner().clone(), Workspace::snapshot).await?;
     crate::file_watch::configure(&app, view.library.as_mut());
+    Ok(view)
+}
+
+#[tauri::command]
+pub async fn search_notes(
+    state: State<'_, WorkspaceState>,
+    query: String,
+    notebook_id: Option<String>,
+    offset: Option<usize>,
+) -> Result<SearchResults, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.search_notes(&query, notebook_id.as_deref(), offset.unwrap_or(0))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn rebuild_search_index(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+) -> Result<LibraryView, WorkspaceError> {
+    let mut view = work(state.inner().clone(), Workspace::rebuild_search_index).await?;
+    crate::file_watch::configure(&app, Some(&mut view));
     Ok(view)
 }
 

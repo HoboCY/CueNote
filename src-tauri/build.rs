@@ -3,6 +3,8 @@ fn main() {
         tauri_build::Attributes::new().app_manifest(tauri_build::AppManifest::new().commands(&[
             "get_app_version",
             "get_workspace",
+            "search_notes",
+            "rebuild_search_index",
             "use_default_library",
             "initialize_selected_library",
             "choose_library",

@@ -62,12 +62,23 @@ pub fn run() {
         .manage(CloseGate::default())
         .manage(file_watch::LibraryWatch::default())
         .setup(|app| {
-            let workspace: commands::WorkspaceState = Arc::new(Mutex::new(create_workspace(app)?));
+            let mut workspace = create_workspace(app)?;
+            let watcher = app.state::<file_watch::LibraryWatch>();
+            workspace.attach_search_generation(watcher.search_generation());
+            let emitter = app.handle().clone();
+            workspace.attach_search_progress(Arc::new(
+                move |progress: workspace::SearchProgress| {
+                    let _ = emitter.emit("cuenote:search-progress", progress);
+                },
+            ));
+            let workspace: commands::WorkspaceState = Arc::new(Mutex::new(workspace));
             app.manage(workspace);
             Ok(())
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Focused(true) = event {
+                let watcher = window.state::<file_watch::LibraryWatch>();
+                file_watch::invalidate_search_index(&watcher);
                 let _ = window.emit("cuenote:files-changed", ());
             }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -80,6 +91,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_app_version,
             commands::get_workspace,
+            commands::search_notes,
+            commands::rebuild_search_index,
             commands::use_default_library,
             commands::initialize_selected_library,
             commands::choose_library,

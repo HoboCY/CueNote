@@ -15,6 +15,39 @@ export interface NoteSummary {
   trashedAt: string | null;
 }
 
+export type SearchSection = 'title' | 'cue' | 'content' | 'summary';
+
+export interface SearchHit {
+  note: NoteSummary;
+  section: SearchSection;
+  snippet: {
+    before: string;
+    matched: string;
+    after: string;
+  };
+}
+
+export interface SearchResults {
+  libraryPath: string;
+  query: string;
+  notebookId: string | null;
+  status: 'ready' | 'building' | 'unavailable';
+  hits: SearchHit[];
+  total: number;
+  offset: number;
+  indexedNotes: number;
+  incomplete: boolean;
+  warnings: string[];
+}
+
+export interface SearchProgress {
+  libraryPath: string;
+  phase: 'building' | 'ready' | 'unavailable';
+  checked: number;
+  total: number;
+  incomplete: boolean;
+}
+
 export interface NotebookSummary {
   notebookId: string;
   name: string;
@@ -129,6 +162,9 @@ export const workspaceApi = {
   initializeSelectedLibrary: () => invoke<WorkspaceView>('initialize_selected_library'),
   choose: () => invoke<WorkspaceView | null>('choose_library'),
   openFolder: () => invoke<void>('open_library_folder'),
+  searchNotes: (query: string, notebookId: string | null, offset: number) =>
+    invoke<SearchResults>('search_notes', { query, notebookId, offset }),
+  rebuildSearchIndex: () => invoke<LibraryView>('rebuild_search_index'),
   newNote: (notebookId: string | null = null) => invoke<NoteSession>('new_note', { notebookId }),
   openNote: (noteId: string) => invoke<NoteSession>('open_note', { noteId }),
   createNotebook: (name: string) => invoke<LibraryView>('create_notebook', { name }),

@@ -4,6 +4,7 @@ import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { createSaveCoordinator, type SaveCoordinatorState } from './save-coordinator';
 import { createExternalChangesCoordinator, type ExternalChangeToken } from './external-changes';
+import { createSearchCoordinator, type SearchCoordinatorState } from './search-coordinator';
 import { continueFromVerifiedCopyOrProtect } from './conflict-transition';
 import { RichTextEditor, type RichTextSection } from './RichTextEditor';
 import type { ImageEditorBridge } from './image-session';
@@ -20,6 +21,9 @@ import {
   type PreservedVersionSummary,
   type SaveReceipt,
   type SavedCopy,
+  type SearchHit,
+  type SearchProgress,
+  type SearchSection,
   type ViewPreferences,
   type WorkspaceError,
   type WorkspaceView,
@@ -129,10 +133,37 @@ function preservedVersionReason(version: PreservedVersionSummary) {
   }
 }
 
+function searchSectionLabel(section: SearchSection) {
+  switch (section) {
+    case 'title': return '标题';
+    case 'cue': return '线索区';
+    case 'content': return '内容区';
+    case 'summary': return '总结区';
+  }
+}
+
+function SearchSnippet({ hit }: { hit: SearchHit }) {
+  return <>{hit.snippet.before}<mark className="search-hit-mark">{hit.snippet.matched}</mark>{hit.snippet.after}</>;
+}
+
+function resolveSearchScope(preferredNotebookId: string | null, library: WorkspaceView['library']) {
+  return preferredNotebookId && library?.notebooks.some((notebook) => notebook.notebookId === preferredNotebookId)
+    ? preferredNotebookId
+    : null;
+}
+
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
   const [isTrashView, setIsTrashView] = useState(false);
+  const [searchInput, setSearchInput] = useState('');
+  const [searchState, setSearchState] = useState<SearchCoordinatorState>({
+    query: '', libraryPath: null, notebookId: null, phase: 'idle', buildingSource: null, results: null, error: null,
+  });
+  const [searchProgress, setSearchProgress] = useState<SearchProgress | null>(null);
+  const [isSearchRebuilding, setIsSearchRebuilding] = useState(false);
+  const [searchRebuildError, setSearchRebuildError] = useState<WorkspaceError | null>(null);
+  const [isChangingLibrary, setIsChangingLibrary] = useState(false);
   const [notebookDialog, setNotebookDialog] = useState<NotebookDialogState | null>(null);
   const [notebookDialogError, setNotebookDialogError] = useState<string | null>(null);
   const [trashDialog, setTrashDialog] = useState<TrashDialogState | null>(null);
@@ -179,6 +210,10 @@ function App() {
   const [isAbandoning, setIsAbandoning] = useState(false);
 
   const workspaceRef = useRef<WorkspaceView | null>(null);
+  const searchProgressRef = useRef<SearchProgress | null>(null);
+  const searchBuildProbeKeyRef = useRef<string | null>(null);
+  const searchComposingRef = useRef(false);
+  const searchCoordinatorRef = useRef<ReturnType<typeof createSearchCoordinator> | null>(null);
   const viewPreferencesRef = useRef<ViewPreferences>({ sidebarCollapsed: false, selectedNotebookId: null });
   const viewPreferencesInitializedRef = useRef(false);
   const viewPreferencesWriteQueueRef = useRef<Promise<void>>(Promise.resolve());
@@ -219,9 +254,35 @@ function App() {
     isCurrent: () => boolean,
   ) => Promise<void>>(async () => undefined);
 
+  if (searchCoordinatorRef.current === null) {
+    searchCoordinatorRef.current = createSearchCoordinator({
+      searchNotes: workspaceApi.searchNotes,
+      onState: setSearchState,
+    });
+  }
+  const searchCoordinator = searchCoordinatorRef.current;
+
   const hasUnsettledEditorWork = (sessionId: string) => isComposingRef.current
     || pendingEditorOperationsRef.current.size > 0
     || [...editorFlushersRef.current.values()].some(registeredSessionId => registeredSessionId === sessionId);
+
+  const handleSearchProgress = (progress: SearchProgress) => {
+    searchProgressRef.current = progress;
+    setSearchProgress(progress);
+    if (progress.libraryPath !== workspaceRef.current?.library?.path) return;
+    if (progress.phase === 'building') {
+      searchCoordinatorRef.current?.markBuilding(progress.libraryPath);
+    } else if (progress.phase === 'ready') {
+      searchCoordinatorRef.current?.refresh();
+    } else {
+      searchCoordinatorRef.current?.invalidate();
+    }
+  };
+
+  const clearSearchProgress = () => {
+    searchProgressRef.current = null;
+    setSearchProgress(null);
+  };
 
   const scheduleDeferredMetadataReadOnlyProbe = () => {
     const deferredSessionId = pendingMetadataReadOnlyProbeSessionIdRef.current;
@@ -238,16 +299,36 @@ function App() {
 
   const setTrashView = (value: boolean) => {
     isTrashViewRef.current = value;
+    searchCoordinatorRef.current?.setEnabled(!value);
     setIsTrashView(value);
   };
 
   const updateWorkspace = (value: WorkspaceView | null) => {
+    const previousLibrary = workspaceRef.current?.library ?? null;
+    const nextLibrary = value?.library ?? null;
     workspaceRef.current = value;
     setWorkspace(value);
+    const preferredNotebookId = viewPreferencesRef.current.selectedNotebookId;
+    // Preserve the preference ID while search follows a notebook that is currently visible.
+    searchCoordinatorRef.current?.setScope(resolveSearchScope(preferredNotebookId, nextLibrary));
+    if ((previousLibrary?.path ?? null) !== (nextLibrary?.path ?? null)) {
+      searchCoordinatorRef.current?.setLibraryPath(nextLibrary?.path ?? null);
+      if (nextLibrary) externalChangesCoordinatorRef.current?.schedule();
+      const progress = searchProgressRef.current;
+      if (progress && progress.libraryPath === nextLibrary?.path) {
+        handleSearchProgress(progress);
+      } else if (progress) {
+        searchProgressRef.current = null;
+        setSearchProgress(null);
+      }
+    } else if (nextLibrary && nextLibrary !== previousLibrary) {
+      searchCoordinatorRef.current?.refresh();
+    }
   };
 
   const persistViewPreferences = (next: ViewPreferences) => {
     viewPreferencesRef.current = next;
+    searchCoordinatorRef.current?.setScope(resolveSearchScope(next.selectedNotebookId, workspaceRef.current?.library ?? null));
     setSidebarCollapsed(next.sidebarCollapsed);
     setSelectedNotebookId(next.selectedNotebookId);
     if (!desktopRuntime || !viewPreferencesInitializedRef.current) return;
@@ -349,6 +430,7 @@ function App() {
     const preferences = { ...value.preferences, selectedNotebookId: selectedNotebook };
     viewPreferencesRef.current = preferences;
     viewPreferencesInitializedRef.current = true;
+    searchCoordinatorRef.current?.setScope(selectedNotebook);
     setSidebarCollapsed(preferences.sidebarCollapsed);
     setSelectedNotebookId(preferences.selectedNotebookId);
     updateWorkspace(value);
@@ -1189,22 +1271,37 @@ function App() {
   useEffect(() => {
     if (!desktopRuntime) return;
     let active = true;
+    let unlistenSearchProgress: (() => void) | null = null;
 
-    void workspaceApi.get()
-      .then((view) => {
-        if (active) applyWorkspace(view);
+    const searchProgressListener = listen<SearchProgress>('cuenote:search-progress', event => {
+      if (active) handleSearchProgress(event.payload);
+    })
+      .then((stopListening) => {
+        if (!active) {
+          stopListening();
+          return;
+        }
+        unlistenSearchProgress = stopListening;
       })
       .catch((cause: unknown) => {
         if (active) setError(toWorkspaceError(cause));
-      })
-      .finally(() => {
-        if (active) setIsInitializing(false);
       });
+    void searchProgressListener.then(async () => {
+      if (!active) return;
+      try {
+        applyWorkspace(await workspaceApi.get());
+      } catch (cause) {
+        if (active) setError(toWorkspaceError(cause));
+      } finally {
+        if (active) setIsInitializing(false);
+      }
+    });
     void refreshRecoveryDrafts();
     void refreshPreservedVersions();
 
     return () => {
       active = false;
+      unlistenSearchProgress?.();
     };
   }, []);
 
@@ -1233,12 +1330,16 @@ function App() {
 
     const externalChanges = externalChangesCoordinatorRef.current;
     const scheduleExternalProbe = () => externalChanges?.schedule();
+    const handleFilesChanged = () => {
+      searchCoordinator.invalidate();
+      scheduleExternalProbe();
+    };
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') scheduleExternalProbe();
     };
     window.addEventListener('focus', scheduleExternalProbe);
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    void listen('cuenote:files-changed', scheduleExternalProbe)
+    void listen('cuenote:files-changed', handleFilesChanged)
       .then((stopListening) => {
         if (!active) {
           stopListening();
@@ -1270,6 +1371,20 @@ function App() {
     externalChangesCoordinator.resume();
     return () => externalChangesCoordinator.dispose();
   }, [externalChangesCoordinator]);
+
+  useEffect(() => () => searchCoordinator.dispose(), [searchCoordinator]);
+
+  useEffect(() => {
+    if (searchState.phase === 'ready') {
+      searchBuildProbeKeyRef.current = null;
+      return;
+    }
+    if (searchState.phase !== 'building' || searchState.buildingSource !== 'search') return;
+    const probeKey = JSON.stringify([searchState.libraryPath, searchState.notebookId, searchState.query]);
+    if (searchBuildProbeKeyRef.current === probeKey) return;
+    searchBuildProbeKeyRef.current = probeKey;
+    externalChangesCoordinator.schedule();
+  }, [searchState.phase, searchState.buildingSource, searchState.libraryPath, searchState.notebookId, searchState.query, externalChangesCoordinator]);
 
   useEffect(() => {
     if (!pendingTransition) return;
@@ -1518,8 +1633,19 @@ function App() {
     label: '更换笔记库',
     run: async () => {
       await viewPreferencesWriteQueueRef.current;
-      const nextWorkspace = await workspaceApi.choose();
-      if (nextWorkspace) applyWorkspace(nextWorkspace);
+      searchCoordinator.invalidate();
+      clearSearchProgress();
+      setIsChangingLibrary(true);
+      try {
+        const nextWorkspace = await workspaceApi.choose();
+        if (nextWorkspace) applyWorkspace(nextWorkspace);
+        else searchCoordinator.refresh();
+      } catch (cause) {
+        searchCoordinator.refresh();
+        throw cause;
+      } finally {
+        setIsChangingLibrary(false);
+      }
     },
   });
 
@@ -1527,13 +1653,35 @@ function App() {
     label: '切换到默认笔记库',
     run: async () => {
       await viewPreferencesWriteQueueRef.current;
-      applyWorkspace(await workspaceApi.useDefault());
+      searchCoordinator.invalidate();
+      clearSearchProgress();
+      setIsChangingLibrary(true);
+      try {
+        applyWorkspace(await workspaceApi.useDefault());
+      } catch (cause) {
+        searchCoordinator.refresh();
+        throw cause;
+      } finally {
+        setIsChangingLibrary(false);
+      }
     },
   });
 
   const initializeSelectedLibrary = () => requestTransition({
     label: '初始化当前空笔记库',
-    run: async () => applyWorkspace(await workspaceApi.initializeSelectedLibrary()),
+    run: async () => {
+      searchCoordinator.invalidate();
+      clearSearchProgress();
+      setIsChangingLibrary(true);
+      try {
+        applyWorkspace(await workspaceApi.initializeSelectedLibrary());
+      } catch (cause) {
+        searchCoordinator.refresh();
+        throw cause;
+      } finally {
+        setIsChangingLibrary(false);
+      }
+    },
   });
 
   const createNote = () => {
@@ -1594,6 +1742,25 @@ function App() {
   const applyLibraryView = (nextLibrary: NonNullable<WorkspaceView['library']>) => {
     const currentWorkspace = workspaceRef.current;
     if (currentWorkspace) updateWorkspace({ ...currentWorkspace, library: nextLibrary });
+  };
+
+  const rebuildSearchIndex = async () => {
+    const targetPath = workspaceRef.current?.library?.path;
+    if (!desktopRuntime || !targetPath || isSearchRebuilding) return;
+    setIsSearchRebuilding(true);
+    setSearchRebuildError(null);
+    clearSearchProgress();
+    searchCoordinator.invalidate();
+    try {
+      const nextLibrary = await workspaceApi.rebuildSearchIndex();
+      if (workspaceRef.current?.library?.path !== targetPath) return;
+      if (nextLibrary.path !== targetPath) throw new Error('重建结果所属的笔记库已变化，请重新尝试。');
+      applyLibraryView(nextLibrary);
+    } catch (cause) {
+      setSearchRebuildError(toWorkspaceError(cause));
+    } finally {
+      setIsSearchRebuilding(false);
+    }
   };
 
   const trashCurrentNote = () => {
@@ -1878,6 +2045,15 @@ function App() {
   const selectedViewName = isTrashView ? '回收站' : selectedNotebook
     ? notebookDisplayLabel(notebooks, selectedNotebook)
     : '全部笔记';
+  const searchHasMeaningfulQuery = searchInput.length > 0 && /\S/u.test(searchInput);
+  const isSearchActive = Boolean(library && !isTrashView && searchHasMeaningfulQuery);
+  const searchScopeLabel = selectedNotebook ? `“${notebookDisplayLabel(notebooks, selectedNotebook)}”` : '全部笔记';
+  const progressMatchesLibrary = Boolean(searchProgress && searchProgress.libraryPath === library?.path);
+  const visibleSearchProgress = searchProgress && (
+    progressMatchesLibrary || isInitializing || isChangingLibrary
+  ) && (searchProgress.phase !== 'ready' || (isChangingLibrary && !progressMatchesLibrary))
+    ? searchProgress
+    : null;
   const isTrashSession = Boolean(session?.trashedAt);
   const sessionNotebookId = session?.notebookId ?? null;
   const sessionNotebook = sessionNotebookId === null
@@ -1992,6 +2168,98 @@ function App() {
       )}
     </div>
   );
+
+  const clearSearch = () => {
+    searchComposingRef.current = false;
+    setSearchInput('');
+    searchCoordinator.clear();
+    searchCoordinator.setEnabled(!isTrashViewRef.current);
+  };
+
+  const renderSearchContent = () => {
+    if (!library) return null;
+    const results = searchState.results;
+    const progressForCurrentLibrary = searchProgress?.libraryPath === library.path ? searchProgress : null;
+    const pageStart = results && results.hits.length > 0 ? results.offset + 1 : 0;
+    const pageEnd = results ? results.offset + results.hits.length : 0;
+
+    return (
+      <>
+        {searchRebuildError && <div className="search-result-error" role="alert">重建索引失败：{searchRebuildError.message}</div>}
+        {searchState.phase === 'debouncing' || searchState.phase === 'loading' ? (
+          <div className="sidebar-empty search-status" role="status">正在搜索 {searchScopeLabel}…</div>
+        ) : searchState.phase === 'building' ? (
+          <div className="sidebar-empty search-status" role="status">
+            {progressForCurrentLibrary?.phase === 'building'
+              ? `正在建立搜索索引 ${progressForCurrentLibrary.checked}/${progressForCurrentLibrary.total}…`
+              : '搜索索引正在更新…'}
+          </div>
+        ) : searchState.phase === 'unavailable' ? (
+          <div className="sidebar-empty search-status" role="status">搜索索引暂不可用，可以重建后重试。</div>
+        ) : searchState.phase === 'error' ? (
+          <div className="search-result-error" role="alert">搜索未完成：{searchState.error ?? '未知错误'}</div>
+        ) : searchState.phase === 'ready' && results ? (
+          <>
+            <div className="search-results-summary" role="status">
+              共 {results.total} 条{results.incomplete ? '可检索匹配' : '匹配'} · {searchScopeLabel}
+            </div>
+            {results.incomplete && <div className="search-results-warning" role="status">部分笔记未能检索，结果可能不完整。</div>}
+            {results.warnings.map((warning, index) => (
+              <div className="search-results-warning" role="status" key={`${index}-${warning}`}>{warning}</div>
+            ))}
+            {results.hits.length > 0 ? (
+              <ul className="sidebar-note-list search-result-list" aria-label="搜索结果" data-testid="search-result-list">
+                {results.hits.map((hit) => (
+                  <li key={hit.note.noteId}>
+                    <button
+                      className={`sidebar-note-item search-note-item${sessionMatchesView && session?.noteId === hit.note.noteId ? ' is-current' : ''}`}
+                      type="button"
+                      data-testid="search-note-item"
+                      data-note-id={hit.note.noteId}
+                      aria-current={sessionMatchesView && session?.noteId === hit.note.noteId ? 'page' : undefined}
+                      disabled={navigationLocked}
+                      onClick={() => openNote(hit.note.noteId, hit.note.title)}
+                      title={`命中${searchSectionLabel(hit.section)}：${hit.snippet.before}${hit.snippet.matched}${hit.snippet.after}`}
+                      aria-label={`打开笔记：${noteTitle(hit.note)}；命中${searchSectionLabel(hit.section)}：${hit.snippet.before}${hit.snippet.matched}${hit.snippet.after}；${formatModifiedAt(hit.note.modifiedAt)}`}
+                    >
+                      <span className="sidebar-note-line">
+                        {hit.note.pinned && <span className="sidebar-pin" aria-label="已置顶" title="已置顶">◆</span>}
+                        <span className="sidebar-note-title">
+                          {noteTitle(hit.note)}
+                        </span>
+                      </span>
+                      <span className="search-hit-line">
+                        <span className="search-hit-section">{searchSectionLabel(hit.section)} ·</span>
+                        <span className="search-hit-context"><SearchSnippet hit={hit} /></span>
+                      </span>
+                      <time className="sidebar-note-time" dateTime={hit.note.modifiedAt}>{formatModifiedAt(hit.note.modifiedAt)}</time>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : results.total === 0 ? (
+              <div className="sidebar-empty search-status">
+                {results.incomplete ? '当前可检索部分没有找到匹配项。' : '没有找到匹配笔记'}
+              </div>
+            ) : (
+              <div className="sidebar-empty search-status">当前页没有可显示的匹配项。</div>
+            )}
+            {results.total > 100 && (
+              <div className="search-pagination" aria-label="搜索结果分页">
+                <span>显示 {pageStart}–{pageEnd} / {results.total}</span>
+                <div>
+                  <button type="button" className="search-page-button" disabled={navigationLocked || results.offset === 0 || searchState.phase !== 'ready'} onClick={() => searchCoordinator.previousPage()}>上一页</button>
+                  <button type="button" className="search-page-button" disabled={navigationLocked || results.offset + 100 >= results.total || searchState.phase !== 'ready'} onClick={() => searchCoordinator.nextPage()}>下一页</button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : searchState.phase === 'idle' ? (
+          <div className="sidebar-empty search-status" role="status">搜索将在此显示。</div>
+        ) : null}
+      </>
+    );
+  };
 
   const renderSectionEditor = (section: RichTextSection) => {
     if (!session || !draft) return null;
@@ -2159,10 +2427,77 @@ function App() {
             ) : (
               <div className="sidebar-empty">选择笔记库后开始整理</div>
             )}
+            {library && !isTrashView && (
+              <div className="sidebar-search">
+                <label className="sidebar-search-label" htmlFor="sidebar-search-input">搜索{searchScopeLabel}</label>
+                <div className="sidebar-search-controls">
+                  <input
+                    id="sidebar-search-input"
+                    data-testid="sidebar-search-input"
+                    type="text"
+                    value={searchInput}
+                    placeholder="标题、线索区、内容区或总结区"
+                    autoComplete="off"
+                    disabled={!desktopRuntime || navigationLocked}
+                    onChange={(event) => {
+                      setSearchInput(event.currentTarget.value);
+                      if (!searchComposingRef.current) searchCoordinator.setQuery(event.currentTarget.value);
+                    }}
+                    onCompositionStart={() => {
+                      searchComposingRef.current = true;
+                      searchCoordinator.setEnabled(false);
+                    }}
+                    onCompositionEnd={(event) => {
+                      searchComposingRef.current = false;
+                      const query = event.currentTarget.value;
+                      setSearchInput(query);
+                      searchCoordinator.setQuery(query);
+                      searchCoordinator.setEnabled(!isTrashViewRef.current);
+                    }}
+                    aria-label={`搜索${searchScopeLabel}中的笔记标题、线索区、内容区和总结区`}
+                  />
+                  {searchInput.length > 0 && (
+                    <button
+                      className="sidebar-search-clear"
+                      type="button"
+                      aria-label="清除搜索"
+                      title="清除搜索"
+                      disabled={navigationLocked}
+                      onClick={clearSearch}
+                    >×</button>
+                  )}
+                  <button
+                    className={`sidebar-search-rebuild${isSearchRebuilding ? ' is-busy' : ''}`}
+                    type="button"
+                    aria-label="重建搜索索引"
+                    title="重建本机搜索索引"
+                    disabled={!desktopRuntime || isSearchRebuilding || navigationLocked}
+                    onClick={() => void rebuildSearchIndex()}
+                  >{isSearchRebuilding ? '…' : '↻'}</button>
+                </div>
+                <span className="sidebar-search-hint">搜索范围：{searchScopeLabel}</span>
+              </div>
+            )}
+            {visibleSearchProgress && (
+              <div className="sidebar-search-progress" role="status" data-testid="search-index-progress">
+                <strong>{visibleSearchProgress.phase === 'building'
+                  ? '正在建立搜索索引'
+                  : visibleSearchProgress.phase === 'unavailable' ? '搜索索引暂不可用' : '搜索索引已就绪'}</strong>
+                <span title={visibleSearchProgress.libraryPath}>
+                  {visibleSearchProgress.libraryPath.split(/[\\/]/u).filter(Boolean).at(-1) || visibleSearchProgress.libraryPath}
+                  {visibleSearchProgress.phase === 'building' && ` · ${visibleSearchProgress.checked}/${visibleSearchProgress.total}`}
+                </span>
+              </div>
+            )}
+            {searchRebuildError && !isSearchActive && (
+              <div className="search-result-error" role="alert">重建索引失败：{searchRebuildError.message}</div>
+            )}
             <div className="sidebar-notebook-heading">
               <div>
-                <span className="sidebar-group-title">{isTrashView ? '回收站笔记' : '笔记列表'}</span>
-                {library && <span className="sidebar-note-count">{visibleNotes.length}{!isTrashView && selectedNotebook ? ` / ${notes.length}` : ''} 篇笔记</span>}
+                <span className="sidebar-group-title">{isTrashView ? '回收站笔记' : isSearchActive ? '搜索结果' : '笔记列表'}</span>
+                {library && <span className="sidebar-note-count">{isSearchActive
+                  ? searchState.results ? `${searchState.results.total} 条匹配 · ${searchScopeLabel}` : `${searchScopeLabel} · 搜索中`
+                  : `${visibleNotes.length}${!isTrashView && selectedNotebook ? ` / ${notes.length}` : ''} 篇笔记`}</span>}
               </div>
               <button
                 className="sidebar-add"
@@ -2181,7 +2516,7 @@ function App() {
               >＋</button>
             </div>
             {library ? (
-              visibleNotes.length > 0 ? (
+              isSearchActive ? renderSearchContent() : visibleNotes.length > 0 ? (
                 <ul className={`sidebar-note-list${isTrashView ? ' trash-note-list' : ''}`} aria-label={isTrashView ? '回收站笔记列表' : '笔记列表'} data-testid={isTrashView ? 'trash-note-list' : 'normal-note-list'}>
                   {visibleNotes.map((note) => (
                     <li key={note.noteId} data-testid={isTrashView ? 'trash-note-row' : undefined}>
@@ -2309,6 +2644,18 @@ function App() {
           </div>
           <span className="runtime-readonly">{desktopRuntime ? saveStatus : '只读'}</span>
         </section>
+
+        {sidebarCollapsed && visibleSearchProgress && (
+          <div className="workspace-notice search-index-main-progress" role="status" data-testid="search-index-main-progress">
+            <strong>{visibleSearchProgress.phase === 'building'
+              ? '正在建立搜索索引'
+              : visibleSearchProgress.phase === 'unavailable' ? '搜索索引暂不可用' : '搜索索引已就绪'}</strong>
+            <span title={visibleSearchProgress.libraryPath}>
+              {visibleSearchProgress.libraryPath.split(/[\\/]/u).filter(Boolean).at(-1) || visibleSearchProgress.libraryPath}
+              {visibleSearchProgress.phase === 'building' && ` · ${visibleSearchProgress.checked}/${visibleSearchProgress.total}`}
+            </span>
+          </div>
+        )}
 
         {!pendingTransition && error && renderError(error)}
         {!notebookDialog && notebookDialogError && (

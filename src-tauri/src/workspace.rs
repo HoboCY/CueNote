@@ -15,11 +15,15 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::fs::{self, File, Metadata, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use uuid::Uuid;
 
 mod external;
+mod search;
 pub use crate::storage::versions::{PreservedVersionSummary, VersionList};
 pub use external::{ExternalProbe, ExternalReconciliation};
+pub use search::{SearchHit, SearchResults, SearchSection, SearchSnippet, SearchStatus};
 
 pub type WorkspaceError = StorageError;
 
@@ -171,6 +175,51 @@ struct LibraryState {
     notebook_metadata_baselines: BTreeMap<String, Option<Vec<u8>>>,
     metadata_warnings: Vec<String>,
     view: LibraryView,
+    search: SearchSnapshot,
+}
+
+struct SearchSnapshot {
+    index: search::SearchIndex,
+    available: bool,
+    incomplete: bool,
+    warnings: Vec<String>,
+    generation: u64,
+}
+
+impl SearchSnapshot {
+    fn unavailable(generation: u64, warnings: Vec<String>) -> Self {
+        Self {
+            index: search::SearchIndex::default(),
+            available: false,
+            incomplete: true,
+            warnings,
+            generation,
+        }
+    }
+}
+
+struct LibraryScan {
+    view: LibraryView,
+    search_index: search::SearchIndex,
+    search_available: bool,
+    incomplete: bool,
+    generation: u64,
+}
+
+#[derive(Clone)]
+struct SearchScanContext {
+    generation: Arc<AtomicU64>,
+    progress: Option<Arc<dyn Fn(SearchProgress) + Send + Sync>>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SearchProgress {
+    pub library_path: String,
+    pub phase: SearchStatus,
+    pub checked: usize,
+    pub total: usize,
+    pub incomplete: bool,
 }
 
 struct NotebookMetadataScan {
@@ -205,6 +254,8 @@ pub struct Workspace {
     preferences: ViewPreferences,
     initialized: bool,
     asset_run: AssetRun,
+    search_generation: Arc<AtomicU64>,
+    search_progress: Option<Arc<dyn Fn(SearchProgress) + Send + Sync>>,
 }
 
 impl Workspace {
@@ -224,6 +275,26 @@ impl Workspace {
             preferences: ViewPreferences::default(),
             initialized: false,
             asset_run: AssetRun::new(),
+            search_generation: Arc::new(AtomicU64::new(0)),
+            search_progress: None,
+        }
+    }
+
+    pub(crate) fn attach_search_generation(&mut self, generation: Arc<AtomicU64>) {
+        self.search_generation = generation;
+    }
+
+    pub(crate) fn attach_search_progress(
+        &mut self,
+        progress: Arc<dyn Fn(SearchProgress) + Send + Sync>,
+    ) {
+        self.search_progress = Some(progress);
+    }
+
+    fn search_scan_context(&self) -> SearchScanContext {
+        SearchScanContext {
+            generation: Arc::clone(&self.search_generation),
+            progress: self.search_progress.clone(),
         }
     }
 
@@ -380,6 +451,110 @@ impl Workspace {
         self.notice = None;
         self.initialized = true;
         Ok(self.view())
+    }
+
+    pub fn search_notes(
+        &self,
+        query: &str,
+        notebook_id: Option<&str>,
+        offset: usize,
+    ) -> Result<SearchResults, WorkspaceError> {
+        if query.chars().count() > search::MAX_QUERY_CHARS {
+            return Err(StorageError::new(
+                "invalidSearchQuery",
+                format!("搜索词不能超过 {} 个字符。", search::MAX_QUERY_CHARS),
+            ));
+        }
+        let Some(library) = self.library.as_ref() else {
+            return Ok(SearchResults {
+                library_path: display_path(&self.default_library_path),
+                query: query.to_owned(),
+                notebook_id: notebook_id.map(str::to_owned),
+                status: SearchStatus::Unavailable,
+                hits: Vec::new(),
+                total: 0,
+                offset,
+                indexed_notes: 0,
+                incomplete: true,
+                warnings: vec!["请先选择或使用默认笔记库。".into()],
+            });
+        };
+        let generation = self.search_generation.load(Ordering::Acquire);
+        let mut dirty = generation != library.search.generation;
+        let mut status = if dirty {
+            SearchStatus::Building
+        } else if library.search.available {
+            SearchStatus::Ready
+        } else {
+            SearchStatus::Unavailable
+        };
+        let (mut hits, mut total) = if status == SearchStatus::Ready && !query.trim().is_empty() {
+            library.search.index.search(query, notebook_id, offset)
+        } else {
+            (Vec::new(), 0)
+        };
+        if self.search_generation.load(Ordering::Acquire) != generation {
+            dirty = true;
+            status = SearchStatus::Building;
+            hits.clear();
+            total = 0;
+        }
+        let mut warnings = library.search.warnings.clone();
+        if dirty {
+            warnings.push("笔记库内容已变化，搜索索引正在重建。".into());
+        }
+        Ok(SearchResults {
+            library_path: library.view.path.clone(),
+            query: query.to_owned(),
+            notebook_id: notebook_id.map(str::to_owned),
+            status,
+            hits,
+            total,
+            offset,
+            indexed_notes: library.search.index.indexed_notes(),
+            incomplete: library.search.incomplete || dirty,
+            warnings,
+        })
+    }
+
+    pub fn rebuild_search_index(&mut self) -> Result<LibraryView, WorkspaceError> {
+        let generation = self.search_generation.load(Ordering::Acquire);
+        if let Some(library) = self.library.as_mut() {
+            library.search =
+                SearchSnapshot::unavailable(generation, vec!["搜索索引正在重建。".into()]);
+        }
+        self.refresh_library_metadata_inner(true)?;
+        let scan_context = self.search_scan_context();
+        let generation = scan_context.generation.load(Ordering::Acquire);
+        let Some(library) = self.library.as_ref() else {
+            return Err(StorageError::new("noLibrary", "请先选择或使用默认笔记库。"));
+        };
+        let scan = scan_library_with_previous(
+            &library.path,
+            &library.notebooks,
+            library.default_notebook_id.as_deref(),
+            &self.recovery_root,
+            &library.metadata_warnings,
+            Some(&library.view),
+            &scan_context,
+        );
+        match scan {
+            Ok(scan) => {
+                let view = scan.view.clone();
+                let library = self.library.as_mut().expect("library path was checked");
+                install_library_scan(library, scan);
+                Ok(view)
+            }
+            Err(error) => {
+                if let Some(library) = self.library.as_mut() {
+                    library.search = SearchSnapshot::unavailable(
+                        generation,
+                        vec![format!("无法重建搜索索引：{}", error.message)],
+                    );
+                }
+                Err(error)
+            }
+        }
     }
 
     pub fn use_default_library(&mut self) -> Result<WorkspaceView, WorkspaceError> {
@@ -796,6 +971,7 @@ impl Workspace {
                 )
             });
 
+        let scan_context = self.search_scan_context();
         let library = self.library.as_mut().expect("library checked above");
         let mut receipt_library = match scan_library(
             &library_path,
@@ -803,12 +979,18 @@ impl Workspace {
             default_notebook_id.as_deref(),
             &self.recovery_root,
             &library.metadata_warnings,
+            &scan_context,
         ) {
-            Ok(view) => {
-                library.view = view.clone();
+            Ok(scan) => {
+                let view = scan.view.clone();
+                install_library_scan(library, scan);
                 view
             }
             Err(error) => {
+                library.search = SearchSnapshot::unavailable(
+                    self.search_generation.load(Ordering::Acquire),
+                    vec![format!("无法刷新搜索索引：{}", error.message)],
+                );
                 let mut view = library.view.clone();
                 view.notes.retain(|note| note.note_id != note_id);
                 view.trash_notes.retain(|note| note.note_id != note_id);
@@ -968,6 +1150,7 @@ impl Workspace {
             .err()
             .map(|error| format!("笔记已恢复，但无法更新本机上次笔记设置：{}", error.message));
 
+        let scan_context = self.search_scan_context();
         let library = self.library.as_mut().expect("library checked above");
         let mut receipt_library = match scan_library(
             &library_path,
@@ -975,12 +1158,18 @@ impl Workspace {
             default_notebook_id.as_deref(),
             &self.recovery_root,
             &library.metadata_warnings,
+            &scan_context,
         ) {
-            Ok(view) => {
-                library.view = view.clone();
+            Ok(scan) => {
+                let view = scan.view.clone();
+                install_library_scan(library, scan);
                 view
             }
             Err(error) => {
+                library.search = SearchSnapshot::unavailable(
+                    self.search_generation.load(Ordering::Acquire),
+                    vec![format!("无法刷新搜索索引：{}", error.message)],
+                );
                 let mut view = library.view.clone();
                 view.trash_notes.retain(|note| note.note_id != note_id);
                 view.notes.retain(|note| note.note_id != note_id);
@@ -1092,6 +1281,7 @@ impl Workspace {
         active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
+        let scan_context = self.search_scan_context();
         let library = self.library.as_mut().expect("library checked above");
         let receipt_library = match scan_library(
             &library_path,
@@ -1099,12 +1289,18 @@ impl Workspace {
             library.default_notebook_id.as_deref(),
             &self.recovery_root,
             &library.metadata_warnings,
+            &scan_context,
         ) {
-            Ok(view) => {
-                library.view = view.clone();
+            Ok(scan) => {
+                let view = scan.view.clone();
+                install_library_scan(library, scan);
                 view
             }
             Err(error) => {
+                library.search = SearchSnapshot::unavailable(
+                    self.search_generation.load(Ordering::Acquire),
+                    vec![format!("无法刷新搜索索引：{}", error.message)],
+                );
                 let mut view = library.view.clone();
                 push_warning(
                     &mut view.warnings,
@@ -1341,6 +1537,7 @@ impl Workspace {
         active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
+        let scan_context = self.search_scan_context();
         let library = self.library.as_mut().expect("library checked above");
         let mut receipt_library = match scan_library(
             &library_path,
@@ -1348,12 +1545,18 @@ impl Workspace {
             library.default_notebook_id.as_deref(),
             &self.recovery_root,
             &library.metadata_warnings,
+            &scan_context,
         ) {
-            Ok(view) => {
-                library.view = view.clone();
+            Ok(scan) => {
+                let view = scan.view.clone();
+                install_library_scan(library, scan);
                 view
             }
             Err(error) => {
+                library.search = SearchSnapshot::unavailable(
+                    self.search_generation.load(Ordering::Acquire),
+                    vec![format!("无法刷新搜索索引：{}", error.message)],
+                );
                 let mut view = library.view.clone();
                 push_warning(
                     &mut view.warnings,
@@ -1404,20 +1607,23 @@ impl Workspace {
             .map_err(|error| StorageError::new("libraryMetadata", error.to_string()))?;
         notebooks.insert(notebook_id.clone(), notebook);
         ensure_child_directory(&library_path, &metadata_path, true)?;
-        let view = scan_library(
+        let scan_context = self.search_scan_context();
+        let scan = scan_library(
             &library_path,
             &notebooks,
             default_notebook_id.as_deref(),
             &self.recovery_root,
             &metadata_warnings,
+            &scan_context,
         )?;
+        let view = scan.view.clone();
         publish_notebook_metadata(&metadata_path, &published_notebook)?;
         let library = self.library.as_mut().expect("library checked above");
         library.notebooks = notebooks;
         library
             .notebook_metadata_baselines
             .insert(notebook_id, Some(candidate_bytes));
-        library.view = view.clone();
+        install_library_scan(library, scan);
         Ok(view)
     }
 
@@ -1465,13 +1671,16 @@ impl Workspace {
         for warning in duplicate_notebook_name_warnings(&notebooks) {
             push_warning(&mut metadata_warnings, warning);
         }
-        let view = scan_library(
+        let scan_context = self.search_scan_context();
+        let scan = scan_library(
             &library_path,
             &notebooks,
             default_notebook_id.as_deref(),
             &self.recovery_root,
             &metadata_warnings,
+            &scan_context,
         )?;
+        let view = scan.view.clone();
         if let Err(error) =
             storage::replace_metadata_file(&metadata_path, &expected_bytes, &candidate_bytes)
         {
@@ -1484,7 +1693,8 @@ impl Workspace {
         library
             .notebook_metadata_baselines
             .insert(notebook_id.to_owned(), Some(candidate_bytes));
-        library.view = view.clone();
+        library.metadata_warnings = metadata_warnings;
+        install_library_scan(library, scan);
         Ok(view)
     }
 
@@ -1541,13 +1751,16 @@ impl Workspace {
             notebook_id,
         )?;
         notebooks.remove(notebook_id);
-        let mut view = scan_library(
+        let scan_context = self.search_scan_context();
+        let mut scan = scan_library(
             &library_path,
             &notebooks,
             default_notebook_id.as_deref(),
             &self.recovery_root,
             &metadata_warnings,
+            &scan_context,
         )?;
+        let mut view = scan.view.clone();
         let (_, current_bytes) = read_notebook_metadata_file(&library_path, notebook_id)?;
         if current_bytes != expected_bytes {
             return Err(StorageError::new(
@@ -1599,7 +1812,8 @@ impl Workspace {
                 );
             }
         }
-        self.library.as_mut().expect("library checked above").view = view.clone();
+        scan.view = view.clone();
+        install_library_scan(self.library.as_mut().expect("library checked above"), scan);
         Ok(view)
     }
 
@@ -1740,6 +1954,7 @@ impl Workspace {
         active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
+        let scan_context = self.search_scan_context();
         let library = self.library.as_mut().expect("library checked above");
         let mut receipt_library = match scan_library(
             &library_path,
@@ -1747,12 +1962,18 @@ impl Workspace {
             default_notebook_id.as_deref(),
             &self.recovery_root,
             &library.metadata_warnings,
+            &scan_context,
         ) {
-            Ok(view) => {
-                library.view = view.clone();
+            Ok(scan) => {
+                let view = scan.view.clone();
+                install_library_scan(library, scan);
                 view
             }
             Err(error) => {
+                library.search = SearchSnapshot::unavailable(
+                    self.search_generation.load(Ordering::Acquire),
+                    vec![format!("无法刷新搜索索引：{}", error.message)],
+                );
                 let mut view = library.view.clone();
                 push_warning(
                     &mut view.warnings,
@@ -1841,6 +2062,7 @@ impl Workspace {
         };
         self.session = None;
 
+        let scan_context = self.search_scan_context();
         let library = self.library.as_mut().expect("library checked above");
         let mut updated = match scan_library(
             &library_path,
@@ -1848,9 +2070,18 @@ impl Workspace {
             default_notebook_id.as_deref(),
             &self.recovery_root,
             &library.metadata_warnings,
+            &scan_context,
         ) {
-            Ok(view) => view,
+            Ok(scan) => {
+                let view = scan.view.clone();
+                install_library_scan(library, scan);
+                view
+            }
             Err(error) => {
+                library.search = SearchSnapshot::unavailable(
+                    self.search_generation.load(Ordering::Acquire),
+                    vec![format!("无法刷新搜索索引：{}", error.message)],
+                );
                 let mut view = library.view.clone();
                 view.notes.retain(|note| note.note_id != note_id);
                 view.trash_notes.retain(|note| note.note_id != note_id);
@@ -1981,6 +2212,7 @@ impl Workspace {
             return Err(error);
         }
 
+        let scan_context = self.search_scan_context();
         let library = self.library.as_mut().expect("library checked above");
         let read_only_reason = read_only_reason(
             &restored.package,
@@ -2019,12 +2251,18 @@ impl Workspace {
             library.default_notebook_id.as_deref(),
             &self.recovery_root,
             &library.metadata_warnings,
+            &scan_context,
         ) {
-            Ok(view) => {
-                library.view = view.clone();
+            Ok(scan) => {
+                let view = scan.view.clone();
+                install_library_scan(library, scan);
                 view
             }
             Err(error) => {
+                library.search = SearchSnapshot::unavailable(
+                    self.search_generation.load(Ordering::Acquire),
+                    vec![format!("无法刷新搜索索引：{}", error.message)],
+                );
                 let mut view = library.view.clone();
                 push_warning(
                     &mut view.warnings,
@@ -2259,6 +2497,7 @@ impl Workspace {
         &mut self,
     ) -> Result<Option<LibraryView>, WorkspaceError> {
         self.refresh_library_metadata_inner(true)?;
+        let scan_context = self.search_scan_context();
         let Some(library) = self.library.as_mut() else {
             return Ok(None);
         };
@@ -2269,10 +2508,15 @@ impl Workspace {
             &self.recovery_root,
             &library.metadata_warnings,
             Some(&library.view),
+            &scan_context,
         ) {
-            Ok(view) => library.view = view,
+            Ok(scan) => install_library_scan(library, scan),
             Err(error) => {
-                library.view.warnings = vec![format!("无法刷新笔记列表：{}", error.message)]
+                library.view.warnings = vec![format!("无法刷新笔记列表：{}", error.message)];
+                library.search = SearchSnapshot::unavailable(
+                    self.search_generation.load(Ordering::Acquire),
+                    vec![format!("无法刷新搜索索引：{}", error.message)],
+                );
             }
         }
         Ok(Some(library.view.clone()))
@@ -2334,13 +2578,16 @@ impl Workspace {
         let mut metadata = read_library_metadata(&canonical);
         let default_notebook_id =
             resolved_default_notebook_id(&metadata.notebooks, &mut metadata.warnings);
+        let scan_context = self.search_scan_context();
         let view = scan_library(
             &canonical,
             &metadata.notebooks,
             default_notebook_id.as_deref(),
             &self.recovery_root,
             &metadata.warnings,
+            &scan_context,
         )?;
+        let (view, search) = library_scan_parts(view);
         let notebook_metadata_baselines = metadata
             .bytes
             .iter()
@@ -2353,6 +2600,7 @@ impl Workspace {
             notebook_metadata_baselines,
             metadata_warnings: metadata.warnings,
             view,
+            search,
         })
     }
 
@@ -3192,13 +3440,33 @@ fn note_session_from_opened(
     }
 }
 
+fn emit_search_progress(
+    context: &SearchScanContext,
+    library_path: &Path,
+    phase: SearchStatus,
+    checked: usize,
+    total: usize,
+    incomplete: bool,
+) {
+    if let Some(progress) = &context.progress {
+        progress(SearchProgress {
+            library_path: display_path(library_path),
+            phase,
+            checked,
+            total,
+            incomplete,
+        });
+    }
+}
+
 fn scan_library(
     library_path: &Path,
     notebooks: &BTreeMap<String, NotebookMetadata>,
     default_notebook_id: Option<&str>,
     recovery_root: &Path,
     metadata_warnings: &[String],
-) -> Result<LibraryView, WorkspaceError> {
+    context: &SearchScanContext,
+) -> Result<LibraryScan, WorkspaceError> {
     scan_library_with_previous(
         library_path,
         notebooks,
@@ -3206,6 +3474,7 @@ fn scan_library(
         recovery_root,
         metadata_warnings,
         None,
+        context,
     )
 }
 
@@ -3216,20 +3485,57 @@ fn scan_library_with_previous(
     recovery_root: &Path,
     metadata_warnings: &[String],
     previous: Option<&LibraryView>,
-) -> Result<LibraryView, WorkspaceError> {
+    context: &SearchScanContext,
+) -> Result<LibraryScan, WorkspaceError> {
+    let result = scan_library_with_previous_inner(
+        library_path,
+        notebooks,
+        default_notebook_id,
+        recovery_root,
+        metadata_warnings,
+        previous,
+        context,
+    );
+    if result.is_err() {
+        emit_search_progress(context, library_path, SearchStatus::Unavailable, 0, 0, true);
+    }
+    result
+}
+
+fn scan_library_with_previous_inner(
+    library_path: &Path,
+    notebooks: &BTreeMap<String, NotebookMetadata>,
+    default_notebook_id: Option<&str>,
+    recovery_root: &Path,
+    metadata_warnings: &[String],
+    previous: Option<&LibraryView>,
+    context: &SearchScanContext,
+) -> Result<LibraryScan, WorkspaceError> {
+    let generation = context.generation.load(Ordering::Acquire);
     let notes_path = library_path.join("notes");
     let mut warnings = metadata_warnings.to_vec();
+    let mut notes_directory_available = true;
+    let mut incomplete = !metadata_warnings.is_empty();
     let mut entries = match secure_read_dir_if_present(library_path, &notes_path) {
         Ok(Some(entries)) => entries,
         Ok(None) => {
+            notes_directory_available = false;
+            incomplete = true;
             if let Some(previous) = previous {
-                return Ok(preserve_unavailable_notes_view(
-                    previous,
-                    notebooks,
-                    default_notebook_id,
-                    &notes_path,
-                    "目录尚未到达",
-                ));
+                emit_search_progress(context, library_path, SearchStatus::Unavailable, 0, 0, true);
+                return Ok(LibraryScan {
+                    view: preserve_unavailable_notes_view(
+                        previous,
+                        notebooks,
+                        default_notebook_id,
+                        &notes_path,
+                        "目录尚未到达",
+                    ),
+                    search_index: search::SearchIndex::default(),
+                    search_available: false,
+                    incomplete: true,
+                    generation,
+                });
             }
             push_warning(
                 &mut warnings,
@@ -3238,14 +3544,23 @@ fn scan_library_with_previous(
             Vec::new()
         }
         Err(error) => {
+            notes_directory_available = false;
+            incomplete = true;
             if let Some(previous) = previous {
-                return Ok(preserve_unavailable_notes_view(
-                    previous,
-                    notebooks,
-                    default_notebook_id,
-                    &notes_path,
-                    &error.message,
-                ));
+                emit_search_progress(context, library_path, SearchStatus::Unavailable, 0, 0, true);
+                return Ok(LibraryScan {
+                    view: preserve_unavailable_notes_view(
+                        previous,
+                        notebooks,
+                        default_notebook_id,
+                        &notes_path,
+                        &error.message,
+                    ),
+                    search_index: search::SearchIndex::default(),
+                    search_available: false,
+                    incomplete: true,
+                    generation,
+                });
             }
             push_warning(
                 &mut warnings,
@@ -3260,6 +3575,7 @@ fn scan_library_with_previous(
     };
     entries.sort_by_key(|entry| entry.file_name());
     if entries.len() > MAX_NOTE_FILES {
+        emit_search_progress(context, library_path, SearchStatus::Unavailable, 0, 0, true);
         return Err(StorageError::new(
             "libraryTooLarge",
             "笔记文件数量超出当前索引上限。",
@@ -3267,9 +3583,51 @@ fn scan_library_with_previous(
     }
     let mut notes = Vec::new();
     let mut trash_notes = Vec::new();
+    let mut search_index = search::SearchIndex::default();
     let mut seen_file_ids = HashSet::new();
     let mut seen_package_ids = HashMap::<String, (String, String, bool)>::new();
     let mut omitted_warnings = 0usize;
+    let mut index_limit_warned = false;
+    let mut search_index_limit_reached = false;
+    let total = entries
+        .iter()
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .and_then(|extension| extension.to_str())
+                .is_some_and(|extension| extension.eq_ignore_ascii_case("cuenote"))
+        })
+        .count();
+    let mut checked = 0usize;
+    emit_search_progress(
+        context,
+        library_path,
+        SearchStatus::Building,
+        checked,
+        total,
+        incomplete,
+    );
+    let progress_interval = total
+        .saturating_add(99)
+        .checked_div(100)
+        .unwrap_or(1)
+        .max(1);
+    macro_rules! report_checked_file {
+        () => {{
+            checked += 1;
+            if checked % progress_interval == 0 || checked == total {
+                emit_search_progress(
+                    context,
+                    library_path,
+                    SearchStatus::Building,
+                    checked,
+                    total,
+                    incomplete,
+                );
+            }
+        }};
+    }
     for entry in entries {
         let path = entry.path();
         let Some(extension) = path.extension().and_then(|extension| extension.to_str()) else {
@@ -3279,6 +3637,7 @@ fn scan_library_with_previous(
             continue;
         }
         if let Err(error) = storage::ensure_local_file(&path) {
+            incomplete = true;
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
@@ -3288,43 +3647,52 @@ fn scan_library_with_previous(
                     error.message
                 ),
             );
+            report_checked_file!();
             continue;
         }
         let file_metadata = match fs::symlink_metadata(&path) {
             Ok(metadata) => metadata,
             Err(error) => {
+                incomplete = true;
                 push_warning_counted(
                     &mut warnings,
                     &mut omitted_warnings,
                     format!("无法检查笔记文件：{error}"),
                 );
+                report_checked_file!();
                 continue;
             }
         };
         if !file_metadata.is_file() {
+            incomplete = true;
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
                 format!("已跳过非普通笔记文件：{}", display_path(&path)),
             );
+            report_checked_file!();
             continue;
         }
         let Some(stem) = path.file_stem().and_then(|stem| stem.to_str()) else {
+            incomplete = true;
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
                 "已跳过文件名无法读取的笔记。".into(),
             );
+            report_checked_file!();
             continue;
         };
         let opened = match storage::open_note(&path) {
             Ok(opened) => opened,
             Err(error) => {
+                incomplete = true;
                 push_warning_counted(
                     &mut warnings,
                     &mut omitted_warnings,
                     format!("无法读取笔记 {}：{}", stem, error.message),
                 );
+                report_checked_file!();
                 continue;
             }
         };
@@ -3338,15 +3706,18 @@ fn scan_library_with_previous(
             &origin,
             "笔记库中取得的有效版本",
         ) {
+            incomplete = true;
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
                 format!("无法保留笔记 {}，已跳过索引：{}", origin, error.message),
             );
+            report_checked_file!();
             continue;
         }
         let previous = seen_package_ids.get(&package_id).cloned();
         if let Some((revision, previous_origin, _)) = &previous {
+            incomplete = true;
             if revision != &opened.revision {
                 storage::versions::pin_observed_version(
                     recovery_root,
@@ -3372,6 +3743,7 @@ fn scan_library_with_previous(
             );
         }
         if !is_canonical_uuid_v4(stem) || package_id != stem {
+            incomplete = true;
             storage::versions::preserve_conflict_version(
                 recovery_root,
                 &opened,
@@ -3386,6 +3758,7 @@ fn scan_library_with_previous(
                 &mut omitted_warnings,
                 format!("笔记文件名与内容身份不一致，已保留到历史与冲突：{stem}"),
             );
+            report_checked_file!();
             continue;
         }
         if previous
@@ -3393,18 +3766,22 @@ fn scan_library_with_previous(
             .is_some_and(|(_, _, canonical)| *canonical)
             || !seen_file_ids.insert(stem.to_owned())
         {
+            incomplete = true;
+            report_checked_file!();
             continue;
         }
         seen_package_ids.insert(package_id, (opened.revision.clone(), origin, true));
         let notebook_id = opened.package.document.organization.notebook_id.as_deref();
         let trashed_at = opened.package.document.organization.trashed_at.clone();
         if trashed_at.is_none() && notebook_id.is_none() {
+            incomplete = true;
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
                 format!("笔记 {stem} 缺少笔记本归属，保存前需先处理。"),
             );
         } else if trashed_at.is_none() && !notebooks.contains_key(notebook_id.unwrap()) {
+            incomplete = true;
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
@@ -3415,8 +3792,26 @@ fn scan_library_with_previous(
         if trashed_at.is_some() {
             trash_notes.push(summary);
         } else {
+            if !search_index_limit_reached
+                && !search_index.add_note(summary.clone(), &opened.package)
+            {
+                incomplete = true;
+                search_index_limit_reached = true;
+                if !index_limit_warned {
+                    push_warning_counted(
+                        &mut warnings,
+                        &mut omitted_warnings,
+                        format!(
+                            "搜索索引达到 {} MiB 资源上限，部分笔记未进入索引。",
+                            search::MAX_INDEX_BYTES / 1024 / 1024
+                        ),
+                    );
+                    index_limit_warned = true;
+                }
+            }
             notes.push(summary);
         }
+        report_checked_file!();
     }
     if omitted_warnings > 0 {
         warnings.push(format!("另有 {omitted_warnings} 条笔记警告未显示。"));
@@ -3427,15 +3822,53 @@ fn scan_library_with_previous(
         .and_then(|id| notebooks.get(id))
         .map(|metadata| metadata.name.clone())
         .unwrap_or_else(|| "默认笔记本".into());
-    Ok(LibraryView {
+    let view = LibraryView {
         path: display_path(library_path),
         default_notebook_name,
         default_notebook_id: default_notebook_id.map(str::to_owned),
         notebooks: notebook_summaries(notebooks),
         notes,
         trash_notes,
-        warnings,
+        warnings: warnings.clone(),
+    };
+    let phase =
+        if notes_directory_available && context.generation.load(Ordering::Acquire) == generation {
+            SearchStatus::Ready
+        } else if notes_directory_available {
+            SearchStatus::Building
+        } else {
+            SearchStatus::Unavailable
+        };
+    emit_search_progress(context, library_path, phase, checked, total, incomplete);
+    Ok(LibraryScan {
+        view,
+        incomplete: incomplete || search_index.is_incomplete(),
+        search_index,
+        search_available: notes_directory_available,
+        generation,
     })
+}
+
+fn library_scan_parts(scan: LibraryScan) -> (LibraryView, SearchSnapshot) {
+    let warnings = scan.view.warnings.clone();
+    let search = if scan.search_available {
+        SearchSnapshot {
+            index: scan.search_index,
+            available: true,
+            incomplete: scan.incomplete,
+            warnings,
+            generation: scan.generation,
+        }
+    } else {
+        SearchSnapshot::unavailable(scan.generation, warnings)
+    };
+    (scan.view, search)
+}
+
+fn install_library_scan(library: &mut LibraryState, scan: LibraryScan) {
+    let (view, search) = library_scan_parts(scan);
+    library.view = view;
+    library.search = search;
 }
 
 fn preserve_unavailable_notes_view(

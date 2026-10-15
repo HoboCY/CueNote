@@ -1,7 +1,7 @@
 //! Native notifications request a fingerprint check; they never mutate notes.
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -14,6 +14,17 @@ struct WatchedLibrary {
 #[derive(Default)]
 pub(crate) struct LibraryWatch {
     watched: Mutex<Option<WatchedLibrary>>,
+    search_generation: Arc<AtomicU64>,
+}
+
+impl LibraryWatch {
+    pub(crate) fn search_generation(&self) -> Arc<AtomicU64> {
+        Arc::clone(&self.search_generation)
+    }
+}
+
+pub(crate) fn invalidate_search_index(state: &LibraryWatch) {
+    state.search_generation.fetch_add(1, Ordering::AcqRel);
 }
 
 pub(crate) fn configure(app: &AppHandle, library: Option<&mut crate::workspace::LibraryView>) {
@@ -40,6 +51,7 @@ pub(crate) fn configure(app: &AppHandle, library: Option<&mut crate::workspace::
     }
     let emitter = app.clone();
     let selected_path = path.clone();
+    let callback_generation = state.search_generation();
     let needs_rearm = Arc::new(AtomicBool::new(false));
     let callback_rearm = Arc::clone(&needs_rearm);
     let create = || -> notify::Result<RecommendedWatcher> {
@@ -70,6 +82,7 @@ pub(crate) fn configure(app: &AppHandle, library: Option<&mut crate::workspace::
                 }
             };
             if should_check {
+                callback_generation.fetch_add(1, Ordering::AcqRel);
                 let _ = emitter.emit("cuenote:files-changed", ());
             }
         })?;

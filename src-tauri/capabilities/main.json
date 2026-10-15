@@ -6,6 +6,8 @@
   "permissions": [
     "allow-get-app-version",
     "allow-get-workspace",
+    "allow-search-notes",
+    "allow-rebuild-search-index",
     "allow-use-default-library",
     "allow-initialize-selected-library",
     "allow-choose-library",
