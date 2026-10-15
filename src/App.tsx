@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { flushSync } from 'react-dom';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { createSaveCoordinator, type SaveCoordinatorState } from './save-coordinator';
+import { createExternalChangesCoordinator, type ExternalChangeToken } from './external-changes';
+import { continueFromVerifiedCopyOrProtect } from './conflict-transition';
 import { RichTextEditor, type RichTextSection } from './RichTextEditor';
 import type { ImageEditorBridge } from './image-session';
 import type { MindMapEditorBridge } from './mindmap-session';
@@ -9,8 +12,12 @@ import {
   workspaceApi,
   type NoteSession,
   type NoteContent,
+  type ExternalChangeProbe,
+  type ExternalChangeReconciliation,
   type RecoveryDraftSummary,
   type RecoveryList,
+  type PreservedVersionList,
+  type PreservedVersionSummary,
   type SaveReceipt,
   type SavedCopy,
   type ViewPreferences,
@@ -27,7 +34,12 @@ type PendingTransition = {
 };
 
 type CurrentCopy = SavedCopy & { sessionId: string; content: NoteContent };
+type ActivePreservedPreview = PreservedVersionSummary & {
+  sessionId: string;
+  returnNoteId: string | null;
+};
 type SaveCoordinator = ReturnType<typeof createSaveCoordinator<NoteContent, SaveReceipt>>;
+type ExternalChangesCoordinator = ReturnType<typeof createExternalChangesCoordinator>;
 type EditorIssue = { message: string; initial: boolean } | null;
 type EditorIssues = Record<RichTextSection, EditorIssue>;
 
@@ -77,6 +89,19 @@ function noteTitle(note: { title: string }) {
   return note.title.trim() || '未命名笔记';
 }
 
+function preservedVersionReason(version: PreservedVersionSummary) {
+  const reason = version.reason.trim();
+  const internalReason = /^([a-z]+(?:-[a-z]+)+)(?::\s*(.*))?$/s.exec(reason);
+  if (!internalReason) return reason || (version.conflict ? '保留的冲突版本' : '已保存的历史版本');
+  if (internalReason[2]) return internalReason[2];
+  switch (internalReason[1]) {
+    case 'confirmed-publication': return '已保存的版本';
+    case 'recovered-publication': return '重启后找回的已保存版本';
+    case 'publication-baseline': return '保存前的版本';
+    default: return version.conflict ? '保存冲突时保留的版本' : '已保存的历史版本';
+  }
+}
+
 function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedNotebookId, setSelectedNotebookId] = useState<string | null>(null);
@@ -104,6 +129,18 @@ function App() {
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState<WorkspaceError | null>(null);
   const [recoveryCopyPaths, setRecoveryCopyPaths] = useState<Record<string, string>>({});
+  const [preservedVersions, setPreservedVersions] = useState<PreservedVersionList | null>(null);
+  const [preservedVersionsOpen, setPreservedVersionsOpen] = useState(false);
+  const [preservedVersionsLoading, setPreservedVersionsLoading] = useState(false);
+  const [preservedVersionsError, setPreservedVersionsError] = useState<WorkspaceError | null>(null);
+  const [preservedCopyPaths, setPreservedCopyPaths] = useState<Record<string, string>>({});
+  const [previewingVersionId, setPreviewingVersionId] = useState<string | null>(null);
+  const [preservedVersionActionBusy, setPreservedVersionActionBusy] = useState(false);
+  const [activePreservedPreview, setActivePreservedPreview] = useState<ActivePreservedPreview | null>(null);
+  const [externalConflict, setExternalConflict] = useState(false);
+  const [externalConflictKind, setExternalConflictKind] = useState<'conflict' | 'missing' | 'unreadable' | null>(null);
+  const [externalMessage, setExternalMessage] = useState<string | null>(null);
+  const [isReconcilingExternalChange, setIsReconcilingExternalChange] = useState(false);
   const [closeGuardReady, setCloseGuardReady] = useState(!desktopRuntime);
   const [isComposing, setIsComposing] = useState(false);
   const [pendingEditorOperationCount, setPendingEditorOperationCount] = useState(0);
@@ -121,12 +158,17 @@ function App() {
   const draftRef = useRef<NoteContent | null>(null);
   const editorIssuesRef = useRef<EditorIssues>({ ...emptyEditorIssues });
   const operationInProgressRef = useRef(false);
+  const manualSaveInProgressRef = useRef(false);
   const pendingTransitionRef = useRef<PendingTransition | null>(null);
   const transitionAttemptRef = useRef<PendingTransition | null>(null);
   const transitionWaitingForOperationRef = useRef(false);
   const activeTransitionRef = useRef<PendingTransition | null>(null);
   const isAbandoningRef = useRef(false);
   const isTrashViewRef = useRef(false);
+  const externalConflictRef = useRef(false);
+  const externalConflictProtectedRef = useRef(false);
+  const externalReconcilePendingRef = useRef(false);
+  const activePreservedPreviewRef = useRef<ActivePreservedPreview | null>(null);
   const trashMutationInProgressRef = useRef(false);
   const leaveIntentRef = useRef<ReturnType<SaveCoordinator['leave']> | null>(null);
   const lastSaveErrorRef = useRef<unknown | null>(null);
@@ -140,6 +182,12 @@ function App() {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const trashDialogRef = useRef<HTMLDivElement | null>(null);
   const saveCoordinatorRef = useRef<SaveCoordinator | null>(null);
+  const externalChangesCoordinatorRef = useRef<ExternalChangesCoordinator | null>(null);
+  const externalChangeHandlerRef = useRef<(
+    result: ExternalChangeProbe,
+    token: ExternalChangeToken,
+    isCurrent: () => boolean,
+  ) => Promise<void>>(async () => undefined);
 
   const setTrashView = (value: boolean) => {
     isTrashViewRef.current = value;
@@ -168,8 +216,24 @@ function App() {
   };
 
   const updateSessionMetadata = (value: NoteSession | null) => {
+    if ((sessionRef.current?.sessionId ?? null) !== (value?.sessionId ?? null)) {
+      externalChangesCoordinatorRef.current?.sessionChanged();
+    }
     sessionRef.current = value;
     setSession(value);
+  };
+
+  const clearExternalConflict = () => {
+    externalConflictRef.current = false;
+    externalConflictProtectedRef.current = false;
+    setExternalConflict(false);
+    setExternalConflictKind(null);
+    setExternalMessage(null);
+  };
+
+  const markActivePreservedPreview = (value: ActivePreservedPreview | null) => {
+    activePreservedPreviewRef.current = value;
+    setActivePreservedPreview(value);
   };
 
   const refreshRecoveryDrafts = async () => {
@@ -184,8 +248,23 @@ function App() {
     }
   };
 
+  const refreshPreservedVersions = async () => {
+    if (!desktopRuntime) return;
+    setPreservedVersionsLoading(true);
+    try {
+      setPreservedVersions(await workspaceApi.listPreservedVersions());
+      setPreservedVersionsError(null);
+    } catch (cause) {
+      setPreservedVersionsError(toWorkspaceError(cause));
+    } finally {
+      setPreservedVersionsLoading(false);
+    }
+  };
+
   const applySession = (value: NoteSession | null) => {
     updateSessionMetadata(value);
+    clearExternalConflict();
+    markActivePreservedPreview(null);
     const nextDraft = value ? cloneNoteContent(value.content) : null;
     const nextSaved = value ? cloneNoteContent(value.content) : null;
     draftRef.current = nextDraft;
@@ -217,6 +296,8 @@ function App() {
     setSelectedNotebookId(preferences.selectedNotebookId);
     updateWorkspace(value);
     updateSessionMetadata(value.session);
+    clearExternalConflict();
+    markActivePreservedPreview(null);
     const nextDraft = value.session ? cloneNoteContent(value.session.content) : null;
     const nextSaved = value.session ? cloneNoteContent(value.session.content) : null;
     draftRef.current = nextDraft;
@@ -249,6 +330,16 @@ function App() {
       },
       onState: (nextState) => {
         setSaveState(nextState);
+        if (nextState.phase === 'conflict' && !externalConflictRef.current) {
+          externalConflictRef.current = true;
+          setExternalConflict(true);
+          setExternalConflictKind('conflict');
+          setExternalMessage('保存时发现磁盘版本已变化。当前草稿仍保留，请查看历史与冲突后选择下一步。');
+          setPreservedVersionsOpen(true);
+          void saveCoordinatorRef.current?.pauseAutomaticSavingAndWait();
+          void refreshPreservedVersions();
+          externalChangesCoordinatorRef.current?.schedule();
+        }
         if (nextState.error !== null) {
           setSaveError(toWorkspaceError(nextState.error));
           if (lastSaveErrorRef.current !== nextState.error) {
@@ -280,7 +371,9 @@ function App() {
   };
   const resumeAutomaticSavingWhenSafe = () => {
     void savingPauseRef.current.then(() => {
-      if (!isComposingRef.current && !hasEditorIssue() && !isAbandoningRef.current) {
+      if (!isComposingRef.current && !hasEditorIssue() && !isAbandoningRef.current && !externalConflictRef.current
+        && !externalReconcilePendingRef.current && !operationInProgressRef.current
+        && !pendingTransitionRef.current && !transitionAttemptRef.current && !activeTransitionRef.current) {
         saveCoordinator.resumeAutomaticSaving();
       }
     });
@@ -365,10 +458,177 @@ function App() {
     }
   };
 
+  const updateLibraryFromExternalResult = (value: WorkspaceView['library'] | null) => {
+    const currentWorkspace = workspaceRef.current;
+    if (value && currentWorkspace) updateWorkspace({ ...currentWorkspace, library: value });
+  };
+
+  const blockExternalSaving = (
+    kind: 'conflict' | 'missing' | 'unreadable',
+    message: string,
+  ) => {
+    externalConflictRef.current = true;
+    setExternalConflict(true);
+    setExternalConflictKind(kind);
+    setExternalMessage(message);
+    setPreservedVersionsOpen(true);
+    void pauseAutomaticSaving();
+    void refreshPreservedVersions();
+  };
+
+  const handleExternalProbeResult = (result: ExternalChangeProbe) => {
+    updateLibraryFromExternalResult(result.library);
+  };
+
+  const handleExternalProbeError = async (
+    cause: unknown,
+    token: ExternalChangeToken,
+    isCurrent: () => boolean,
+  ) => {
+    const operationError = toWorkspaceError(cause);
+    await externalChangeHandlerRef.current({
+      sessionId: token.sessionId,
+      status: 'unreadable',
+      revision: null,
+      message: operationError.message,
+      library: null,
+    }, token, isCurrent);
+  };
+
+  const handleExternalChange = async (
+    result: ExternalChangeProbe,
+    _token: ExternalChangeToken,
+    isCurrent: () => boolean,
+  ) => {
+    if (!isCurrent()) return;
+    updateLibraryFromExternalResult(result.library);
+    const initialSession = sessionRef.current;
+    if (!initialSession || result.sessionId !== initialSession.sessionId) {
+      void refreshPreservedVersions();
+      return;
+    }
+    if (externalConflictRef.current && externalConflictProtectedRef.current) return;
+    const hasOtherOperation = () => operationInProgressRef.current
+      || manualSaveInProgressRef.current
+      || Boolean(activeTransitionRef.current)
+      || Boolean(pendingTransitionRef.current)
+      || Boolean(transitionAttemptRef.current)
+      || isTransitionSaving
+      || isOperationBusy
+      || isInitializing
+      || isAbandoningRef.current;
+    const queueProbe = () => externalChangesCoordinatorRef.current?.schedule();
+    if (hasOtherOperation()) {
+      queueProbe();
+      return;
+    }
+
+    externalReconcilePendingRef.current = true;
+    setIsReconcilingExternalChange(true);
+    let ownsOperationLock = false;
+    const conflictKind = result.status === 'missing'
+      ? 'missing'
+      : result.status === 'unreadable'
+        ? 'unreadable'
+        : 'conflict';
+    try {
+      await pauseAutomaticSaving();
+      if (!isCurrent()) {
+        queueProbe();
+        resumeAutomaticSavingWhenSafe();
+        return;
+      }
+      await settleEditors();
+      if (!isCurrent() || sessionRef.current?.sessionId !== initialSession.sessionId) {
+        queueProbe();
+        resumeAutomaticSavingWhenSafe();
+        return;
+      }
+      if (hasOtherOperation()) {
+        queueProbe();
+        return;
+      }
+
+      operationInProgressRef.current = true;
+      ownsOperationLock = true;
+      flushSync(() => setIsOperationBusy(true));
+      const confirmedSession = sessionRef.current;
+      if (!confirmedSession || confirmedSession.sessionId !== initialSession.sessionId) {
+        queueProbe();
+        return;
+      }
+      const finalContent = draftRef.current;
+      if (!finalContent) {
+        blockExternalSaving(conflictKind, '无法读取当前编辑器草稿。现有内容仍保留，自动保存已暂停。');
+        return;
+      }
+      const reconciliation = await workspaceApi.reconcileExternalChanges(
+        confirmedSession.sessionId,
+        cloneNoteContent(finalContent),
+      );
+      updateLibraryFromExternalResult(reconciliation.library);
+      if (reconciliation.status === 'refreshed' && reconciliation.session) {
+        const needsProtection = !sameContent(finalContent, confirmedSession.content);
+        if (needsProtection) {
+          blockExternalSaving(conflictKind, reconciliation.message
+            ?? '当前草稿与打开时的内容不同，无法确认它已进入保留版本区。草稿仍留在此处，自动保存已暂停。');
+        } else {
+          applySession(reconciliation.session);
+          void refreshPreservedVersions();
+        }
+      } else if (reconciliation.status === 'conflict') {
+        externalConflictProtectedRef.current = true;
+        blockExternalSaving(conflictKind, reconciliation.message
+          ?? '磁盘版本与当前草稿冲突。原文件、当前版本和草稿均已保留；请查看历史与冲突后选择下一步。');
+      } else if (reconciliation.status === 'unchanged') {
+        const needsProtection = !sameContent(finalContent, confirmedSession.content);
+        if (needsProtection) blockExternalSaving(conflictKind, reconciliation.message
+          ?? '当前文件无法安全读取。草稿仍保留在此处，自动保存已暂停。');
+        else clearExternalConflict();
+      } else {
+        blockExternalSaving(conflictKind, reconciliation.message
+          ?? '无法安全读取最新版本。草稿仍保留在此处，自动保存已暂停。');
+      }
+    } catch (cause) {
+      const operationError = toWorkspaceError(cause);
+      setError(operationError);
+      const probeFailure = result.status === 'unreadable' && result.message
+        ? `外部检查失败：${result.message}；`
+        : '';
+      blockExternalSaving(conflictKind, `${probeFailure}协调磁盘版本失败：${operationError.message} 草稿仍保留在此处，自动保存已暂停。`);
+    } finally {
+      if (ownsOperationLock) {
+        operationInProgressRef.current = false;
+        flushSync(() => setIsOperationBusy(false));
+      }
+      externalReconcilePendingRef.current = false;
+      setIsReconcilingExternalChange(false);
+      if (!externalConflictRef.current) resumeAutomaticSavingWhenSafe();
+    }
+  };
+
+  externalChangeHandlerRef.current = handleExternalChange;
+  if (externalChangesCoordinatorRef.current === null) {
+    externalChangesCoordinatorRef.current = createExternalChangesCoordinator({
+      getSessionId: () => sessionRef.current?.sessionId ?? null,
+      probe: (sessionId) => workspaceApi.probeExternalChanges(sessionId),
+      onChanged: (result, token, isCurrent) => externalChangeHandlerRef.current(result, token, isCurrent),
+      onProbeResult: handleExternalProbeResult,
+      onError: handleExternalProbeError,
+    });
+  }
+  const externalChangesCoordinator = externalChangesCoordinatorRef.current;
+
   const hasExpandedEditor = () => [...editorFlushersRef.current.values()]
     .some(sessionId => sessionId === sessionRef.current?.sessionId);
 
   const attemptTransitionAfterSave = async (transition: PendingTransition) => {
+    if (externalConflictRef.current) {
+      setDialogMessage(externalConflictProtectedRef.current
+        ? '当前笔记有未解决的外部版本冲突。草稿和原文件都已保留，请先查看历史与冲突并选择下一步。'
+        : '当前笔记有未解决的外部版本冲突。草稿仍在本页，自动保存已暂停；请选择一个操作来保护草稿后再继续。');
+      return;
+    }
     if (transitionAttemptRef.current) return;
     transitionAttemptRef.current = transition;
     setIsTransitionSaving(true);
@@ -408,6 +668,12 @@ function App() {
   };
 
   const beginTransition = (transition: PendingTransition) => {
+    if (externalConflictRef.current) {
+      setDialogMessage(externalConflictProtectedRef.current
+        ? '草稿和磁盘原件已保留。请选择打开最新版本、恢复为新笔记或取消切换。'
+        : '当前草稿仍在本页。请选择一个操作先保护草稿，再继续切换。');
+      return;
+    }
     if (hasBlockingEditorIssue()) {
       setDialogMessage('编辑器内容尚无法转换为安全的保存快照。请撤销或修复该操作后再继续。');
       return;
@@ -424,6 +690,23 @@ function App() {
 
   const requestTransition = (transition: PendingTransition, queueWhileBusy = false) => {
     if (pendingTransitionRef.current) return;
+    if (externalReconcilePendingRef.current) {
+      if (!queueWhileBusy) return;
+      pendingTransitionRef.current = transition;
+      transitionWaitingForOperationRef.current = true;
+      setPendingTransition(transition);
+      setIsWaitingForOperation(true);
+      setDialogMessage(`正在检查磁盘版本，完成后继续${transition.label}。`);
+      return;
+    }
+    if (externalConflictRef.current) {
+      pendingTransitionRef.current = transition;
+      setPendingTransition(transition);
+      setDialogMessage(externalConflictProtectedRef.current
+        ? '外部版本与当前草稿存在冲突。草稿和磁盘原件均已保留；请先查看历史与冲突，或明确选择继续此操作。'
+        : '外部版本与当前草稿存在冲突。当前草稿仍在本页；请先保护草稿，再继续此操作。');
+      return;
+    }
     if (hasBlockingEditorIssue()) {
       setError({ kind: 'editor_conversion', message: '编辑器内容尚无法转换为安全的保存快照。请撤销或修复该操作后再继续。' });
       return;
@@ -459,18 +742,25 @@ function App() {
 
   const saveCurrent = async () => {
     const currentSession = sessionRef.current;
-    if (!desktopRuntime || isInitializing || operationInProgressRef.current || hasEditorIssue() || !currentSession || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
+    if (!desktopRuntime || isInitializing || operationInProgressRef.current || externalReconcilePendingRef.current
+      || manualSaveInProgressRef.current || externalConflictRef.current || hasEditorIssue()
+      || !currentSession || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
+    manualSaveInProgressRef.current = true;
     try {
       await settleEditors();
-      if (sessionRef.current?.sessionId !== currentSession.sessionId || operationInProgressRef.current) return;
+      if (sessionRef.current?.sessionId !== currentSession.sessionId || operationInProgressRef.current
+        || externalReconcilePendingRef.current || externalConflictRef.current) return;
       await saveCoordinator.flush();
     } catch (cause) {
       setError(toWorkspaceError(cause));
+    } finally {
+      manualSaveInProgressRef.current = false;
     }
   };
   flushCurrentRef.current = () => { void saveCurrent(); };
 
   const saveCurrentAs = async () => {
+    if (externalReconcilePendingRef.current) return;
     try {
       await settleEditors();
     } catch (cause) {
@@ -480,7 +770,8 @@ function App() {
     const currentSession = sessionRef.current;
     const snapshot = draftRef.current;
     const unchangedReadOnlyCopy = Boolean(currentSession && (currentSession.readOnlyReason || hasInitialEditorIssue()));
-    if (!desktopRuntime || isInitializing || operationInProgressRef.current || hasEditorIssue() && !unchangedReadOnlyCopy || !currentSession || !snapshot || currentSession.trashedAt !== null) return;
+    if (!desktopRuntime || isInitializing || operationInProgressRef.current || externalReconcilePendingRef.current
+      || hasEditorIssue() && !unchangedReadOnlyCopy || !currentSession || !snapshot || currentSession.trashedAt !== null) return;
     const copyContent = cloneNoteContent(unchangedReadOnlyCopy ? currentSession.content : snapshot);
     operationInProgressRef.current = true;
     setIsOperationBusy(true);
@@ -497,7 +788,7 @@ function App() {
   };
 
   const saveRecoveryAs = async (draft: RecoveryDraftSummary) => {
-    if (operationInProgressRef.current) return;
+    if (operationInProgressRef.current || externalReconcilePendingRef.current) return;
     operationInProgressRef.current = true;
     setIsOperationBusy(true);
     setError(null);
@@ -531,31 +822,255 @@ function App() {
 
   const discardAndContinue = async () => {
     const transition = pendingTransitionRef.current;
-    if (!transition || hasEditorIssue() || isTransitionSaving || isOperationBusy || isSaving || isComposing || isInitializing) return;
+    if (!transition || externalReconcilePendingRef.current || hasEditorIssue() || isTransitionSaving
+      || isOperationBusy || isSaving || isComposing || isInitializing) return;
+    if (externalConflictRef.current) {
+      try {
+        await settleEditors();
+      } catch (cause) {
+        setError(toWorkspaceError(cause));
+        setDialogMessage('编辑器内容尚未完成整理，草稿仍留在本页。请修复内容后重试。');
+        return;
+      }
+      if (pendingTransitionRef.current !== transition || isComposingRef.current) return;
+    }
     isAbandoningRef.current = true;
     operationInProgressRef.current = true;
     setIsAbandoning(true);
-    setIsOperationBusy(true);
-    setDialogMessage('正在停止自动保存并等待当前磁盘写入。可以取消此次操作。');
+    flushSync(() => setIsOperationBusy(true));
+    setDialogMessage(externalConflictRef.current
+      ? '正在保留最新草稿并等待当前磁盘写入。'
+      : '正在停止自动保存并等待当前磁盘写入。可以取消此次操作。');
     try {
       await saveCoordinator.pauseAutomaticSavingAndWait();
       if (pendingTransitionRef.current !== transition) return;
+      if (externalConflictRef.current) {
+        const currentSession = sessionRef.current;
+        const currentDraft = draftRef.current;
+        if (!currentSession || !currentDraft) {
+          setDialogMessage('当前草稿不可用，磁盘原件仍保留；请先检查历史与冲突。');
+          return;
+        }
+        const protectedKind = externalConflictKind ?? 'conflict';
+        const needsDraftProtection = !sameContent(currentDraft, currentSession.content);
+        const synchronizeCancelledRefresh = (result: ExternalChangeReconciliation | undefined) => {
+          if (!result || result.status !== 'refreshed' || !result.session || needsDraftProtection
+            || sessionRef.current?.sessionId !== currentSession.sessionId
+            || !draftRef.current || !sameContent(draftRef.current, currentDraft)) return;
+          updateLibraryFromExternalResult(result.library);
+          applySession(result.session);
+          void refreshPreservedVersions();
+        };
+        const transitionChoice = await continueFromVerifiedCopyOrProtect(
+          { sessionId: currentSession.sessionId, content: currentDraft },
+          currentCopy,
+          sameContent,
+          () => pendingTransitionRef.current === transition
+            && sessionRef.current?.sessionId === currentSession.sessionId,
+          (snapshot) => workspaceApi.reconcileExternalChanges(
+            snapshot.sessionId,
+            cloneNoteContent(snapshot.content),
+          ),
+        );
+        if (transitionChoice.kind === 'cancelled'
+          || pendingTransitionRef.current !== transition
+          || sessionRef.current?.sessionId !== currentSession.sessionId) {
+          const completedReconciliation = transitionChoice.kind === 'protect' || transitionChoice.kind === 'cancelled'
+            ? transitionChoice.result
+            : undefined;
+          // The host may have refreshed this same frozen note even when a new
+          // transition replaced the cancelled one. Sync its session without
+          // clearing or executing either pending navigation here.
+          synchronizeCancelledRefresh(completedReconciliation);
+          return;
+        }
+        if (transitionChoice.kind === 'continue') {
+          setDialogMessage('已核对已另存副本与当前冻结草稿一致；继续操作不会标记笔记库原件已保存。');
+        } else if (transitionChoice.kind === 'protect') {
+          const reconciliation = transitionChoice.result;
+          updateLibraryFromExternalResult(reconciliation.library);
+          if (reconciliation.status === 'conflict') {
+            externalConflictProtectedRef.current = true;
+            blockExternalSaving(protectedKind, reconciliation.message
+              ?? '最新草稿已保留为冲突版本。可以继续打开所选内容。');
+          } else if (reconciliation.status === 'refreshed' && reconciliation.session) {
+            if (needsDraftProtection) {
+              blockExternalSaving(protectedKind, reconciliation.message
+                ?? '无法确认当前草稿已进入保留版本区，因此未执行切换。');
+              setDialogMessage('当前草稿尚未确认已受到保护。可另存当前内容为副本，或稍后重试。');
+              return;
+            }
+            // This transition will replace the active session immediately after the
+            // protected draft is reconciled, so the refreshed base is not shown.
+            void refreshPreservedVersions();
+          } else if (reconciliation.status === 'unchanged') {
+            if (needsDraftProtection) {
+              blockExternalSaving(protectedKind, reconciliation.message
+                ?? '无法确认当前草稿已进入保留版本区，因此未执行切换。');
+              setDialogMessage('当前草稿尚未确认已受到保护。可另存当前内容为副本，或稍后重试。');
+              return;
+            }
+            void refreshPreservedVersions();
+          }
+        }
+      }
       clearPendingTransition(false);
       isAbandoningRef.current = false;
       operationInProgressRef.current = false;
       setIsAbandoning(false);
       setIsOperationBusy(false);
       await executeTransition(transition);
+    } catch (cause) {
+      if (pendingTransitionRef.current === transition) {
+        const operationError = toWorkspaceError(cause);
+        setError(operationError);
+        setDialogMessage(`无法安全继续：${operationError.message} 草稿和已保留版本仍在当前工作区。`);
+      }
     } finally {
       isAbandoningRef.current = false;
       operationInProgressRef.current = false;
       setIsAbandoning(false);
       setIsOperationBusy(false);
-      if (pendingTransitionRef.current !== transition) saveCoordinator.resumeAutomaticSaving();
+      if (pendingTransitionRef.current !== transition && !externalConflictRef.current) saveCoordinator.resumeAutomaticSaving();
     }
   };
 
   const cancelPendingTransition = () => clearPendingTransition();
+
+  const openLatestExternalVersion = () => {
+    const currentSession = sessionRef.current;
+    if (!currentSession || !externalConflictRef.current || externalReconcilePendingRef.current) return;
+    const transition: PendingTransition = {
+      label: '打开磁盘上的最新版本',
+      run: async () => applySession(await workspaceApi.openNote(currentSession.noteId)),
+    };
+    pendingTransitionRef.current = transition;
+    setPendingTransition(transition);
+    setDialogMessage('继续前会再次保护当前草稿，然后读取磁盘上的最新版本。');
+    void discardAndContinue();
+  };
+
+  const previewPreservedVersion = async (version: PreservedVersionSummary) => {
+    if (previewingVersionId !== null || externalReconcilePendingRef.current) return;
+    setPreservedVersionsError(null);
+    const transition: PendingTransition = {
+      label: `预览“${version.title || '未命名笔记'}”的保留版本`,
+      run: async () => {
+        const returnNoteId = sessionRef.current?.noteId ?? null;
+        setPreviewingVersionId(version.versionId);
+        try {
+          const preview = await workspaceApi.openPreservedVersion(version.versionId);
+          if (isTrashViewRef.current) setTrashView(false);
+          applySession(preview);
+          markActivePreservedPreview({
+            ...version,
+            sessionId: preview.sessionId,
+            returnNoteId,
+          });
+          void refreshPreservedVersions();
+        } finally {
+          setPreviewingVersionId(null);
+        }
+      },
+    };
+    if (externalConflictRef.current) {
+      pendingTransitionRef.current = transition;
+      setPendingTransition(transition);
+      setDialogMessage('继续前会再次保护当前草稿，然后在主编辑区只读预览所选版本。');
+      void discardAndContinue();
+      return;
+    }
+    requestTransition(transition);
+  };
+
+  const restorePreservedVersion = (version: PreservedVersionSummary) => {
+    if (externalReconcilePendingRef.current) return;
+    const transition: PendingTransition = {
+      label: `恢复“${version.title || '未命名笔记'}”为新笔记`,
+      run: async () => {
+        const receipt = await workspaceApi.restorePreservedAsCopy(version.versionId);
+        if (isTrashViewRef.current) {
+          setTrashView(false);
+          persistViewPreferences({ ...viewPreferencesRef.current, selectedNotebookId: null });
+        }
+        const currentWorkspace = workspaceRef.current;
+        if (currentWorkspace) updateWorkspace({ ...currentWorkspace, library: receipt.library, session: receipt.session });
+        applySession(receipt.session);
+        await refreshPreservedVersions();
+      },
+    };
+    if (externalConflictRef.current) {
+      pendingTransitionRef.current = transition;
+      setPendingTransition(transition);
+      setDialogMessage('继续前会再次保护当前草稿，并将所选版本恢复为独立新笔记。原保留版本会继续留存。');
+      void discardAndContinue();
+      return;
+    }
+    requestTransition(transition);
+  };
+
+  const savePreservedVersionAs = async (version: PreservedVersionSummary) => {
+    if (operationInProgressRef.current || externalReconcilePendingRef.current || isComposingRef.current) return;
+    try {
+      await settleEditors();
+    } catch (cause) {
+      setPreservedVersionsError(toWorkspaceError(cause));
+      return;
+    }
+    if (operationInProgressRef.current || externalReconcilePendingRef.current || isComposingRef.current) return;
+    operationInProgressRef.current = true;
+    flushSync(() => setIsOperationBusy(true));
+    setPreservedVersionsError(null);
+    try {
+      const copy = await workspaceApi.savePreservedAs(version.versionId);
+      if (copy) setPreservedCopyPaths((current) => ({ ...current, [version.versionId]: copy.path }));
+    } catch (cause) {
+      setPreservedVersionsError(toWorkspaceError(cause));
+    } finally {
+      operationInProgressRef.current = false;
+      setIsOperationBusy(false);
+    }
+  };
+
+  const markPreservedVersionHandled = async (version: PreservedVersionSummary) => {
+    if (preservedVersionActionBusy || externalReconcilePendingRef.current) return;
+    setPreservedVersionActionBusy(true);
+    setPreservedVersionsError(null);
+    try {
+      await workspaceApi.resolvePreservedVersion(version.versionId);
+      await refreshPreservedVersions();
+    } catch (cause) {
+      setPreservedVersionsError(toWorkspaceError(cause));
+    } finally {
+      setPreservedVersionActionBusy(false);
+    }
+  };
+
+  const openPreviewDestination = (noteId: string | null) => {
+    if (!noteId) return;
+    const library = workspaceRef.current?.library;
+    const note = library?.notes.find((item) => item.noteId === noteId)
+      ?? library?.trashNotes.find((item) => item.noteId === noteId);
+    if (note) {
+      setTrashView(note.trashedAt !== null);
+      openNote(note.noteId, note.title);
+    }
+  };
+
+  const closePreservedPreview = () => {
+    const preview = activePreservedPreviewRef.current;
+    if (!preview) return;
+    const library = workspaceRef.current?.library;
+    const returnNote = preview.returnNoteId
+      ? library?.notes.find((note) => note.noteId === preview.returnNoteId)
+        ?? library?.trashNotes.find((note) => note.noteId === preview.returnNoteId)
+      : null;
+    const sourceNote = library?.notes.find((note) => note.noteId === preview.noteId)
+      ?? library?.trashNotes.find((note) => note.noteId === preview.noteId);
+    const target = returnNote ?? sourceNote;
+    if (target) openPreviewDestination(target.noteId);
+    else setError({ kind: 'workspace', message: '此保留版本的原笔记已不在当前库中。请从侧栏打开另一篇笔记，或将版本恢复为新笔记。' });
+  };
 
   const requestClose = () => {
     if (!desktopRuntime) return;
@@ -589,6 +1104,7 @@ function App() {
         if (active) setIsInitializing(false);
       });
     void refreshRecoveryDrafts();
+    void refreshPreservedVersions();
 
     return () => {
       active = false;
@@ -599,6 +1115,7 @@ function App() {
     if (!desktopRuntime || isInitializing) return;
     let active = true;
     let unlisten: (() => void) | null = null;
+    let unlistenFilesChanged: (() => void) | null = null;
     setCloseGuardReady(false);
 
     void listen('cuenote:close-requested', () => {
@@ -617,10 +1134,33 @@ function App() {
         if (active) setError(toWorkspaceError(cause));
       });
 
+    const externalChanges = externalChangesCoordinatorRef.current;
+    const scheduleExternalProbe = () => externalChanges?.schedule();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') scheduleExternalProbe();
+    };
+    window.addEventListener('focus', scheduleExternalProbe);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    void listen('cuenote:files-changed', scheduleExternalProbe)
+      .then((stopListening) => {
+        if (!active) {
+          stopListening();
+          return;
+        }
+        unlistenFilesChanged = stopListening;
+      })
+      .catch((cause: unknown) => {
+        if (active) setError(toWorkspaceError(cause));
+      });
+    externalChanges?.schedule();
+
     return () => {
       active = false;
       setCloseGuardReady(false);
       unlisten?.();
+      unlistenFilesChanged?.();
+      window.removeEventListener('focus', scheduleExternalProbe);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [isInitializing]);
 
@@ -628,6 +1168,11 @@ function App() {
     saveCoordinator.resume();
     return () => saveCoordinator.dispose();
   }, [saveCoordinator]);
+
+  useEffect(() => {
+    externalChangesCoordinator.resume();
+    return () => externalChangesCoordinator.dispose();
+  }, [externalChangesCoordinator]);
 
   useEffect(() => {
     if (!pendingTransition) return;
@@ -703,8 +1248,11 @@ function App() {
     if (operationInProgressRef.current || isAbandoningRef.current) return;
     const current = draftRef.current;
     const currentSession = sessionRef.current;
-    if (!current || !currentSession || isTrashViewRef.current || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
+    if (!current || !currentSession || isTrashViewRef.current || currentSession.readOnlyReason || currentSession.trashedAt !== null
+      || activePreservedPreviewRef.current?.sessionId === currentSession.sessionId) return;
     const next = { ...current, title: value };
+    externalConflictProtectedRef.current = false;
+    externalChangesCoordinator.noteInputChanged();
     draftRef.current = next;
     setDraft(next);
     if (!isComposingRef.current && !hasEditorIssue()) saveCoordinator.edit(currentSession.sessionId, cloneNoteContent(next));
@@ -714,8 +1262,11 @@ function App() {
     if (operationInProgressRef.current || isAbandoningRef.current) return;
     const current = draftRef.current;
     const currentSession = sessionRef.current;
-    if (!current || !currentSession || isTrashViewRef.current || currentSession.readOnlyReason || currentSession.trashedAt !== null) return;
+    if (!current || !currentSession || isTrashViewRef.current || currentSession.readOnlyReason || currentSession.trashedAt !== null
+      || activePreservedPreviewRef.current?.sessionId === currentSession.sessionId) return;
     const next = cloneNoteContent({ ...current, sections: { ...current.sections, [section]: blocks } });
+    externalConflictProtectedRef.current = false;
+    externalChangesCoordinator.noteInputChanged();
     draftRef.current = next;
     setDraft(next);
     if (!isComposingRef.current && !hasEditorIssue()) saveCoordinator.edit(currentSession.sessionId, cloneNoteContent(next));
@@ -739,7 +1290,7 @@ function App() {
     };
     const assertEditable = () => {
       const current = assertSession();
-      if (current.readOnlyReason || current.trashedAt !== null || isTrashViewRef.current
+      if (current.readOnlyReason || current.trashedAt !== null || activePreservedPreviewRef.current?.sessionId === sessionId || isTrashViewRef.current
         || operationInProgressRef.current || isAbandoningRef.current || hasEditorIssue()) {
         throw new Error('当前笔记暂时无法插入图片。已有内容保持不变。');
       }
@@ -796,6 +1347,7 @@ function App() {
     const assertEditable = () => {
       const current = sessionRef.current;
       if (!current || current.sessionId !== sessionId || current.readOnlyReason
+        || activePreservedPreviewRef.current?.sessionId === sessionId
         || current.trashedAt !== null || isTrashViewRef.current || operationInProgressRef.current
         || isAbandoningRef.current || hasEditorIssue()) {
         throw new Error('当前笔记暂时无法编辑导图。已有内容保持不变。');
@@ -835,6 +1387,8 @@ function App() {
   };
 
   const handleCompositionStart = () => {
+    externalConflictProtectedRef.current = false;
+    externalChangesCoordinator.noteInputChanged();
     isComposingRef.current = true;
     setIsComposing(true);
     void pauseAutomaticSaving();
@@ -930,7 +1484,8 @@ function App() {
 
   const trashCurrentNote = () => {
     const currentSession = sessionRef.current;
-    if (!currentSession || currentSession.trashedAt !== null) return;
+    if (!currentSession || currentSession.trashedAt !== null
+      || activePreservedPreviewRef.current?.sessionId === currentSession.sessionId) return;
     requestTransition({
       label: `将“${noteTitle(currentSession.text)}”移入回收站`,
       run: async () => {
@@ -1077,7 +1632,8 @@ function App() {
     event.preventDefault();
     const currentDialog = notebookDialog;
     const currentLibrary = workspaceRef.current?.library;
-    if (!currentDialog || currentDialog.mode === 'delete' || !currentLibrary || isNotebookBusy || operationInProgressRef.current) return;
+    if (!currentDialog || currentDialog.mode === 'delete' || !currentLibrary || isNotebookBusy
+      || operationInProgressRef.current || externalReconcilePendingRef.current) return;
     const name = currentDialog.name.trim();
     if (!name) {
       setNotebookDialogError('请输入笔记本名称。');
@@ -1114,7 +1670,7 @@ function App() {
   };
 
   const deleteNotebook = async (notebookId: string) => {
-    if (isNotebookBusy || operationInProgressRef.current) return;
+    if (isNotebookBusy || operationInProgressRef.current || externalReconcilePendingRef.current) return;
     setIsNotebookBusy(true);
     operationInProgressRef.current = true;
     setIsOperationBusy(true);
@@ -1142,7 +1698,7 @@ function App() {
     label,
     run: async () => {
       const currentSession = sessionRef.current;
-      if (!currentSession) return;
+      if (!currentSession || activePreservedPreviewRef.current?.sessionId === currentSession.sessionId) return;
       const receipt = await workspaceApi.updateNoteOrganization(currentSession.sessionId, notebookId, pinned);
       const currentWorkspace = workspaceRef.current;
       updateSessionMetadata(receipt.session);
@@ -1160,7 +1716,7 @@ function App() {
   };
 
   const openLibraryFolder = async () => {
-    if (isInitializing || operationInProgressRef.current) return;
+    if (isInitializing || operationInProgressRef.current || externalReconcilePendingRef.current) return;
     operationInProgressRef.current = true;
     setIsOperationBusy(true);
     setError(null);
@@ -1192,7 +1748,8 @@ function App() {
   const hasAnyEditorIssue = Boolean(editorIssue);
   const hasInitialIssue = Object.values(editorIssues).some((issue) => issue?.initial);
   const hasBlockingIssue = Object.values(editorIssues).some((issue) => issue !== null && !issue.initial);
-  const displayedTitle = session?.readOnlyReason ? session.text.title : displayedDraft?.title;
+  const isActivePreservedPreview = Boolean(activePreservedPreview && session?.sessionId === activePreservedPreview.sessionId);
+  const displayedTitle = session?.readOnlyReason || isActivePreservedPreview ? session?.text.title : displayedDraft?.title;
   const sessionNotebookName = session
     ? isTrashSession
       ? session.notebookId === null
@@ -1202,7 +1759,7 @@ function App() {
         ?? library?.defaultNotebookName
         ?? '默认笔记本'
     : null;
-  const isReadOnly = Boolean(session?.readOnlyReason || session?.trashedAt);
+  const isReadOnly = Boolean(session?.readOnlyReason || session?.trashedAt || isActivePreservedPreview);
   const isSaving = saveState.phase === 'saving';
   const saveFailed = saveState.phase === 'failed' || saveState.phase === 'conflict';
   const isDirty = Boolean(sessionMatchesView && session && draft && !isReadOnly && (
@@ -1210,12 +1767,12 @@ function App() {
       ? saveState.isDirty
       : session.revision === null || !sameContent(draft, savedContent))
   ));
-  const navigationLocked = isInitializing || isOperationBusy || isNotebookBusy || pendingTransition !== null || trashDialog !== null;
+  const navigationLocked = isInitializing || isOperationBusy || isReconcilingExternalChange || isNotebookBusy || pendingTransition !== null || trashDialog !== null;
   const editingLocked = !desktopRuntime || isInitializing || isOperationBusy || isAbandoning || !closeGuardReady || isTrashView || isTrashSession || !sessionMatchesView || hasAnyEditorIssue;
   const sectionCanEdit = (section: RichTextSection) => {
     const ownIssue = editorIssues[section];
     return desktopRuntime && !isInitializing && !isOperationBusy && !isAbandoning && closeGuardReady
-      && !isTrashView && !isTrashSession && sessionMatchesView && !session?.readOnlyReason
+      && !isTrashView && !isTrashSession && sessionMatchesView && !isReadOnly
       && (!hasAnyEditorIssue || Boolean(ownIssue && !ownIssue.initial && !hasInitialIssue));
   };
   const canDiscardAfterCopy = Boolean(currentCopy && session && draft
@@ -1232,6 +1789,16 @@ function App() {
     ? '只读文字投影，原件保持不变'
     : editorIssue
       ? '内容无法安全转换，保存已暂停'
+    : isReconcilingExternalChange
+      ? '正在整理编辑器并检查磁盘版本'
+    : externalConflict
+      ? !externalConflictProtectedRef.current
+        ? '保存已暂停；当前草稿仍在本页，尚未确认独立保存'
+        : externalConflictKind === 'missing'
+          ? '文件已移除，草稿已保存到本机恢复区'
+          : externalConflictKind === 'unreadable'
+            ? '无法读取文件，草稿已保存到本机恢复区'
+            : '外部版本冲突，草稿已保存到本机恢复区'
     : pendingEditorOperationCount > 0
       ? '正在处理内容，完成后自动保存'
     : isSaving
@@ -1269,7 +1836,7 @@ function App() {
 
   const renderSectionEditor = (section: RichTextSection) => {
     if (!session || !draft) return null;
-    if (session.readOnlyReason && !isTrashSession) {
+    if (session.readOnlyReason && !isTrashSession && !isActivePreservedPreview) {
       const projection = session.text[section];
       return (
         <textarea
@@ -1536,7 +2103,7 @@ function App() {
                 {library ? '更换笔记库' : '选择笔记库'}
               </button>
               {library && (
-                <button className="quiet-button" type="button" disabled={isInitializing || isOperationBusy} onClick={openLibraryFolder}>
+                <button className="quiet-button" type="button" disabled={isInitializing || isOperationBusy || isReconcilingExternalChange} onClick={openLibraryFolder}>
                   打开笔记库目录
                 </button>
               )}
@@ -1595,9 +2162,22 @@ function App() {
                 <span className="eyebrow">本机恢复区</span>
                 <h2 id="recovery-panel-title">可恢复草稿</h2>
               </div>
-              <button className="text-button" type="button" disabled={recoveryLoading} onClick={() => void refreshRecoveryDrafts()}>
-                {recoveryLoading ? '正在读取…' : '刷新'}
-              </button>
+              <div className="preserved-panel-heading-actions">
+                <button
+                  className={`quiet-button${preservedVersionsOpen ? ' is-active' : ''}`}
+                  type="button"
+                  aria-expanded={preservedVersionsOpen}
+                  aria-controls="preserved-versions-panel"
+                  onClick={() => {
+                    const open = !preservedVersionsOpen;
+                    setPreservedVersionsOpen(open);
+                    if (open) void refreshPreservedVersions();
+                  }}
+                >历史与冲突{preservedVersions?.versions.length ? ` · ${preservedVersions.versions.length}` : ''}</button>
+                <button className="text-button" type="button" disabled={recoveryLoading} onClick={() => void refreshRecoveryDrafts()}>
+                  {recoveryLoading ? '正在读取…' : '刷新草稿'}
+                </button>
+              </div>
             </div>
             {recoveryError && renderError(recoveryError)}
             {recoveryLoading && !recoveryList && <p className="recovery-empty">正在读取恢复区。</p>}
@@ -1639,6 +2219,62 @@ function App() {
             ) : recoveryList && recoveryList.drafts.length === 0 ? (
               <p className="recovery-empty">当前没有可恢复草稿。恢复区无法读取时会在这里明确提示，不会当作空列表。</p>
             ) : null}
+            {preservedVersionsOpen && (
+              <section className="preserved-versions-panel" id="preserved-versions-panel" aria-labelledby="preserved-versions-title">
+                <div className="preserved-versions-heading">
+                  <div>
+                    <span className="eyebrow">已保存版本与冲突副本</span>
+                    <h3 id="preserved-versions-title">历史与冲突</h3>
+                  </div>
+                  <button
+                    className="text-button"
+                    type="button"
+                    disabled={preservedVersionsLoading}
+                    onClick={() => void refreshPreservedVersions()}
+                  >{preservedVersionsLoading ? '正在读取…' : '刷新版本'}</button>
+                </div>
+                {externalConflict && (
+                  <div className="external-conflict-notice" role="status">
+                    <strong>{externalConflictKind === 'missing' ? '笔记文件已移除' : externalConflictKind === 'unreadable' ? '无法读取笔记文件' : '磁盘版本与草稿冲突'}</strong>
+                    <p>{externalMessage ?? '草稿仍保留在当前页面，自动保存和切换已暂停。'}</p>
+                    {externalConflictKind === 'conflict' && (
+                      <button className="quiet-button" type="button" disabled={isOperationBusy || isReconcilingExternalChange || isComposing} onClick={openLatestExternalVersion}>
+                        打开磁盘最新版本…
+                      </button>
+                    )}
+                  </div>
+                )}
+                {preservedVersionsError && renderError(preservedVersionsError)}
+                {preservedVersionsLoading && !preservedVersions && <p className="recovery-empty">正在读取保留版本。</p>}
+                {preservedVersions?.warnings.map((warning, index) => (
+                  <div className="workspace-notice" role="status" key={`${index}-${warning}`}>{warning}</div>
+                ))}
+                {preservedVersions?.versions.length ? (
+                  <ul className="recovery-list preserved-version-list">
+                    {preservedVersions.versions.map((version) => (
+                      <li className="recovery-item preserved-version-item" key={version.versionId}>
+                        <div className="recovery-copy">
+                          <strong>{version.title || '未命名笔记'}{version.conflict ? <span className="preserved-conflict-tag">冲突副本</span> : null}</strong>
+                          <span>{preservedVersionReason(version)} · {formatModifiedAt(version.savedAt)}</span>
+                          <span>保存来源：{version.origin} · 源版本：{version.sourceRevision}</span>
+                        </div>
+                        <div className="recovery-actions">
+                          <button className="quiet-button" type="button" disabled={previewingVersionId !== null || navigationLocked || isTransitionSaving} onClick={() => void previewPreservedVersion(version)}>{previewingVersionId === version.versionId ? '正在读取…' : '预览'}</button>
+                          <button className="quiet-button" type="button" disabled={!library || navigationLocked} onClick={() => restorePreservedVersion(version)}>恢复为新笔记</button>
+                          <button className="quiet-button" type="button" disabled={isOperationBusy || isReconcilingExternalChange || isComposing} onClick={() => void savePreservedVersionAs(version)}>另存为…</button>
+                          <button className="text-button" type="button" disabled={preservedVersionActionBusy || isReconcilingExternalChange} onClick={() => void markPreservedVersionHandled(version)}>{preservedVersionActionBusy ? '正在处理…' : '标记已处理'}</button>
+                        </div>
+                        {preservedCopyPaths[version.versionId] && (
+                          <p className="recovery-saved-path" role="status">已另存完整版本：<code>{preservedCopyPaths[version.versionId]}</code></p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : preservedVersions && preservedVersions.versions.length === 0 ? (
+                  <p className="recovery-empty">当前没有历史版本或冲突副本。</p>
+                ) : null}
+              </section>
+            )}
           </section>
         )}
 
@@ -1717,7 +2353,7 @@ function App() {
                     <select
                       aria-label="移动当前笔记到笔记本"
                       value={session.notebookId ?? library.defaultNotebookId}
-                      disabled={navigationLocked}
+                      disabled={navigationLocked || isReadOnly}
                       onChange={(event) => moveCurrentNote(event.currentTarget.value)}
                     >
                       {notebooks.map((notebook) => (
@@ -1730,7 +2366,7 @@ function App() {
                     type="button"
                     aria-label={session.pinned ? '取消置顶当前笔记' : '置顶当前笔记'}
                     aria-pressed={session.pinned}
-                    disabled={navigationLocked}
+                    disabled={navigationLocked || isReadOnly}
                     onClick={() => updateCurrentNoteOrganization(
                       session.notebookId ?? library.defaultNotebookId,
                       !session.pinned,
@@ -1743,7 +2379,7 @@ function App() {
                     className="quiet-button destructive-quiet move-to-trash-button"
                     type="button"
                     data-testid="move-to-trash"
-                    disabled={navigationLocked}
+                    disabled={navigationLocked || isReadOnly}
                     onClick={trashCurrentNote}
                   >移入回收站</button>
                 </div>
@@ -1768,10 +2404,21 @@ function App() {
               )}
             </div>
             {isReadOnly && (
-              <div className="readonly-notice" role="status">
-                <strong>这篇笔记以只读方式打开</strong>
-                <p>{session.readOnlyReason}</p>
-                {!isTrashSession && <span>当前版本暂不支持编辑其中的全部内容，原文件保持完整。</span>}
+              <div className={`readonly-notice${isActivePreservedPreview ? ' preserved-preview-notice' : ''}`} role="status">
+                <strong>{isActivePreservedPreview ? '正在主编辑区只读预览保留版本' : '这篇笔记以只读方式打开'}</strong>
+                <p>{isActivePreservedPreview
+                  ? `${activePreservedPreview?.title || '未命名笔记'} · ${activePreservedPreview ? preservedVersionReason(activePreservedPreview) : ''} · ${activePreservedPreview ? formatModifiedAt(activePreservedPreview.savedAt) : ''}。此版本不会覆盖笔记库原件。`
+                  : session.readOnlyReason}</p>
+                {!isTrashSession && !isActivePreservedPreview && <span>当前版本暂不支持编辑其中的全部内容；原文件保持完整。</span>}
+                {isActivePreservedPreview && (
+                  <div className="preserved-preview-actions">
+                    <button className="quiet-button" type="button" disabled={navigationLocked} onClick={closePreservedPreview}>关闭预览</button>
+                    {(library?.notes.some((note) => note.noteId === activePreservedPreview?.noteId)
+                      || library?.trashNotes.some((note) => note.noteId === activePreservedPreview?.noteId)) && (
+                      <button className="quiet-button" type="button" disabled={navigationLocked} onClick={() => openPreviewDestination(activePreservedPreview?.noteId ?? null)}>打开笔记库中的原笔记</button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             <section className="title-preview editable-title" aria-labelledby="note-title-label" data-testid="editor-section-title">
@@ -1783,7 +2430,7 @@ function App() {
                     id="note-title-input"
                     className="title-input"
                     aria-label="笔记标题"
-                    value={session.readOnlyReason ? session.text.title : draft.title}
+                    value={isReadOnly ? session.text.title : draft.title}
                     placeholder="输入笔记标题"
                     readOnly={isReadOnly || hasAnyEditorIssue}
                     disabled={editingLocked}
@@ -1814,6 +2461,8 @@ function App() {
               <div className="save-controls">
                 <span className="save-hint">{isTrashSession
                   ? '回收站中的笔记为只读；恢复后可继续编辑。'
+                  : isActivePreservedPreview
+                    ? '当前为完整保留版本的只读预览，可恢复为新笔记或另存完整副本。'
                   : session.readOnlyReason || hasInitialIssue
                     ? '这篇笔记包含当前编辑器无法安全转换的内容；文字投影只读，可另存完整副本。'
                   : hasAnyEditorIssue
@@ -1821,8 +2470,8 @@ function App() {
                   : isReadOnly
                     ? '当前笔记只读显示。'
                   : '停止输入约 1 秒后自动保存；使用 Ctrl / ⌘ + S 可立即保存。'}</span>
-                {!isTrashSession && (saveFailed && !isReadOnly || session.readOnlyReason || hasInitialIssue) && (
-                  <button className="quiet-button safe-copy-button" type="button" disabled={isOperationBusy || hasAnyEditorIssue && !hasInitialIssue} onClick={() => void saveCurrentAs()}>
+                {!isTrashSession && (externalConflict || saveFailed && !isReadOnly || session.readOnlyReason || hasInitialIssue) && (
+                  <button className="quiet-button safe-copy-button" type="button" disabled={isOperationBusy || isReconcilingExternalChange || hasAnyEditorIssue && !hasInitialIssue} onClick={() => void saveCurrentAs()}>
                     {session.readOnlyReason || hasInitialIssue ? '另存完整副本…' : '另存当前草稿…'}
                   </button>
                 )}
@@ -1841,10 +2490,10 @@ function App() {
               <button
                 className="primary-button save-button"
                 type="button"
-                disabled={editingLocked || isSaving || isReadOnly || hasAnyEditorIssue || (!isDirty && !saveFailed)}
+                disabled={editingLocked || isReconcilingExternalChange || isSaving || isReadOnly || externalConflict || hasAnyEditorIssue || (!isDirty && !saveFailed)}
                 onClick={() => void saveCurrent()}
               >
-                {editorIssue?.initial ? '只读内容' : editorIssue ? '内容无法保存' : isSaving ? '正在保存…' : saveFailed ? '重试保存' : isDirty ? '立即保存' : session.revision === null ? '尚未保存' : '已保存到本地'}
+                {externalConflict ? '先处理外部版本' : editorIssue?.initial ? '只读内容' : editorIssue ? '内容无法保存' : isSaving ? '正在保存…' : saveFailed ? '重试保存' : isDirty ? '立即保存' : session.revision === null ? '尚未保存' : '已保存到本地'}
               </button>
             </div>
           </article>
@@ -1859,7 +2508,7 @@ function App() {
       {pendingTransition && (
         <div className="dialog-backdrop">
           <div
-            className="unsaved-dialog"
+            className={`unsaved-dialog${externalConflict ? ' external-conflict-dialog' : ''}`}
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="unsaved-dialog-title"
@@ -1880,32 +2529,61 @@ function App() {
                 此次草稿已另存到：<code>{currentCopy.path}</code>。这不代表笔记库原件已保存。
               </p>
             )}
+            {externalConflict && (
+              <section className="conflict-dialog-versions" aria-label="受保护的历史与冲突版本">
+                <p>{externalConflictProtectedRef.current
+                  ? '草稿和磁盘原件均已保留。可预览保留版本、恢复为新笔记，或明确打开磁盘最新版本。'
+                  : '当前草稿仍留在本页面。正在尝试保护草稿；也可先将当前内容另存为副本。'}</p>
+                {preservedVersions?.versions.slice(0, 3).map((version) => (
+                  <div className="conflict-dialog-version" key={version.versionId}>
+                    <span><strong>{version.title || '未命名笔记'}</strong>{version.conflict ? ' · 冲突副本' : ' · 历史版本'}</span>
+                    <div className="recovery-actions">
+                      <button className="quiet-button" type="button" disabled={previewingVersionId !== null || isOperationBusy || isTransitionSaving || isReconcilingExternalChange} onClick={() => void previewPreservedVersion(version)}>{previewingVersionId === version.versionId ? '正在读取…' : '预览'}</button>
+                      <button className="quiet-button" type="button" disabled={!library || isOperationBusy || isTransitionSaving || isComposing || isReconcilingExternalChange} onClick={() => restorePreservedVersion(version)}>恢复为新笔记</button>
+                    </div>
+                  </div>
+                ))}
+                {externalConflictKind === 'conflict' && (
+                  <button className="quiet-button" type="button" disabled={isOperationBusy || isReconcilingExternalChange || isComposing} onClick={openLatestExternalVersion}>
+                    打开磁盘最新版本…
+                  </button>
+                )}
+              </section>
+            )}
             {notebookDialogError && <div className="notebook-dialog-error" role="alert">笔记本操作未完成：{notebookDialogError}</div>}
             {error && renderError(error)}
             <div className="dialog-actions">
-              <button
-                className="primary-button"
-                type="button"
-                disabled={isTransitionSaving || isOperationBusy || isWaitingForOperation || isInitializing || isReadOnly || !session}
-                onClick={() => void attemptTransitionAfterSave(pendingTransition)}
-              >
-                {isWaitingForOperation ? '等待当前操作…' : isTransitionSaving ? '正在保存…' : pendingTransition.close ? '重试保存并关闭' : '重试保存并继续'}
-              </button>
-              {((saveFailed && !isReadOnly) || Boolean(session?.readOnlyReason || hasInitialIssue)) && (
-                <button className="quiet-button" type="button" disabled={isOperationBusy || isWaitingForOperation || isInitializing} onClick={() => void saveCurrentAs()}>
+              {!externalConflict && (
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={isTransitionSaving || isOperationBusy || isWaitingForOperation || isInitializing || isReadOnly || !session}
+                  onClick={() => void attemptTransitionAfterSave(pendingTransition)}
+                >
+                  {isWaitingForOperation ? '等待当前操作…' : isTransitionSaving ? '正在保存…' : pendingTransition.close ? '重试保存并关闭' : '重试保存并继续'}
+                </button>
+              )}
+              {(externalConflict || (saveFailed && !isReadOnly) || Boolean(session?.readOnlyReason || hasInitialIssue)) && (
+                <button className="quiet-button" type="button" disabled={isOperationBusy || isReconcilingExternalChange || isWaitingForOperation || isInitializing} onClick={() => void saveCurrentAs()}>
                   {session?.readOnlyReason || hasInitialIssue ? '另存完整副本…' : '另存当前草稿…'}
                 </button>
               )}
-              {session && !isReadOnly && (isDirty || saveFailed) && (
+              {session && !isReadOnly && (externalConflict || isDirty || saveFailed) && (
                 <button
                   className="quiet-button destructive-quiet"
                   type="button"
-                  disabled={isTransitionSaving || isOperationBusy || isSaving || isComposing || isWaitingForOperation || isInitializing}
+                  disabled={isTransitionSaving || isOperationBusy || isReconcilingExternalChange || isSaving || isComposing || isWaitingForOperation || isInitializing}
                   onClick={() => void discardAndContinue()}
                 >
                   {isAbandoning
                     ? '正在等待磁盘写入…'
-                    : `${canDiscardAfterCopy ? '已另存当前快照；' : ''}放弃本机修改并${pendingTransition.close ? '关闭' : '继续'}`}
+                    : externalConflict
+                      ? externalConflictProtectedRef.current
+                        ? `使用已保护草稿并${pendingTransition.close ? '关闭' : '继续'}`
+                        : canDiscardAfterCopy
+                          ? `已另存当前快照；${pendingTransition.close ? '关闭' : '继续'}`
+                          : `先保护当前草稿并${pendingTransition.close ? '关闭' : '继续'}`
+                      : `${canDiscardAfterCopy ? '已另存当前快照；' : ''}放弃本机修改并${pendingTransition.close ? '关闭' : '继续'}`}
                 </button>
               )}
               <button className="text-button" type="button" data-dialog-cancel onClick={cancelPendingTransition}>
@@ -1933,7 +2611,7 @@ function App() {
                 {notebookDialogError && <div className="notebook-dialog-error" role="alert">{notebookDialogError}</div>}
                 <div className="dialog-actions">
                   <button className="quiet-button" type="button" disabled={isNotebookBusy} onClick={() => setNotebookDialog(null)}>取消</button>
-                  <button className="quiet-button destructive-quiet" type="button" disabled={isNotebookBusy} onClick={() => void deleteNotebook(notebookDialog.notebookId)}>
+                  <button className="quiet-button destructive-quiet" type="button" disabled={isNotebookBusy || isReconcilingExternalChange} onClick={() => void deleteNotebook(notebookDialog.notebookId)}>
                     {isNotebookBusy ? '正在删除…' : '删除笔记本'}
                   </button>
                 </div>
@@ -1950,14 +2628,14 @@ function App() {
                     aria-label="笔记本名称"
                     maxLength={120}
                     value={notebookDialog.name}
-                    disabled={isNotebookBusy}
+                    disabled={isNotebookBusy || isReconcilingExternalChange}
                     onChange={(event) => setNotebookDialog({ ...notebookDialog, name: event.currentTarget.value })}
                   />
                 </label>
                 {notebookDialogError && <div className="notebook-dialog-error" role="alert">{notebookDialogError}</div>}
                 <div className="dialog-actions">
                   <button className="quiet-button" type="button" disabled={isNotebookBusy} onClick={() => setNotebookDialog(null)}>取消</button>
-                  <button className="primary-button" type="submit" disabled={isNotebookBusy || !notebookDialog.name.trim()}>
+                  <button className="primary-button" type="submit" disabled={isNotebookBusy || isReconcilingExternalChange || !notebookDialog.name.trim()}>
                     {isNotebookBusy ? '正在保存…' : notebookDialog.mode === 'create' ? '创建笔记本' : '保存名称'}
                   </button>
                 </div>
@@ -2046,6 +2724,7 @@ function App() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

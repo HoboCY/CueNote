@@ -411,8 +411,19 @@ fn a_permanent_delete_lock_failure_keeps_the_package_and_active_session() {
         .join(format!("{}.cuenote", note.note_id));
     let original_bytes = std::fs::read(&package_path).unwrap();
     let locks_directory = recovery.join(".locks");
-    std::fs::rename(&locks_directory, recovery.join(".locks-preserved")).unwrap();
-    std::fs::write(&locks_directory, b"not a directory").unwrap();
+    let canonical_target = std::fs::canonicalize(package_path.parent().unwrap())
+        .unwrap()
+        .join(package_path.file_name().unwrap());
+    let target_key = format!(
+        "{:x}",
+        Sha256::digest(canonical_target.to_string_lossy().to_lowercase().as_bytes())
+    );
+    let save_lock = locks_directory.join(format!("{target_key}.lock"));
+    let preserved_lock = locks_directory.join(format!("{target_key}.lock-preserved"));
+    // Fail only this target's save-lock open. Do not move .locks: it also
+    // contains the active baseline VersionLease handle on Windows.
+    std::fs::rename(&save_lock, &preserved_lock).unwrap();
+    std::fs::create_dir(&save_lock).unwrap();
 
     let error = workspace
         .delete_trashed_note(&trashed.session.session_id, true)

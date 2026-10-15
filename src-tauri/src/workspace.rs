@@ -17,6 +17,10 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+mod external;
+pub use crate::storage::versions::{PreservedVersionSummary, VersionList};
+pub use external::{ExternalProbe, ExternalReconciliation};
+
 pub type WorkspaceError = StorageError;
 
 const LIBRARY_SCHEMA_VERSION: u32 = 1;
@@ -173,6 +177,9 @@ struct ActiveNoteSession {
     asset_stash: Option<AssetStash>,
     baseline_revision: Option<String>,
     notebook_id: Option<String>,
+    baseline_witness: Option<storage::versions::VersionLease>,
+    preserved_preview: bool,
+    external_conflict: bool,
 }
 
 /// Coordinates one selected library and at most one host-owned editor session.
@@ -210,7 +217,9 @@ impl Workspace {
     }
 
     pub fn snapshot(&mut self) -> Result<WorkspaceView, WorkspaceError> {
+        let mut recovery_warnings = Vec::new();
         if !self.initialized {
+            recovery_warnings = storage::recover_pending_publications(&self.recovery_root)?;
             self.initialized = true;
             match self.read_latest_preference() {
                 Ok(Some(preference)) => {
@@ -332,12 +341,19 @@ impl Workspace {
                 &library.path,
                 &library.notebooks,
                 &library.default_notebook_id,
+                &self.recovery_root,
             ) {
                 Ok(view) => library.view = view,
                 Err(error) => {
                     library.view.warnings = vec![format!("无法刷新笔记列表：{}", error.message)]
                 }
             }
+        }
+        if !recovery_warnings.is_empty() {
+            if let Some(notice) = self.notice.take() {
+                recovery_warnings.push(notice);
+            }
+            self.notice = Some(recovery_warnings.join("\n"));
         }
         Ok(self.view())
     }
@@ -431,6 +447,9 @@ impl Workspace {
             asset_stash: None,
             baseline_revision: None,
             notebook_id: Some(assigned_notebook_id),
+            baseline_witness: None,
+            preserved_preview: false,
+            external_conflict: false,
         });
         self.last_note_id = Some(view.note_id.clone());
         Ok(view)
@@ -469,6 +488,12 @@ impl Workspace {
             (notebook_id, read_only_reason)
         };
         let view = note_session_from_opened(note_id, &opened, read_only_reason.clone());
+        let baseline_witness = storage::versions::lease_observed_version(
+            &self.recovery_root,
+            &opened,
+            &display_path(&path),
+            "打开的笔记版本",
+        )?;
         if view.trashed_at.is_none() {
             self.persist_preference(&library_path, Some(note_id), &self.preferences)?;
             self.last_note_id = Some(note_id.to_owned());
@@ -480,6 +505,9 @@ impl Workspace {
             asset_stash: None,
             baseline_revision: Some(opened.revision),
             notebook_id,
+            baseline_witness: Some(baseline_witness),
+            preserved_preview: false,
+            external_conflict: false,
         });
         Ok(view)
     }
@@ -638,14 +666,18 @@ impl Workspace {
         ) {
             Ok(revision) => (revision, None),
             Err(error) => match storage::open_note(&note_path) {
-                Ok(published) if published.package == candidate => (
-                    published.revision,
-                    Some(format!(
-                        "笔记已移入回收站并通过重读校验，但保存后步骤报告错误：{}",
-                        error.message
-                    )),
-                ),
-                _ => return Err(error),
+                Ok(published)
+                    if error.kind == "postPublishCleanup" && published.package == candidate =>
+                {
+                    (
+                        published.revision,
+                        Some(format!(
+                            "笔记已移入回收站并通过重读校验，但保存后步骤报告错误：{}",
+                            error.message
+                        )),
+                    )
+                }
+                _ => return Err(self.retain_save_conflict(error)),
             },
         };
 
@@ -669,6 +701,7 @@ impl Workspace {
         active.view.trashed_at = candidate.document.organization.trashed_at.clone();
         active.view.read_only_reason = read_only_reason;
         active.view.revision = Some(revision);
+        active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
         self.last_note_id = None;
@@ -683,27 +716,31 @@ impl Workspace {
             });
 
         let library = self.library.as_mut().expect("library checked above");
-        let mut receipt_library =
-            match scan_library(&library_path, &library.notebooks, &default_notebook_id) {
-                Ok(view) => {
-                    library.view = view.clone();
-                    view
-                }
-                Err(error) => {
-                    let mut view = library.view.clone();
-                    view.notes.retain(|note| note.note_id != note_id);
-                    view.trash_notes.retain(|note| note.note_id != note_id);
-                    view.trash_notes
-                        .push(note_summary_from_package(&note_id, &candidate));
-                    sort_trash_notes(&mut view.trash_notes);
-                    push_warning(
-                        &mut view.warnings,
-                        format!("笔记已移入回收站，但无法刷新笔记列表：{}", error.message),
-                    );
-                    library.view = view.clone();
-                    view
-                }
-            };
+        let mut receipt_library = match scan_library(
+            &library_path,
+            &library.notebooks,
+            &default_notebook_id,
+            &self.recovery_root,
+        ) {
+            Ok(view) => {
+                library.view = view.clone();
+                view
+            }
+            Err(error) => {
+                let mut view = library.view.clone();
+                view.notes.retain(|note| note.note_id != note_id);
+                view.trash_notes.retain(|note| note.note_id != note_id);
+                view.trash_notes
+                    .push(note_summary_from_package(&note_id, &candidate));
+                sort_trash_notes(&mut view.trash_notes);
+                push_warning(
+                    &mut view.warnings,
+                    format!("笔记已移入回收站，但无法刷新笔记列表：{}", error.message),
+                );
+                library.view = view.clone();
+                view
+            }
+        };
         if let Some(warning) = publish_warning {
             push_warning(&mut receipt_library.warnings, warning);
         }
@@ -792,14 +829,18 @@ impl Workspace {
         ) {
             Ok(revision) => (revision, None),
             Err(error) => match storage::open_note(&note_path) {
-                Ok(published) if published.package == candidate => (
-                    published.revision,
-                    Some(format!(
-                        "笔记已恢复并通过重读校验，但保存后步骤报告错误：{}",
-                        error.message
-                    )),
-                ),
-                _ => return Err(error),
+                Ok(published)
+                    if error.kind == "postPublishCleanup" && published.package == candidate =>
+                {
+                    (
+                        published.revision,
+                        Some(format!(
+                            "笔记已恢复并通过重读校验，但保存后步骤报告错误：{}",
+                            error.message
+                        )),
+                    )
+                }
+                _ => return Err(self.retain_save_conflict(error)),
             },
         };
 
@@ -821,6 +862,7 @@ impl Workspace {
         active.view.trashed_at = None;
         active.view.read_only_reason = read_only_reason;
         active.view.revision = Some(revision);
+        active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
         self.last_note_id = Some(note_id.clone());
@@ -830,27 +872,31 @@ impl Workspace {
             .map(|error| format!("笔记已恢复，但无法更新本机上次笔记设置：{}", error.message));
 
         let library = self.library.as_mut().expect("library checked above");
-        let mut receipt_library =
-            match scan_library(&library_path, &library.notebooks, &default_notebook_id) {
-                Ok(view) => {
-                    library.view = view.clone();
-                    view
-                }
-                Err(error) => {
-                    let mut view = library.view.clone();
-                    view.trash_notes.retain(|note| note.note_id != note_id);
-                    view.notes.retain(|note| note.note_id != note_id);
-                    view.notes
-                        .push(note_summary_from_package(&note_id, &candidate));
-                    sort_note_summaries(&mut view.notes);
-                    push_warning(
-                        &mut view.warnings,
-                        format!("笔记已恢复，但无法刷新笔记列表：{}", error.message),
-                    );
-                    library.view = view.clone();
-                    view
-                }
-            };
+        let mut receipt_library = match scan_library(
+            &library_path,
+            &library.notebooks,
+            &default_notebook_id,
+            &self.recovery_root,
+        ) {
+            Ok(view) => {
+                library.view = view.clone();
+                view
+            }
+            Err(error) => {
+                let mut view = library.view.clone();
+                view.trash_notes.retain(|note| note.note_id != note_id);
+                view.notes.retain(|note| note.note_id != note_id);
+                view.notes
+                    .push(note_summary_from_package(&note_id, &candidate));
+                sort_note_summaries(&mut view.notes);
+                push_warning(
+                    &mut view.warnings,
+                    format!("笔记已恢复，但无法刷新笔记列表：{}", error.message),
+                );
+                library.view = view.clone();
+                view
+            }
+        };
         if let Some(warning) = publish_warning {
             push_warning(&mut receipt_library.warnings, warning);
         }
@@ -911,7 +957,8 @@ impl Workspace {
             &self.recovery_root,
             &candidate,
             session.baseline_revision.as_deref(),
-        )?;
+        )
+        .map_err(|error| self.retain_save_conflict(error))?;
 
         let active = self
             .session
@@ -931,6 +978,7 @@ impl Workspace {
         active.view.text = text;
         active.view.content = active.package.content();
         active.view.revision = Some(revision);
+        active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
         let library = self.library.as_mut().expect("library checked above");
@@ -938,6 +986,7 @@ impl Workspace {
             &library_path,
             &library.notebooks,
             &library.default_notebook_id,
+            &self.recovery_root,
         ) {
             Ok(view) => {
                 library.view = view.clone();
@@ -1116,14 +1165,18 @@ impl Workspace {
         ) {
             Ok(revision) => (revision, None),
             Err(error) => match storage::open_note(&note_path) {
-                Ok(published) if published.package == candidate => (
-                    published.revision,
-                    Some(format!(
-                        "笔记已保存并通过重读校验，但保存后步骤报告错误：{}",
-                        error.message
-                    )),
-                ),
-                _ => return Err(error),
+                Ok(published)
+                    if error.kind == "postPublishCleanup" && published.package == candidate =>
+                {
+                    (
+                        published.revision,
+                        Some(format!(
+                            "笔记已保存并通过重读校验，但保存后步骤报告错误：{}",
+                            error.message
+                        )),
+                    )
+                }
+                _ => return Err(self.retain_save_conflict(error)),
             },
         };
 
@@ -1143,6 +1196,7 @@ impl Workspace {
         active.view.assets = candidate.manifest.assets.clone();
         active.view.text = candidate.text_projection();
         active.view.revision = Some(revision);
+        active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
         let library = self.library.as_mut().expect("library checked above");
@@ -1150,6 +1204,7 @@ impl Workspace {
             &library_path,
             &library.notebooks,
             &library.default_notebook_id,
+            &self.recovery_root,
         ) {
             Ok(view) => {
                 library.view = view.clone();
@@ -1201,7 +1256,12 @@ impl Workspace {
         let published_notebook = notebook.clone();
         let metadata_path = library_path.join("notebooks");
         notebooks.insert(notebook_id, notebook);
-        let view = scan_library(&library_path, &notebooks, &default_notebook_id)?;
+        let view = scan_library(
+            &library_path,
+            &notebooks,
+            &default_notebook_id,
+            &self.recovery_root,
+        )?;
         publish_notebook_metadata(&metadata_path, &published_notebook)?;
         let library = self.library.as_mut().expect("library checked above");
         library.notebooks = notebooks;
@@ -1255,7 +1315,12 @@ impl Workspace {
             StorageError::new("libraryMetadata", format!("无法编码笔记本元数据：{error}"))
         })?;
         notebooks.insert(notebook_id.to_owned(), notebook);
-        let view = scan_library(&library_path, &notebooks, &default_notebook_id)?;
+        let view = scan_library(
+            &library_path,
+            &notebooks,
+            &default_notebook_id,
+            &self.recovery_root,
+        )?;
         storage::replace_metadata_file(&metadata_path, &expected_bytes, &candidate_bytes)?;
 
         let library = self.library.as_mut().expect("library checked above");
@@ -1316,7 +1381,12 @@ impl Workspace {
             ));
         }
         notebooks.remove(notebook_id);
-        let mut view = scan_library(&library_path, &notebooks, &default_notebook_id)?;
+        let mut view = scan_library(
+            &library_path,
+            &notebooks,
+            &default_notebook_id,
+            &self.recovery_root,
+        )?;
         let (_, current_bytes) = read_notebook_metadata_file(&library_path, notebook_id)?;
         if current_bytes != expected_bytes {
             return Err(StorageError::new(
@@ -1457,14 +1527,18 @@ impl Workspace {
         ) {
             Ok(revision) => (revision, None),
             Err(error) => match storage::open_note(&note_path) {
-                Ok(published) if published.package == candidate => (
-                    published.revision,
-                    Some(format!(
-                        "笔记组织信息已完整发布并校验，但保存后步骤报告错误：{}",
-                        error.message
-                    )),
-                ),
-                _ => return Err(error),
+                Ok(published)
+                    if error.kind == "postPublishCleanup" && published.package == candidate =>
+                {
+                    (
+                        published.revision,
+                        Some(format!(
+                            "笔记组织信息已完整发布并校验，但保存后步骤报告错误：{}",
+                            error.message
+                        )),
+                    )
+                }
+                _ => return Err(self.retain_save_conflict(error)),
             },
         };
 
@@ -1484,25 +1558,30 @@ impl Workspace {
         active.view.notebook_id = Some(notebook_id.to_owned());
         active.view.pinned = pinned;
         active.view.revision = Some(revision);
+        active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
         let library = self.library.as_mut().expect("library checked above");
-        let mut receipt_library =
-            match scan_library(&library_path, &library.notebooks, &default_notebook_id) {
-                Ok(view) => {
-                    library.view = view.clone();
-                    view
-                }
-                Err(error) => {
-                    let mut view = library.view.clone();
-                    push_warning(
-                        &mut view.warnings,
-                        format!("笔记组织信息已保存，但无法刷新列表：{}", error.message),
-                    );
-                    library.view = view.clone();
-                    view
-                }
-            };
+        let mut receipt_library = match scan_library(
+            &library_path,
+            &library.notebooks,
+            &default_notebook_id,
+            &self.recovery_root,
+        ) {
+            Ok(view) => {
+                library.view = view.clone();
+                view
+            }
+            Err(error) => {
+                let mut view = library.view.clone();
+                push_warning(
+                    &mut view.warnings,
+                    format!("笔记组织信息已保存，但无法刷新列表：{}", error.message),
+                );
+                library.view = view.clone();
+                view
+            }
+        };
         if let Some(warning) = publish_warning {
             push_warning(&mut receipt_library.warnings, warning);
             library.view.warnings = receipt_library.warnings.clone();
@@ -1583,20 +1662,24 @@ impl Workspace {
         self.session = None;
 
         let library = self.library.as_mut().expect("library checked above");
-        let mut updated =
-            match scan_library(&library_path, &library.notebooks, &default_notebook_id) {
-                Ok(view) => view,
-                Err(error) => {
-                    let mut view = library.view.clone();
-                    view.notes.retain(|note| note.note_id != note_id);
-                    view.trash_notes.retain(|note| note.note_id != note_id);
-                    push_warning(
-                        &mut view.warnings,
-                        format!("笔记文件已永久删除，但无法刷新笔记列表：{}", error.message),
-                    );
-                    view
-                }
-            };
+        let mut updated = match scan_library(
+            &library_path,
+            &library.notebooks,
+            &default_notebook_id,
+            &self.recovery_root,
+        ) {
+            Ok(view) => view,
+            Err(error) => {
+                let mut view = library.view.clone();
+                view.notes.retain(|note| note.note_id != note_id);
+                view.trash_notes.retain(|note| note.note_id != note_id);
+                push_warning(
+                    &mut view.warnings,
+                    format!("笔记文件已永久删除，但无法刷新笔记列表：{}", error.message),
+                );
+                view
+            }
+        };
         if let Some(warning) = deletion_warning {
             push_warning(&mut updated.warnings, warning);
         }
@@ -1726,6 +1809,12 @@ impl Workspace {
             &library.notebooks,
         );
         let session = note_session_from_opened(&note_id, &restored, read_only_reason);
+        let baseline_witness = storage::versions::lease_observed_version(
+            &self.recovery_root,
+            &restored,
+            &display_path(&path),
+            "恢复后保存的笔记版本",
+        )?;
         self.session = Some(ActiveNoteSession {
             view: session.clone(),
             path,
@@ -1733,6 +1822,9 @@ impl Workspace {
             asset_stash: None,
             baseline_revision: Some(restored.revision),
             notebook_id: Some(default_notebook_id.clone()),
+            baseline_witness: Some(baseline_witness),
+            preserved_preview: false,
+            external_conflict: false,
         });
         self.last_note_id = Some(note_id.clone());
         self.notice = preference_warning.clone();
@@ -1740,6 +1832,7 @@ impl Workspace {
             &library_path,
             &library.notebooks,
             &library.default_notebook_id,
+            &self.recovery_root,
         ) {
             Ok(view) => {
                 library.view = view.clone();
@@ -1999,7 +2092,12 @@ impl Workspace {
             .expect("exactly one default notebook was checked")
             .id
             .clone();
-        let view = scan_library(&canonical, &metadata, &default_notebook_id)?;
+        let view = scan_library(
+            &canonical,
+            &metadata,
+            &default_notebook_id,
+            &self.recovery_root,
+        )?;
         Ok(LibraryState {
             path: canonical,
             notebooks: metadata,
@@ -2441,6 +2539,21 @@ impl Drop for ActiveNoteSession {
 }
 
 impl ActiveNoteSession {
+    fn retain_baseline(&mut self, recovery_root: &Path) -> Result<(), WorkspaceError> {
+        if let Some(revision) = &self.baseline_revision {
+            self.baseline_witness = Some(storage::versions::lease_observed_version(
+                recovery_root,
+                &OpenedNote {
+                    package: self.package.clone(),
+                    revision: revision.clone(),
+                },
+                &display_path(&self.path),
+                "当前已保存版本",
+            )?);
+        }
+        Ok(())
+    }
+
     fn release_asset_stash(&mut self) -> Result<(), WorkspaceError> {
         let Some(stash) = self.asset_stash.as_ref() else {
             return Ok(());
@@ -2803,6 +2916,7 @@ fn scan_library(
     library_path: &Path,
     notebooks: &BTreeMap<String, NotebookMetadata>,
     default_notebook_id: &str,
+    recovery_root: &Path,
 ) -> Result<LibraryView, WorkspaceError> {
     let notes_path = library_path.join("notes");
     let mut entries = secure_read_dir(library_path, &notes_path)?;
@@ -2817,7 +2931,7 @@ fn scan_library(
     let mut trash_notes = Vec::new();
     let mut warnings = Vec::new();
     let mut seen_file_ids = HashSet::new();
-    let mut seen_package_ids = HashMap::<String, bool>::new();
+    let mut seen_package_ids = HashMap::<String, (String, String, bool)>::new();
     let mut omitted_warnings = 0usize;
     for entry in entries {
         let path = entry.path();
@@ -2854,22 +2968,6 @@ fn scan_library(
             );
             continue;
         };
-        if !is_canonical_uuid_v4(stem) {
-            push_warning_counted(
-                &mut warnings,
-                &mut omitted_warnings,
-                format!("笔记文件名不是有效身份，已跳过：{}", display_path(&path)),
-            );
-            continue;
-        }
-        if !seen_file_ids.insert(stem.to_owned()) {
-            push_warning_counted(
-                &mut warnings,
-                &mut omitted_warnings,
-                format!("发现重复笔记身份，已跳过后续文件：{stem}"),
-            );
-            continue;
-        }
         let opened = match storage::open_note(&path) {
             Ok(opened) => opened,
             Err(error) => {
@@ -2882,9 +2980,39 @@ fn scan_library(
             }
         };
         let package_id = opened.package.document.note_id.clone();
-        let previously_canonical = seen_package_ids.get(&package_id).copied();
-        let duplicate_package_id = previously_canonical.is_some();
-        if duplicate_package_id {
+        let origin = display_path(&path);
+        // Index only versions which have a durable independent witness. Failure
+        // leaves the original untouched and warns instead of claiming protection.
+        if let Err(error) = storage::versions::preserve_observed_version(
+            recovery_root,
+            &opened,
+            &origin,
+            "笔记库中取得的有效版本",
+        ) {
+            push_warning_counted(
+                &mut warnings,
+                &mut omitted_warnings,
+                format!("无法保留笔记 {}，已跳过索引：{}", origin, error.message),
+            );
+            continue;
+        }
+        let previous = seen_package_ids.get(&package_id).cloned();
+        if let Some((revision, previous_origin, _)) = &previous {
+            if revision != &opened.revision {
+                storage::versions::pin_observed_version(
+                    recovery_root,
+                    revision,
+                    previous_origin,
+                    &package_id,
+                    "重复身份的另一版本",
+                )?;
+                storage::versions::preserve_conflict_version(
+                    recovery_root,
+                    &opened,
+                    &origin,
+                    "重复身份的不同版本",
+                )?;
+            }
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
@@ -2894,19 +3022,31 @@ fn scan_library(
                 ),
             );
         }
-        if opened.package.document.note_id != stem {
-            seen_package_ids.entry(package_id).or_insert(false);
+        if !is_canonical_uuid_v4(stem) || package_id != stem {
+            storage::versions::preserve_conflict_version(
+                recovery_root,
+                &opened,
+                &origin,
+                "非标准文件名或同步冲突副本",
+            )?;
+            seen_package_ids
+                .entry(package_id)
+                .or_insert((opened.revision.clone(), origin, false));
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
-                format!("笔记文件名与内容身份不一致，已跳过：{stem}"),
+                format!("笔记文件名与内容身份不一致，已保留到历史与冲突：{stem}"),
             );
             continue;
         }
-        if previously_canonical == Some(true) {
+        if previous
+            .as_ref()
+            .is_some_and(|(_, _, canonical)| *canonical)
+            || !seen_file_ids.insert(stem.to_owned())
+        {
             continue;
         }
-        seen_package_ids.insert(package_id, true);
+        seen_package_ids.insert(package_id, (opened.revision.clone(), origin, true));
         let notebook_id = opened.package.document.organization.notebook_id.as_deref();
         let trashed_at = opened.package.document.organization.trashed_at.clone();
         if trashed_at.is_none() && notebook_id.is_none() {

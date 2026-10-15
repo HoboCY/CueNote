@@ -1,4 +1,5 @@
 mod commands;
+mod file_watch;
 pub mod note_format;
 pub mod storage;
 mod storage_faults;
@@ -59,12 +60,16 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(CloseGate::default())
+        .manage(file_watch::LibraryWatch::default())
         .setup(|app| {
             let workspace: commands::WorkspaceState = Arc::new(Mutex::new(create_workspace(app)?));
             app.manage(workspace);
             Ok(())
         })
         .on_window_event(|window, event| {
+            if let tauri::WindowEvent::Focused(true) = event {
+                let _ = window.emit("cuenote:files-changed", ());
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.state::<CloseGate>().needs_confirmation() {
                     api.prevent_close();
@@ -101,6 +106,13 @@ pub fn run() {
             commands::save_current_as,
             commands::save_current_content_as,
             commands::save_recovery_as,
+            commands::probe_external_changes,
+            commands::reconcile_external_changes,
+            commands::list_preserved_versions,
+            commands::open_preserved_version,
+            commands::restore_preserved_as_copy,
+            commands::resolve_preserved_version,
+            commands::save_preserved_as,
         ])
         .build(tauri::generate_context!())
         .expect("error while building CueNote")

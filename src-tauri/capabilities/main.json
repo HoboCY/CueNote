@@ -32,6 +32,13 @@
     "allow-save-current-as",
     "allow-save-current-content-as",
     "allow-save-recovery-as",
+    "allow-probe-external-changes",
+    "allow-reconcile-external-changes",
+    "allow-list-preserved-versions",
+    "allow-open-preserved-version",
+    "allow-restore-preserved-as-copy",
+    "allow-resolve-preserved-version",
+    "allow-save-preserved-as",
     "core:event:allow-listen",
     "core:event:allow-unlisten"
   ]

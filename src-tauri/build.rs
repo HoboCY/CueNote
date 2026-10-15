@@ -29,6 +29,13 @@ fn main() {
             "save_current_as",
             "save_current_content_as",
             "save_recovery_as",
+            "probe_external_changes",
+            "reconcile_external_changes",
+            "list_preserved_versions",
+            "open_preserved_version",
+            "restore_preserved_as_copy",
+            "resolve_preserved_version",
+            "save_preserved_as",
         ]));
 
     tauri_build::try_build(attributes).expect("failed to build Tauri application metadata");

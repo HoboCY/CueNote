@@ -88,6 +88,40 @@ export interface SavedCopy {
   revision: string;
 }
 
+export type ExternalChangeStatus = 'unchanged' | 'changed' | 'missing' | 'unreadable';
+
+export interface ExternalChangeProbe {
+  sessionId: string | null;
+  status: ExternalChangeStatus;
+  revision: string | null;
+  message: string | null;
+  library: LibraryView | null;
+}
+
+export interface ExternalChangeReconciliation {
+  status: 'unchanged' | 'refreshed' | 'conflict';
+  session: NoteSession | null;
+  library: LibraryView;
+  message: string | null;
+}
+
+export interface PreservedVersionSummary {
+  versionId: string;
+  noteId: string;
+  title: string;
+  savedAt: string;
+  sourceRevision: string;
+  revision: string;
+  origin: string;
+  reason: string;
+  conflict: boolean;
+}
+
+export interface PreservedVersionList {
+  versions: PreservedVersionSummary[];
+  warnings: string[];
+}
+
 export const workspaceApi = {
   get: () => invoke<WorkspaceView>('get_workspace'),
   useDefault: () => invoke<WorkspaceView>('use_default_library'),
@@ -129,6 +163,19 @@ export const workspaceApi = {
     invoke<SaveReceipt>('restore_recovery_as_copy', { recoveryId }),
   saveRecoveryAs: (recoveryId: string) =>
     invoke<SavedCopy | null>('save_recovery_as', { recoveryId }),
+  probeExternalChanges: (sessionId: string | null) =>
+    invoke<ExternalChangeProbe>('probe_external_changes', { sessionId }),
+  reconcileExternalChanges: (sessionId: string, content: NoteContent) =>
+    invoke<ExternalChangeReconciliation>('reconcile_external_changes', { sessionId, content }),
+  listPreservedVersions: () => invoke<PreservedVersionList>('list_preserved_versions'),
+  openPreservedVersion: (versionId: string) =>
+    invoke<NoteSession>('open_preserved_version', { versionId }),
+  restorePreservedAsCopy: (versionId: string) =>
+    invoke<SaveReceipt>('restore_preserved_as_copy', { versionId }),
+  savePreservedAs: (versionId: string) =>
+    invoke<SavedCopy | null>('save_preserved_as', { versionId }),
+  resolvePreservedVersion: (versionId: string) =>
+    invoke<void>('resolve_preserved_version', { versionId }),
   saveCurrentAs: (sessionId: string, content: NoteContent) =>
     invoke<SavedCopy | null>('save_current_content_as', { sessionId, content }),
   activateCloseGuard: () => invoke<void>('activate_close_guard'),

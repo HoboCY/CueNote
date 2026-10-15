@@ -638,6 +638,29 @@ button:focus-visible {
 .recovery-saved-path { grid-column: 1 / -1; margin: 0; color: #628173; font-size: 9px; line-height: 1.6; overflow-wrap: anywhere; }
 .recovery-saved-path code, .safe-copy-path code { overflow-wrap: anywhere; white-space: normal; }
 .recovery-empty { margin: 8px 2px 2px; }
+.preserved-panel-heading-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 5px; }
+.preserved-panel-heading-actions .quiet-button { min-height: 30px; padding: 0 9px; }
+.preserved-panel-heading-actions .quiet-button.is-active { border-color: #b8cec1; background: #edf3eb; color: var(--teal-dark); }
+.preserved-versions-panel { display: grid; gap: 10px; margin-top: 17px; padding-top: 15px; border-top: 1px solid #e0e5dc; }
+.preserved-versions-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.preserved-versions-heading h3 { margin: 3px 0 0; color: #405c52; font: 600 14px/1.4 Georgia, "Songti SC", serif; }
+.preserved-version-item { align-items: start; }
+.preserved-version-item .recovery-copy { overflow-wrap: anywhere; }
+.preserved-version-item .recovery-copy span { overflow-wrap: anywhere; }
+.preserved-version-item .recovery-actions { max-width: 430px; }
+.preserved-version-item .recovery-actions .quiet-button { min-height: 30px; padding: 0 9px; }
+.preserved-conflict-tag { display: inline-flex; margin-left: 7px; padding: 2px 6px; border: 1px solid #e4c8be; border-radius: 999px; background: #fbf2ee; color: #875d52; font-size: 8px; font-weight: 550; vertical-align: middle; }
+.external-conflict-notice { display: grid; justify-items: start; gap: 6px; padding: 11px 12px; border: 1px solid #e5c9bd; border-radius: 9px; background: #fbf2ed; color: #78594f; }
+.external-conflict-notice strong { font-size: 10px; }
+.external-conflict-notice p { margin: 0; color: #876c62; font-size: 9px; line-height: 1.6; overflow-wrap: anywhere; }
+.conflict-dialog-versions { display: grid; gap: 8px; margin-top: 15px; padding: 12px; border: 1px solid #e5e1d4; border-radius: 9px; background: #f8f7ef; }
+.conflict-dialog-versions > p { margin: 0 0 2px; color: #6f7d73; font-size: 9px; line-height: 1.6; }
+.conflict-dialog-version { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 9px; border: 1px solid #e6e8df; border-radius: 7px; background: #fffdf7; color: #728078; font-size: 9px; }
+.conflict-dialog-version strong { color: #40584f; }
+.external-conflict-dialog { width: min(680px, 100%); max-height: calc(100vh - 40px); overflow: auto; }
+.preserved-preview-notice { display: grid; justify-items: start; gap: 6px; }
+.preserved-preview-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.preserved-preview-actions .quiet-button { min-height: 30px; padding: 0 9px; }
 .save-controls { display: grid; justify-items: start; gap: 7px; min-width: 0; }
 .save-controls .error-notice { margin: 0; }
 .safe-copy-button { min-height: 30px; }
@@ -683,6 +706,13 @@ button:focus-visible {
   .content-panel .rich-editor-prose { min-height: 200px; }
   .cue-panel .rich-editor-prose { min-height: 120px; }
   .unsaved-dialog { padding: 20px; }
+  .preserved-panel-heading-actions { justify-content: flex-end; }
+  .preserved-versions-heading { align-items: flex-start; }
+  .preserved-version-item { grid-template-columns: minmax(0, 1fr); }
+  .preserved-version-item .recovery-actions { justify-content: flex-start; max-width: none; }
+  .conflict-dialog-version { align-items: flex-start; flex-direction: column; }
+  .preserved-preview-actions { align-items: stretch; flex-direction: column; }
+  .preserved-preview-actions .quiet-button { width: 100%; }
   .dialog-actions { align-items: stretch; flex-direction: column; }
   .dialog-actions > button { width: 100%; }
   .dialog-actions .text-button { margin-left: 0; }

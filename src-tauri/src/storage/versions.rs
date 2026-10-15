@@ -1,0 +1,1512 @@
+use super::{
+    digest_bytes, inspect_note, is_link_or_reparse, open_read_nofollow, sync_directory_chain,
+    write_and_verify_package, OpenedNote, ResolvedTarget, StorageError,
+};
+use chrono::{DateTime, SecondsFormat, Utc};
+use serde::{Deserialize, Serialize};
+use std::fs::{self, File, OpenOptions};
+use std::io::{self, Read, Write};
+use std::path::{Component, Path, PathBuf};
+use uuid::Uuid;
+
+const VERSIONS_DIRECTORY: &str = "versions";
+const GROUPS_DIRECTORY: &str = "groups";
+const LOCKS_DIRECTORY: &str = ".locks";
+const STORE_LOCK_NAME: &str = "versions.lock";
+const PACKAGE_NAME: &str = "note.cuenote";
+const METADATA_NAME: &str = "metadata.json";
+const RESOLVED_NAME: &str = "resolved";
+const RESOLVED_MARKER: &[u8] = b"cuenote-preserved-version-resolved-v1\n";
+const VERSION_METADATA_LIMIT: u64 = 64 * 1024;
+const VERSION_TEXT_LIMIT: usize = 16 * 1024;
+const TITLE_DISPLAY_CHARACTERS: usize = 180;
+const VERSION_SCAN_LIMIT: usize = 100_000;
+const WARNING_LIMIT: usize = 100;
+const VERSION_SCHEMA: u32 = 1;
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PreservedVersionSummary {
+    pub version_id: String,
+    pub note_id: String,
+    pub title: String,
+    pub saved_at: String,
+    pub source_revision: String,
+    pub revision: String,
+    pub origin: String,
+    pub reason: String,
+    pub conflict: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct VersionList {
+    pub versions: Vec<PreservedVersionSummary>,
+    pub warnings: Vec<String>,
+}
+
+#[derive(Debug)]
+pub struct PreservedNote {
+    pub summary: PreservedVersionSummary,
+    pub opened: OpenedNote,
+    pub path: PathBuf,
+}
+
+/// Holds a shared lock on a durable observed version while an editor uses it.
+/// Dropping the lease only releases the OS lock; it never removes version data.
+#[derive(Debug)]
+pub struct VersionLease {
+    pub version_id: String,
+    lock: File,
+}
+
+impl Drop for VersionLease {
+    fn drop(&mut self) {
+        let _ = self.lock.unlock();
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct VersionMetadata {
+    schema_version: u32,
+    version_id: String,
+    note_id: String,
+    title: String,
+    saved_at: String,
+    source_revision: String,
+    revision: String,
+    origin: String,
+    origin_key: String,
+    reason: String,
+    conflict: bool,
+}
+
+impl VersionMetadata {
+    fn summary(&self) -> PreservedVersionSummary {
+        PreservedVersionSummary {
+            version_id: self.version_id.clone(),
+            note_id: self.note_id.clone(),
+            title: self.title.clone(),
+            saved_at: self.saved_at.clone(),
+            source_revision: self.source_revision.clone(),
+            revision: self.revision.clone(),
+            origin: self.origin.clone(),
+            reason: self.reason.clone(),
+            conflict: self.conflict,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct StoredVersion {
+    metadata: VersionMetadata,
+    opened: OpenedNote,
+    path: PathBuf,
+}
+
+#[derive(Debug)]
+struct StoreOutcome {
+    version_id: String,
+    created: bool,
+}
+
+pub fn preserve_observed_version(
+    root: &Path,
+    opened: &OpenedNote,
+    origin: &str,
+    reason: &str,
+) -> Result<(), StorageError> {
+    let root = prepare_root(root, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备版本存储目录。"))?;
+    let versions = ensure_child_directory(&root, VERSIONS_DIRECTORY, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备已保存版本目录。"))?;
+    let _store_lock = acquire_store_lock(&root, false)?;
+    let outcome = store_version_locked(&versions, opened, origin, reason, false)?;
+    if outcome.created {
+        rotate_observed_versions_locked(
+            &root,
+            &versions,
+            &outcome.version_id,
+            &opened.package.document.note_id,
+            &normalize_origin(origin)?.1,
+        );
+    }
+    Ok(())
+}
+
+pub fn preserve_conflict_version(
+    root: &Path,
+    opened: &OpenedNote,
+    origin: &str,
+    reason: &str,
+) -> Result<(), StorageError> {
+    let root = prepare_root(root, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备版本存储目录。"))?;
+    let versions = ensure_child_directory(&root, VERSIONS_DIRECTORY, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备已保存版本目录。"))?;
+    let _store_lock = acquire_store_lock(&root, false)?;
+    store_version_locked(&versions, opened, origin, reason, true)?;
+    Ok(())
+}
+
+pub fn lease_observed_version(
+    root: &Path,
+    opened: &OpenedNote,
+    origin: &str,
+    reason: &str,
+) -> Result<VersionLease, StorageError> {
+    let root = prepare_root(root, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备版本存储目录。"))?;
+    let versions = ensure_child_directory(&root, VERSIONS_DIRECTORY, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备已保存版本目录。"))?;
+    let _store_lock = acquire_store_lock(&root, false)?;
+    let outcome = store_version_locked(&versions, opened, origin, reason, false)?;
+    let lock = acquire_version_lock(&root, &outcome.version_id, true)?;
+    if outcome.created {
+        rotate_observed_versions_locked(
+            &root,
+            &versions,
+            &outcome.version_id,
+            &opened.package.document.note_id,
+            &normalize_origin(origin)?.1,
+        );
+    }
+    Ok(VersionLease {
+        version_id: outcome.version_id,
+        lock,
+    })
+}
+
+/// Pins a previously observed package as a conflict without consulting its mutable origin.
+pub fn pin_observed_version(
+    root: &Path,
+    source_revision: &str,
+    origin: &str,
+    note_id: &str,
+    reason: &str,
+) -> Result<(), StorageError> {
+    validate_note_id(note_id)?;
+    validate_revision(source_revision, "sourceRevision")?;
+    let (_, origin_key) = normalize_origin(origin)?;
+    validate_display_text(reason, "reason")?;
+
+    let root = prepare_root(root, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备版本存储目录。"))?;
+    let versions = ensure_child_directory(&root, VERSIONS_DIRECTORY, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备已保存版本目录。"))?;
+    let _store_lock = acquire_store_lock(&root, false)?;
+    let observed_id = make_version_id(false, note_id, source_revision, &origin_key)?;
+    let observed = read_stored_version(&versions, &observed_id).map_err(|error| {
+        if error.kind == "versionNotFound" {
+            StorageError::new(
+                "versionConflict",
+                "找不到与指定基线一致的已保存观察版本；没有读取可变来源文件。",
+            )
+        } else {
+            error
+        }
+    })?;
+    if observed.metadata.conflict
+        || observed.metadata.note_id != note_id
+        || observed.metadata.source_revision != source_revision
+        || observed.metadata.origin_key != origin_key
+    {
+        return Err(StorageError::new(
+            "versionConflict",
+            "找不到与指定基线一致的已保存观察版本；没有读取可变来源文件。",
+        ));
+    }
+    let opened = OpenedNote {
+        package: observed.opened.package,
+        revision: source_revision.to_owned(),
+    };
+    store_version_locked(&versions, &opened, origin, reason, true)?;
+    Ok(())
+}
+
+pub fn list_versions(root: &Path) -> Result<VersionList, StorageError> {
+    let Some(root) = prepare_root(root, false)? else {
+        return Ok(VersionList {
+            versions: Vec::new(),
+            warnings: Vec::new(),
+        });
+    };
+    let Some(versions_directory) = ensure_child_directory(&root, VERSIONS_DIRECTORY, false)? else {
+        return Ok(VersionList {
+            versions: Vec::new(),
+            warnings: Vec::new(),
+        });
+    };
+    let _store_lock = acquire_store_lock(&root, true)?;
+    let mut versions = Vec::new();
+    let mut warnings = Vec::new();
+    let entries = fs::read_dir(&versions_directory)
+        .map_err(|error| StorageError::io("无法扫描已保存版本目录", error))?;
+    let mut scanned = 0usize;
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(_) => {
+                push_warning(
+                    &mut warnings,
+                    "无法读取一个版本目录项；相关数据已保留。".into(),
+                );
+                continue;
+            }
+        };
+        scanned += 1;
+        ensure_scan_limit(scanned)?;
+        let Some(id) = entry.file_name().to_str().map(str::to_owned) else {
+            push_warning(
+                &mut warnings,
+                "发现无法识别的版本目录项；相关数据已保留。".into(),
+            );
+            continue;
+        };
+        if id == GROUPS_DIRECTORY {
+            let metadata = fs::symlink_metadata(entry.path())
+                .map_err(|error| StorageError::io("无法检查版本分组目录", error))?;
+            if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+                push_warning(
+                    &mut warnings,
+                    "版本分组索引不是实际目录；相关数据已保留。".into(),
+                );
+            }
+            continue;
+        }
+        if !is_lower_hex(&id, 64) {
+            push_warning(
+                &mut warnings,
+                "发现未识别的版本目录项；相关数据已保留且未打开。".into(),
+            );
+            continue;
+        }
+        match read_metadata(&versions_directory, &id) {
+            Ok(metadata) => {
+                match read_resolved_marker(&version_directory(&versions_directory, &id)) {
+                    Ok(true) => {}
+                    Ok(false) => versions.push(metadata.summary()),
+                    Err(_) => {
+                        push_warning(
+                            &mut warnings,
+                            "一个版本的处理标记无法验证；该版本仍显示为待处理。".into(),
+                        );
+                        versions.push(metadata.summary());
+                    }
+                }
+            }
+            Err(_) => push_warning(
+                &mut warnings,
+                "一个版本的元数据无法验证；相关数据已保留。".into(),
+            ),
+        }
+    }
+    versions.sort_by(|left, right| {
+        right
+            .saved_at
+            .cmp(&left.saved_at)
+            .then_with(|| left.version_id.cmp(&right.version_id))
+    });
+    Ok(VersionList { versions, warnings })
+}
+
+pub fn open_version(root: &Path, version_id: &str) -> Result<PreservedNote, StorageError> {
+    validate_version_id(version_id)?;
+    let root = prepare_root(root, false)?
+        .ok_or_else(|| StorageError::new("versionNotFound", "已保存版本不存在。"))?;
+    let versions = ensure_child_directory(&root, VERSIONS_DIRECTORY, false)?
+        .ok_or_else(|| StorageError::new("versionNotFound", "已保存版本不存在。"))?;
+    let _store_lock = acquire_store_lock(&root, true)?;
+    let stored = read_stored_version(&versions, version_id)?;
+    Ok(PreservedNote {
+        summary: stored.metadata.summary(),
+        opened: stored.opened,
+        path: stored.path,
+    })
+}
+
+pub fn resolve_version(root: &Path, version_id: &str) -> Result<(), StorageError> {
+    validate_version_id(version_id)?;
+    let root = prepare_root(root, false)?
+        .ok_or_else(|| StorageError::new("versionNotFound", "已保存版本不存在。"))?;
+    let versions = ensure_child_directory(&root, VERSIONS_DIRECTORY, false)?
+        .ok_or_else(|| StorageError::new("versionNotFound", "已保存版本不存在。"))?;
+    let _store_lock = acquire_store_lock(&root, false)?;
+    let _stored = read_stored_version(&versions, version_id)?;
+    let directory = version_directory(&versions, version_id);
+    match read_resolved_marker(&directory) {
+        Ok(true) => return Ok(()),
+        Ok(false) => {}
+        Err(error) => return Err(error),
+    }
+    let marker = directory.join(RESOLVED_NAME);
+    let mut file = create_new_file(&marker, true)?;
+    file.write_all(RESOLVED_MARKER)
+        .and_then(|_| file.flush())
+        .and_then(|_| file.sync_all())
+        .map_err(|error| StorageError::io("无法同步版本处理标记", error))?;
+    sync_directory_chain(&directory).map_err(|error| {
+        StorageError::io(
+            "版本已标记处理，但无法确认目录同步；版本内容仍已保留",
+            error,
+        )
+    })?;
+    Ok(())
+}
+
+fn store_version_locked(
+    versions: &Path,
+    opened: &OpenedNote,
+    origin: &str,
+    reason: &str,
+    conflict: bool,
+) -> Result<StoreOutcome, StorageError> {
+    let note_id = opened.package.document.note_id.as_str();
+    validate_note_id(note_id)?;
+    validate_revision(&opened.revision, "sourceRevision")?;
+    let (display_origin, origin_key) = normalize_origin(origin)?;
+    validate_display_text(reason, "reason")?;
+    let version_id = make_version_id(conflict, note_id, &opened.revision, &origin_key)?;
+    let destination = version_directory(versions, &version_id);
+    match fs::symlink_metadata(&destination) {
+        Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_dir() => {
+            return Err(StorageError::new(
+                "unsafePath",
+                "版本标识已被非目录项占用；相关数据未被修改。",
+            ));
+        }
+        Ok(_) => {
+            let existing = read_stored_version(versions, &version_id)?;
+            if existing.metadata.note_id == note_id
+                && existing.metadata.source_revision == opened.revision
+                && existing.metadata.origin_key == origin_key
+                && existing.metadata.conflict == conflict
+            {
+                if !conflict {
+                    ensure_group_member(versions, note_id, &origin_key, &version_id).map_err(
+                        |error| {
+                            version_publish_error("已保存版本有效，但无法更新其轮换索引", error)
+                        },
+                    )?;
+                }
+                return Ok(StoreOutcome {
+                    version_id,
+                    created: false,
+                });
+            }
+            return Err(StorageError::new(
+                "versionConflict",
+                "版本标识对应的元数据与请求不一致；现有数据已保留。",
+            ));
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => return Err(StorageError::io("无法检查已保存版本目录", error)),
+    }
+
+    let staging = create_staging_directory(versions)?;
+    let package_path = staging.join(PACKAGE_NAME);
+    let package_file = create_new_file(&package_path, true).map_err(with_candidate_warning)?;
+    let revision =
+        write_and_verify_package(package_file, &opened.package).map_err(with_candidate_warning)?;
+    if opened.package.document.note_id != note_id {
+        return Err(with_candidate_warning(StorageError::new(
+            "invalid_document",
+            "准备保存的版本笔记身份发生变化；有效候选数据已保留。",
+        )));
+    }
+
+    let metadata = VersionMetadata {
+        schema_version: VERSION_SCHEMA,
+        version_id: version_id.clone(),
+        note_id: note_id.to_owned(),
+        title: display_title(&opened.package.document.title),
+        saved_at: Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true),
+        source_revision: opened.revision.clone(),
+        revision,
+        origin: display_origin,
+        origin_key,
+        reason: reason.to_owned(),
+        conflict,
+    };
+    let metadata_bytes = serde_json::to_vec(&metadata).map_err(|error| {
+        with_candidate_warning(StorageError::new(
+            "versionMetadata",
+            format!("无法编码版本元数据：{error}"),
+        ))
+    })?;
+    if metadata_bytes.len() as u64 > VERSION_METADATA_LIMIT {
+        return Err(with_candidate_warning(StorageError::new(
+            "budget_exceeded",
+            "版本元数据超过大小上限；有效笔记包已保留。",
+        )));
+    }
+    let metadata_path = staging.join(METADATA_NAME);
+    let mut metadata_file =
+        create_new_file(&metadata_path, true).map_err(with_candidate_warning)?;
+    metadata_file
+        .write_all(&metadata_bytes)
+        .and_then(|_| metadata_file.flush())
+        .and_then(|_| metadata_file.sync_all())
+        .map_err(|error| version_publish_error("无法同步版本元数据", error))?;
+    drop(metadata_file);
+    sync_directory_chain(&staging)
+        .map_err(|error| version_publish_error("候选版本已校验，但无法同步候选目录", error))?;
+
+    match fs::symlink_metadata(&destination) {
+        Ok(_) => {
+            return Err(with_candidate_warning(StorageError::new(
+                "versionConflict",
+                "版本标识在发布期间被其他目录项占用；有效候选数据已保留。",
+            )));
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+        Err(error) => {
+            return Err(with_candidate_warning(StorageError::io(
+                "无法检查版本发布位置",
+                error,
+            )))
+        }
+    }
+    fs::rename(&staging, &destination).map_err(|error| {
+        version_publish_error("已验证的候选版本无法发布；候选数据已保留", error)
+    })?;
+    sync_directory_chain(versions).map_err(|error| {
+        version_publish_error("版本已发布并验证，但无法确认版本目录同步", error)
+    })?;
+    if !conflict {
+        ensure_group_member(versions, note_id, &metadata.origin_key, &version_id).map_err(
+            |error| version_publish_error("版本已发布并验证，但无法更新其轮换索引", error),
+        )?;
+    }
+    Ok(StoreOutcome {
+        version_id,
+        created: true,
+    })
+}
+
+fn rotate_observed_versions_locked(
+    root: &Path,
+    versions: &Path,
+    protected_id: &str,
+    note_id: &str,
+    origin_key: &str,
+) {
+    let group_id = match make_group_id(note_id, origin_key) {
+        Ok(group_id) => group_id,
+        Err(_) => return,
+    };
+    let Some(groups) = ensure_child_directory(versions, GROUPS_DIRECTORY, false)
+        .ok()
+        .flatten()
+    else {
+        return;
+    };
+    let Some(group) = ensure_child_directory(&groups, &group_id, false)
+        .ok()
+        .flatten()
+    else {
+        return;
+    };
+    let entries = match fs::read_dir(&group) {
+        Ok(entries) => entries,
+        Err(_) => return,
+    };
+    let mut matching = Vec::new();
+    let mut scanned = 0usize;
+    for entry in entries {
+        let Ok(entry) = entry else { continue };
+        scanned += 1;
+        if scanned > VERSION_SCAN_LIMIT {
+            return;
+        }
+        let Some(id) = entry.file_name().to_str().map(str::to_owned) else {
+            return;
+        };
+        if !is_lower_hex(&id, 64) {
+            return;
+        }
+        if validate_group_member(&group, &id).is_err() {
+            return;
+        }
+        let Ok(metadata) = read_metadata(versions, &id) else {
+            continue;
+        };
+        let unresolved = matches!(
+            read_resolved_marker(&version_directory(versions, &id)),
+            Ok(false)
+        );
+        if metadata.conflict
+            || metadata.note_id != note_id
+            || metadata.origin_key != origin_key
+            || !unresolved
+        {
+            continue;
+        }
+        let Ok(stored) = read_stored_version(versions, &id) else {
+            continue;
+        };
+        let _ = stored;
+        let saved_at = DateTime::parse_from_rfc3339(&metadata.saved_at)
+            .map(|value| value.timestamp_millis())
+            .unwrap_or(i64::MIN);
+        matching.push((id, saved_at));
+    }
+    matching.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
+    for (id, _) in matching.into_iter().skip(30) {
+        if id == protected_id {
+            continue;
+        }
+        let Ok(lock) = acquire_version_lock(root, &id, false) else {
+            continue;
+        };
+        if lock.try_lock().is_err() {
+            continue;
+        }
+        let directory = version_directory(versions, &id);
+        if !directory_contains_only_known_files(&directory) {
+            continue;
+        }
+        // Rotation removes only complete, verified, unleased observed versions.
+        if let Ok(stored) = read_stored_version(versions, &id) {
+            if stored.metadata.conflict
+                || stored.metadata.note_id != note_id
+                || stored.metadata.origin_key != origin_key
+            {
+                continue;
+            }
+            drop(stored);
+            if fs::remove_file(directory.join(METADATA_NAME)).is_err() {
+                continue;
+            }
+            if fs::remove_file(directory.join(PACKAGE_NAME)).is_err() {
+                continue;
+            }
+            if fs::remove_dir(&directory).is_ok() {
+                let _ = fs::remove_file(group.join(&id));
+                let _ = sync_directory_chain(&group);
+            }
+        }
+    }
+}
+
+fn ensure_group_member(
+    versions: &Path,
+    note_id: &str,
+    origin_key: &str,
+    version_id: &str,
+) -> Result<(), StorageError> {
+    validate_version_id(version_id)?;
+    let groups = ensure_child_directory(versions, GROUPS_DIRECTORY, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备版本分组索引目录。"))?;
+    let group_id = make_group_id(note_id, origin_key)?;
+    let group = ensure_child_directory(&groups, &group_id, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备版本分组索引。"))?;
+    let path = group.join(version_id);
+    match fs::symlink_metadata(&path) {
+        Ok(_) => validate_group_member(&group, version_id),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            let file = create_new_file(&path, true)?;
+            file.sync_all()
+                .map_err(|error| StorageError::io("无法同步版本分组索引项", error))?;
+            sync_directory_chain(&group)
+                .map_err(|error| StorageError::io("无法同步版本分组索引", error))
+        }
+        Err(error) => Err(StorageError::io("无法检查版本分组索引项", error)),
+    }
+}
+
+fn validate_group_member(group: &Path, version_id: &str) -> Result<(), StorageError> {
+    validate_version_id(version_id)?;
+    let path = group.join(version_id);
+    let metadata = fs::symlink_metadata(&path)
+        .map_err(|error| StorageError::io("无法检查版本分组索引项", error))?;
+    if is_link_or_reparse(&metadata) || !metadata.is_file() || metadata.len() != 0 {
+        return Err(StorageError::new(
+            "unsafePath",
+            "版本分组索引项不是预期的普通空文件；相关数据已保留。",
+        ));
+    }
+    let file = open_read_nofollow(&path)
+        .map_err(|error| StorageError::io("无法安全打开版本分组索引项", error))?;
+    validate_regular_file(&file, "版本分组索引项不是普通文件")?;
+    if file
+        .metadata()
+        .map_err(|error| StorageError::io("无法检查版本分组索引项", error))?
+        .len()
+        != 0
+    {
+        return Err(StorageError::new(
+            "invalidVersionIndex",
+            "版本分组索引项内容无效；相关数据已保留。",
+        ));
+    }
+    Ok(())
+}
+
+fn directory_contains_only_known_files(directory: &Path) -> bool {
+    let Ok(metadata) = fs::symlink_metadata(directory) else {
+        return false;
+    };
+    if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+        return false;
+    }
+    let Ok(entries) = fs::read_dir(directory) else {
+        return false;
+    };
+    let mut package = false;
+    let mut metadata_file = false;
+    for entry in entries {
+        let Ok(entry) = entry else { return false };
+        let name = entry.file_name();
+        let name = name.to_str().unwrap_or_default();
+        let Ok(entry_metadata) = fs::symlink_metadata(entry.path()) else {
+            return false;
+        };
+        if is_link_or_reparse(&entry_metadata) || !entry_metadata.is_file() {
+            return false;
+        }
+        match name {
+            PACKAGE_NAME if !package => package = true,
+            METADATA_NAME if !metadata_file => metadata_file = true,
+            _ => return false,
+        }
+    }
+    package && metadata_file
+}
+
+fn read_stored_version(versions: &Path, version_id: &str) -> Result<StoredVersion, StorageError> {
+    validate_version_id(version_id)?;
+    let metadata = read_metadata(versions, version_id)?;
+    let directory = version_directory(versions, version_id);
+    let package_path = directory.join(PACKAGE_NAME);
+    let target = ResolvedTarget {
+        path: package_path.clone(),
+        directory: super::publication::StableDirectory::open(&directory)?,
+        parent: directory,
+    };
+    let opened = inspect_note(&target)?.ok_or_else(|| {
+        StorageError::new("invalidVersion", "保存版本缺少笔记包；相关数据已保留。")
+    })?;
+    if opened.package.document.note_id != metadata.note_id
+        || display_title(&opened.package.document.title) != metadata.title
+        || opened.revision != metadata.revision
+    {
+        return Err(StorageError::new(
+            "invalidVersion",
+            "保存版本的笔记身份或内容指纹与元数据不一致；相关数据已保留。",
+        ));
+    }
+    Ok(StoredVersion {
+        metadata,
+        opened,
+        path: package_path,
+    })
+}
+
+fn read_metadata(versions: &Path, version_id: &str) -> Result<VersionMetadata, StorageError> {
+    let directory = version_directory(versions, version_id);
+    let directory_metadata = match fs::symlink_metadata(&directory) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return Err(StorageError::new(
+                "versionNotFound",
+                "已保存版本不存在；没有打开其他路径。",
+            ));
+        }
+        Err(error) => return Err(StorageError::io("无法检查保存版本目录", error)),
+    };
+    if is_link_or_reparse(&directory_metadata) || !directory_metadata.is_dir() {
+        return Err(StorageError::new(
+            "unsafePath",
+            "保存版本必须位于实际目录中；相关数据未被修改。",
+        ));
+    }
+    let path = directory.join(METADATA_NAME);
+    let mut file = open_read_nofollow(&path)
+        .map_err(|error| StorageError::io("无法安全打开版本元数据", error))?;
+    validate_regular_file(&file, "版本元数据不是普通文件")?;
+    let mut bytes = Vec::new();
+    (&mut file)
+        .take(VERSION_METADATA_LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| StorageError::io("无法读取版本元数据", error))?;
+    if bytes.len() as u64 > VERSION_METADATA_LIMIT {
+        return Err(StorageError::new(
+            "budget_exceeded",
+            "版本元数据超过大小上限；相关数据已保留。",
+        ));
+    }
+    let metadata: VersionMetadata = serde_json::from_slice(&bytes).map_err(|error| {
+        StorageError::new("invalidVersionMetadata", format!("版本元数据无效：{error}"))
+    })?;
+    validate_metadata(&metadata, version_id)?;
+    Ok(metadata)
+}
+
+fn validate_metadata(metadata: &VersionMetadata, expected_id: &str) -> Result<(), StorageError> {
+    validate_version_id(expected_id)?;
+    if metadata.schema_version != VERSION_SCHEMA
+        || metadata.version_id != expected_id
+        || metadata.title.len() > VERSION_TEXT_LIMIT
+        || metadata.origin.len() > VERSION_TEXT_LIMIT
+        || metadata.origin_key.len() > VERSION_TEXT_LIMIT
+        || metadata.reason.len() > VERSION_TEXT_LIMIT
+    {
+        return Err(StorageError::new(
+            "invalidVersionMetadata",
+            "保存版本元数据字段不受支持或超过上限。",
+        ));
+    }
+    validate_note_id(&metadata.note_id)?;
+    validate_revision(&metadata.source_revision, "sourceRevision")?;
+    validate_revision(&metadata.revision, "revision")?;
+    validate_display_text(&metadata.origin, "origin")?;
+    validate_display_text(&metadata.origin_key, "originKey")?;
+    validate_display_text(&metadata.reason, "reason")?;
+    DateTime::parse_from_rfc3339(&metadata.saved_at)
+        .map_err(|_| StorageError::new("invalidVersionMetadata", "保存版本时间格式无效。"))?;
+    let expected = make_version_id(
+        metadata.conflict,
+        &metadata.note_id,
+        &metadata.source_revision,
+        &metadata.origin_key,
+    )?;
+    if expected != metadata.version_id {
+        return Err(StorageError::new(
+            "invalidVersionMetadata",
+            "保存版本标识与元数据内容不一致。",
+        ));
+    }
+    Ok(())
+}
+
+fn read_resolved_marker(directory: &Path) -> Result<bool, StorageError> {
+    let path = directory.join(RESOLVED_NAME);
+    match fs::symlink_metadata(&path) {
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(error) => Err(StorageError::io("无法检查版本处理标记", error)),
+        Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_file() => Err(
+            StorageError::new("unsafePath", "版本处理标记不是普通文件；相关数据已保留。"),
+        ),
+        Ok(_) => {
+            let mut file = open_read_nofollow(&path)
+                .map_err(|error| StorageError::io("无法安全打开版本处理标记", error))?;
+            validate_regular_file(&file, "版本处理标记不是普通文件")?;
+            let mut bytes = Vec::new();
+            (&mut file)
+                .take(RESOLVED_MARKER.len() as u64 + 1)
+                .read_to_end(&mut bytes)
+                .map_err(|error| StorageError::io("无法读取版本处理标记", error))?;
+            if bytes == RESOLVED_MARKER {
+                Ok(true)
+            } else {
+                Err(StorageError::new(
+                    "invalidVersionMarker",
+                    "版本处理标记内容无效；相关数据已保留。",
+                ))
+            }
+        }
+    }
+}
+
+fn prepare_root(root: &Path, create: bool) -> Result<Option<PathBuf>, StorageError> {
+    let absolute = if root.is_absolute() {
+        root.to_path_buf()
+    } else {
+        std::env::current_dir()
+            .map_err(|error| StorageError::io("无法解析版本存储目录", error))?
+            .join(root)
+    };
+    let mut current = PathBuf::new();
+    let mut found_anchor = false;
+    for component in absolute.components() {
+        match component {
+            Component::Prefix(_) => {
+                current.push(component.as_os_str());
+            }
+            Component::RootDir => {
+                current.push(component.as_os_str());
+                if !current.as_os_str().is_empty() {
+                    if !check_or_create_directory(&current, create)? {
+                        return Ok(None);
+                    }
+                    found_anchor = true;
+                }
+            }
+            Component::CurDir => {}
+            Component::ParentDir => {
+                return Err(StorageError::new(
+                    "unsafePath",
+                    "版本存储目录不能包含父目录跳转。",
+                ));
+            }
+            Component::Normal(name) => {
+                current.push(name);
+                if !found_anchor {
+                    continue;
+                }
+                if !check_or_create_directory(&current, create)? {
+                    return Ok(None);
+                }
+            }
+        }
+    }
+    if current.as_os_str().is_empty() {
+        return Err(StorageError::new("unsafePath", "版本存储目录无法解析。"));
+    }
+    match fs::symlink_metadata(&current) {
+        Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_dir() => Err(
+            StorageError::new("unsafePath", "版本存储目录及其父目录必须是实际目录。"),
+        ),
+        Ok(_) => fs::canonicalize(&current)
+            .map(Some)
+            .map_err(|error| StorageError::io("无法解析版本存储目录", error)),
+        Err(error) if error.kind() == io::ErrorKind::NotFound && !create => Ok(None),
+        Err(error) => Err(StorageError::io("无法检查版本存储目录", error)),
+    }
+}
+
+fn check_or_create_directory(path: &Path, create: bool) -> Result<bool, StorageError> {
+    match fs::symlink_metadata(path) {
+        Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_dir() => Err(
+            StorageError::new("unsafePath", "版本存储目录及其父目录必须是实际目录。"),
+        ),
+        Ok(_) => Ok(true),
+        Err(error) if error.kind() == io::ErrorKind::NotFound && !create => Ok(false),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            let parent = path
+                .parent()
+                .ok_or_else(|| StorageError::new("unsafePath", "版本存储目录缺少可验证父目录。"))?;
+            match fs::create_dir(path) {
+                Ok(()) => {
+                    sync_directory_chain(parent).map_err(|error| {
+                        StorageError::io("版本存储目录已创建但无法确认父目录同步", error)
+                    })?;
+                }
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+                Err(error) => return Err(StorageError::io("无法创建版本存储目录", error)),
+            }
+            let metadata = fs::symlink_metadata(path)
+                .map_err(|error| StorageError::io("无法检查新建版本存储目录", error))?;
+            if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+                return Err(StorageError::new(
+                    "unsafePath",
+                    "新建版本存储目录不是实际目录；相关数据未被修改。",
+                ));
+            }
+            Ok(true)
+        }
+        Err(error) => Err(StorageError::io("无法检查版本存储目录", error)),
+    }
+}
+
+fn ensure_child_directory(
+    parent: &Path,
+    name: &str,
+    create: bool,
+) -> Result<Option<PathBuf>, StorageError> {
+    let path = parent.join(name);
+    if !check_or_create_directory(&path, create)? {
+        return Ok(None);
+    }
+    Ok(Some(path))
+}
+
+fn acquire_store_lock(root: &Path, shared: bool) -> Result<File, StorageError> {
+    let locks = ensure_child_directory(root, LOCKS_DIRECTORY, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备版本锁目录。"))?;
+    let path = locks.join(STORE_LOCK_NAME);
+    let file = open_lock_file(&path)?;
+    if shared {
+        file.lock_shared()
+            .map_err(|error| StorageError::io("无法读取版本存储锁", error))?;
+    } else {
+        file.lock()
+            .map_err(|error| StorageError::io("无法取得版本存储锁", error))?;
+    }
+    Ok(file)
+}
+
+fn acquire_version_lock(root: &Path, version_id: &str, shared: bool) -> Result<File, StorageError> {
+    validate_version_id(version_id)?;
+    let locks = ensure_child_directory(root, LOCKS_DIRECTORY, true)?
+        .ok_or_else(|| StorageError::new("io", "无法准备版本锁目录。"))?;
+    let path = locks.join(format!("{version_id}.lock"));
+    let file = open_lock_file(&path)?;
+    if shared {
+        file.lock_shared()
+            .map_err(|error| StorageError::io("无法固定已保存版本", error))?;
+    }
+    Ok(file)
+}
+
+fn open_lock_file(path: &Path) -> Result<File, StorageError> {
+    for _ in 0..3 {
+        match fs::symlink_metadata(path) {
+            Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_file() => {
+                return Err(StorageError::new(
+                    "unsafePath",
+                    "版本锁路径必须是普通文件；相关数据未被修改。",
+                ));
+            }
+            Ok(_) => {
+                let file = nofollow_open_options()
+                    .read(true)
+                    .write(true)
+                    .open(path)
+                    .map_err(|error| StorageError::io("无法打开版本锁文件", error))?;
+                validate_regular_file(&file, "版本锁路径不是普通文件")?;
+                return Ok(file);
+            }
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                let file = nofollow_open_options()
+                    .read(true)
+                    .write(true)
+                    .create_new(true)
+                    .open(path);
+                match file {
+                    Ok(file) => {
+                        validate_regular_file(&file, "新建版本锁路径不是普通文件")?;
+                        file.sync_all()
+                            .map_err(|error| StorageError::io("无法同步版本锁文件", error))?;
+                        if let Some(parent) = path.parent() {
+                            sync_directory_chain(parent)
+                                .map_err(|error| StorageError::io("无法同步版本锁目录", error))?;
+                        }
+                        return Ok(file);
+                    }
+                    Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+                    Err(error) => return Err(StorageError::io("无法创建版本锁文件", error)),
+                }
+            }
+            Err(error) => return Err(StorageError::io("无法检查版本锁文件", error)),
+        }
+    }
+    Err(StorageError::new(
+        "io",
+        "多次尝试后仍无法安全打开版本锁文件。",
+    ))
+}
+
+fn nofollow_open_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        options.custom_flags(0x0020_0000);
+    }
+    #[cfg(any(target_os = "linux", target_os = "android"))]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(0x0002_0000);
+    }
+    #[cfg(any(
+        target_os = "macos",
+        target_os = "freebsd",
+        target_os = "openbsd",
+        target_os = "netbsd"
+    ))]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.custom_flags(0x0000_0100);
+    }
+    options
+}
+
+fn create_new_file(path: &Path, read_write: bool) -> Result<File, StorageError> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| StorageError::new("unsafePath", "版本文件缺少父目录。"))?;
+    let parent_metadata = fs::symlink_metadata(parent)
+        .map_err(|error| StorageError::io("无法检查版本文件父目录", error))?;
+    if is_link_or_reparse(&parent_metadata) || !parent_metadata.is_dir() {
+        return Err(StorageError::new(
+            "unsafePath",
+            "版本文件父目录必须是实际目录。",
+        ));
+    }
+    let mut options = nofollow_open_options();
+    options.write(true).create_new(true);
+    if read_write {
+        options.read(true);
+    }
+    let file = options
+        .open(path)
+        .map_err(|error| StorageError::io("无法创建新的版本文件", error))?;
+    validate_regular_file(&file, "新建版本文件不是普通文件")?;
+    Ok(file)
+}
+
+fn validate_regular_file(file: &File, message: &str) -> Result<(), StorageError> {
+    let metadata = file
+        .metadata()
+        .map_err(|error| StorageError::io("无法检查版本文件", error))?;
+    if !metadata.is_file() || is_link_or_reparse(&metadata) {
+        return Err(StorageError::new("unsafePath", message));
+    }
+    Ok(())
+}
+
+fn create_staging_directory(versions: &Path) -> Result<PathBuf, StorageError> {
+    for _ in 0..4 {
+        let path = versions.join(format!(".pending-{}", Uuid::new_v4().simple()));
+        match fs::create_dir(&path) {
+            Ok(()) => {
+                sync_directory_chain(versions).map_err(|error| {
+                    version_publish_error("候选版本目录已创建但无法同步", error)
+                })?;
+                let metadata = fs::symlink_metadata(&path)
+                    .map_err(|error| StorageError::io("无法检查候选版本目录", error))?;
+                if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+                    return Err(StorageError::new(
+                        "unsafePath",
+                        "候选版本目录不是实际目录；相关数据已保留。",
+                    ));
+                }
+                return Ok(path);
+            }
+            Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(error) => return Err(StorageError::io("无法创建候选版本目录", error)),
+        }
+    }
+    Err(StorageError::new(
+        "io",
+        "多次尝试后仍无法创建唯一版本候选目录。",
+    ))
+}
+
+fn version_publish_error(context: &str, error: impl std::fmt::Display) -> StorageError {
+    let mut result = StorageError::new("versionPublish", format!("{context}：{error}"));
+    result.recovery_error =
+        Some("版本候选目录中的已写入数据已保留；可通过版本列表检查。".to_owned());
+    result
+}
+
+fn with_candidate_warning(mut error: StorageError) -> StorageError {
+    if error.recovery_error.is_none() {
+        error.recovery_error =
+            Some("候选目录中已经写入的数据已保留；可通过版本列表检查。".to_owned());
+    }
+    error
+}
+
+fn normalize_origin(origin: &str) -> Result<(String, String), StorageError> {
+    validate_display_text(origin, "origin")?;
+    #[cfg(windows)]
+    {
+        let mut display = origin.replace('/', "\\");
+        let lower = display.to_ascii_lowercase();
+        if lower.starts_with("\\\\?\\unc\\") {
+            display = format!("\\\\{}", &display[8..]);
+        } else if lower.starts_with("\\\\?\\") {
+            display = display[4..].to_owned();
+        }
+        if Path::new(&display).is_absolute() {
+            if display.as_bytes().get(1) == Some(&b':')
+                && display.as_bytes()[0].is_ascii_alphabetic()
+            {
+                let drive = display[..1].to_ascii_uppercase();
+                display.replace_range(0..1, &drive);
+            }
+            return Ok((display.clone(), display));
+        }
+    }
+    Ok((origin.to_owned(), origin.to_owned()))
+}
+
+fn make_version_id(
+    conflict: bool,
+    note_id: &str,
+    source_revision: &str,
+    origin_key: &str,
+) -> Result<String, StorageError> {
+    let key = serde_json::to_vec(&(
+        VERSION_SCHEMA,
+        conflict,
+        note_id,
+        source_revision,
+        origin_key,
+    ))
+    .map_err(|error| StorageError::new("versionId", format!("无法生成版本标识：{error}")))?;
+    Ok(digest_bytes(&key))
+}
+
+fn make_group_id(note_id: &str, origin_key: &str) -> Result<String, StorageError> {
+    validate_note_id(note_id)?;
+    validate_display_text(origin_key, "originKey")?;
+    let key = serde_json::to_vec(&(VERSION_SCHEMA, note_id, origin_key)).map_err(|error| {
+        StorageError::new("versionId", format!("无法生成版本分组标识：{error}"))
+    })?;
+    Ok(digest_bytes(&key))
+}
+
+fn validate_version_id(value: &str) -> Result<(), StorageError> {
+    if is_lower_hex(value, 64) {
+        Ok(())
+    } else {
+        Err(StorageError::new(
+            "invalidVersionId",
+            "已保存版本标识格式无效。",
+        ))
+    }
+}
+
+fn validate_note_id(value: &str) -> Result<(), StorageError> {
+    let parsed = Uuid::parse_str(value)
+        .map_err(|_| StorageError::new("invalidNoteId", "笔记身份格式无效。"))?;
+    if parsed.get_version_num() != 4 || parsed.to_string() != value {
+        return Err(StorageError::new("invalidNoteId", "笔记身份格式无效。"));
+    }
+    Ok(())
+}
+
+fn validate_revision(value: &str, field: &str) -> Result<(), StorageError> {
+    if is_lower_hex(value, 64) {
+        Ok(())
+    } else {
+        Err(StorageError::new(
+            "invalidRevision",
+            format!("{field} 格式无效。"),
+        ))
+    }
+}
+
+fn validate_display_text(value: &str, field: &str) -> Result<(), StorageError> {
+    if value.len() <= VERSION_TEXT_LIMIT {
+        Ok(())
+    } else {
+        Err(StorageError::new(
+            "budget_exceeded",
+            format!("版本 {field} 超过显示长度上限。"),
+        ))
+    }
+}
+
+fn display_title(value: &str) -> String {
+    let mut characters = value.chars();
+    let excerpt: String = characters.by_ref().take(TITLE_DISPLAY_CHARACTERS).collect();
+    if characters.next().is_none() {
+        excerpt
+    } else {
+        let mut truncated: String = value
+            .chars()
+            .take(TITLE_DISPLAY_CHARACTERS.saturating_sub(1))
+            .collect();
+        truncated.push('…');
+        truncated
+    }
+}
+
+fn is_lower_hex(value: &str, expected_len: usize) -> bool {
+    value.len() == expected_len
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn version_directory(versions: &Path, version_id: &str) -> PathBuf {
+    versions.join(version_id)
+}
+
+fn push_warning(warnings: &mut Vec<String>, warning: String) {
+    if warnings.len() < WARNING_LIMIT - 1 {
+        warnings.push(warning);
+    } else if warnings.len() == WARNING_LIMIT - 1 {
+        warnings.push("其余版本目录问题未展开；相关数据仍已保留。".to_owned());
+    }
+}
+
+fn ensure_scan_limit(scanned: usize) -> Result<(), StorageError> {
+    if scanned > VERSION_SCAN_LIMIT {
+        Err(StorageError::new(
+            "versionLimit",
+            format!("版本目录超过单次扫描上限 {VERSION_SCAN_LIMIT}；没有静默省略其余条目。"),
+        ))
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        lease_observed_version, list_versions, open_version, pin_observed_version,
+        preserve_conflict_version, preserve_observed_version, resolve_version,
+    };
+    use crate::note_format::{write_package, NotePackage, PlainText};
+    use crate::storage::StorageError;
+    use std::fs::{self, OpenOptions};
+    use std::io;
+    use std::path::Path;
+    use tempfile::TempDir;
+
+    fn version_temp() -> TempDir {
+        let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
+        fs::create_dir_all(&base).unwrap();
+        tempfile::Builder::new()
+            .prefix("preserved-versions-")
+            .tempdir_in(base)
+            .unwrap()
+    }
+
+    fn plain(title: &str, content: &str) -> NotePackage {
+        NotePackage::new_plain(
+            "00000000-0000-4000-8000-000000000001".to_owned(),
+            PlainText {
+                title: title.to_owned(),
+                cue: String::new(),
+                content: content.to_owned(),
+                summary: String::new(),
+            },
+        )
+    }
+
+    fn write_package_file(path: &Path, package: &NotePackage) -> io::Result<()> {
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(path)?;
+        write_package(&mut file, package)
+            .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        file.sync_all()
+    }
+
+    #[test]
+    fn preserves_the_observed_package_after_its_origin_is_overwritten() -> Result<(), StorageError>
+    {
+        let directory = version_temp();
+        let origin_directory = directory.path().join("origin");
+        fs::create_dir(&origin_directory).unwrap();
+        let source = origin_directory.join("note.cuenote");
+        let root = directory.path().join("preserved");
+        let observed = plain("Observed title", "content from the opened file");
+        write_package_file(&source, &observed).unwrap();
+        let mut source_bytes = fs::read(&source).unwrap();
+        let eocd = source_bytes.len() - 22;
+        assert_eq!(&source_bytes[eocd..eocd + 4], b"PK\x05\x06");
+        source_bytes[eocd + 20] = 1;
+        source_bytes.push(b'x');
+        fs::write(&source, source_bytes).unwrap();
+        let opened = crate::storage::open_note(&source)?;
+        let source_revision = opened.revision.clone();
+        let note_id = opened.package.document.note_id.clone();
+
+        let mut replacement = opened.package.clone();
+        replacement.document.title = "Later title".to_owned();
+        replacement.document.sections.content =
+            plain("", "later content").document.sections.content;
+        write_package_file(&source, &replacement).unwrap();
+
+        preserve_observed_version(
+            &root,
+            &opened,
+            source.to_string_lossy().as_ref(),
+            "external-change",
+        )?;
+
+        let list = list_versions(&root)?;
+        assert_eq!(list.versions.len(), 1);
+        let summary = &list.versions[0];
+        assert_eq!(summary.note_id, note_id);
+        assert_eq!(summary.source_revision, source_revision);
+        assert_ne!(summary.revision, summary.source_revision);
+        assert_eq!(summary.title, "Observed title");
+        assert!(!summary.conflict);
+        let preserved = open_version(&root, &summary.version_id)?;
+        assert_eq!(preserved.opened.revision, summary.revision);
+        assert_eq!(preserved.opened.package.document.title, "Observed title");
+        assert_eq!(
+            preserved.opened.package.text_projection().content,
+            "content from the opened file"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn preserves_native_v1_titles_longer_than_the_summary_excerpt() -> Result<(), StorageError> {
+        let directory = version_temp();
+        let source = directory.path().join("origin.cuenote");
+        let root = directory.path().join("preserved");
+        let full_title = "标题🙂".repeat(8_000);
+        let package = plain(&full_title, "large-title package remains valid");
+        write_package_file(&source, &package).unwrap();
+        let opened = crate::storage::open_note(&source)?;
+
+        preserve_observed_version(&root, &opened, "external note", "observed")?;
+
+        let list = list_versions(&root)?;
+        assert_eq!(list.versions.len(), 1);
+        assert!(list.versions[0].title.chars().count() <= 180);
+        assert!(list.versions[0].title.ends_with('…'));
+        let preserved = open_version(&root, &list.versions[0].version_id)?;
+        assert_eq!(preserved.opened.package.document.title, full_title);
+        Ok(())
+    }
+
+    #[test]
+    fn ordinary_rotation_keeps_thirty_and_never_rotates_pending_conflicts(
+    ) -> Result<(), StorageError> {
+        let directory = version_temp();
+        let source = directory.path().join("origin.cuenote");
+        let root = directory.path().join("preserved");
+        let origin = "external note";
+        let mut package = plain("Version 0", "content 0");
+        let note_id = package.document.note_id.clone();
+        write_package_file(&source, &package).unwrap();
+        let first = crate::storage::open_note(&source)?;
+        preserve_observed_version(&root, &first, origin, "observed")?;
+        preserve_conflict_version(&root, &first, origin, "duplicate-id")?;
+
+        for index in 1..=32 {
+            package = plain(&format!("Version {index}"), &format!("content {index}"));
+            package.document.note_id = note_id.clone();
+            write_package_file(&source, &package).unwrap();
+            let opened = crate::storage::open_note(&source)?;
+            preserve_observed_version(&root, &opened, origin, "observed")?;
+        }
+
+        let list = list_versions(&root)?;
+        assert_eq!(
+            list.versions
+                .iter()
+                .filter(|version| !version.conflict)
+                .count(),
+            30
+        );
+        let conflict = list
+            .versions
+            .iter()
+            .find(|version| version.conflict)
+            .unwrap();
+        let opened_conflict = open_version(&root, &conflict.version_id)?;
+        assert_eq!(opened_conflict.opened.package.document.title, "Version 0");
+        Ok(())
+    }
+
+    #[test]
+    fn an_active_lease_keeps_an_older_observation_during_rotation() -> Result<(), StorageError> {
+        let directory = version_temp();
+        let source = directory.path().join("origin.cuenote");
+        let root = directory.path().join("preserved");
+        let origin = "external note";
+        let mut package = plain("Leased baseline", "baseline content");
+        let note_id = package.document.note_id.clone();
+        write_package_file(&source, &package).unwrap();
+        let first = crate::storage::open_note(&source)?;
+        let lease = lease_observed_version(&root, &first, origin, "editor-baseline")?;
+
+        for index in 1..=31 {
+            package = plain(&format!("Version {index}"), &format!("content {index}"));
+            package.document.note_id = note_id.clone();
+            write_package_file(&source, &package).unwrap();
+            let opened = crate::storage::open_note(&source)?;
+            preserve_observed_version(&root, &opened, origin, "observed")?;
+        }
+
+        let list = list_versions(&root)?;
+        assert_eq!(
+            list.versions
+                .iter()
+                .filter(|version| !version.conflict)
+                .count(),
+            31
+        );
+        assert!(list
+            .versions
+            .iter()
+            .any(|version| version.version_id == lease.version_id));
+        let baseline = open_version(&root, &lease.version_id)?;
+        assert_eq!(baseline.opened.package.document.title, "Leased baseline");
+        drop(lease);
+        Ok(())
+    }
+
+    #[test]
+    fn resolution_hides_a_version_without_deleting_its_package() -> Result<(), StorageError> {
+        let directory = version_temp();
+        let source = directory.path().join("origin.cuenote");
+        let root = directory.path().join("preserved");
+        let package = plain("Keep the bytes", "resolved content");
+        write_package_file(&source, &package).unwrap();
+        let opened = crate::storage::open_note(&source)?;
+        preserve_conflict_version(&root, &opened, "external note", "duplicate-id")?;
+        let version_id = list_versions(&root)?.versions[0].version_id.clone();
+
+        resolve_version(&root, &version_id)?;
+        assert!(list_versions(&root)?.versions.is_empty());
+        let preserved = open_version(&root, &version_id)?;
+        assert_eq!(preserved.opened.package.document.title, "Keep the bytes");
+        assert!(preserved.path.is_file());
+        Ok(())
+    }
+
+    #[test]
+    fn pinning_a_conflict_uses_the_stored_observation_after_origin_changes(
+    ) -> Result<(), StorageError> {
+        let directory = version_temp();
+        let source = directory.path().join("origin.cuenote");
+        let root = directory.path().join("preserved");
+        let origin = "external note";
+        let original = plain("Previously observed", "original content");
+        write_package_file(&source, &original).unwrap();
+        let observed = crate::storage::open_note(&source)?;
+        let note_id = observed.package.document.note_id.clone();
+        let source_revision = observed.revision.clone();
+        preserve_observed_version(&root, &observed, origin, "observed")?;
+
+        let mut replacement = original.clone();
+        replacement.document.title = "Changed at origin".to_owned();
+        write_package_file(&source, &replacement).unwrap();
+        pin_observed_version(&root, &source_revision, origin, &note_id, "duplicate-id")?;
+
+        let list = list_versions(&root)?;
+        assert_eq!(list.versions.len(), 2);
+        let conflict = list
+            .versions
+            .iter()
+            .find(|version| version.conflict)
+            .unwrap();
+        let pinned = open_version(&root, &conflict.version_id)?;
+        assert_eq!(pinned.opened.package.document.title, "Previously observed");
+        assert_eq!(
+            pinned.opened.package.text_projection().content,
+            "original content"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn ids_cannot_be_used_as_paths_and_symlink_roots_are_rejected() -> Result<(), StorageError> {
+        let directory = version_temp();
+        let source = directory.path().join("origin.cuenote");
+        let root = directory.path().join("preserved");
+        let package = plain("Opaque id", "content");
+        write_package_file(&source, &package).unwrap();
+        let opened = crate::storage::open_note(&source)?;
+        preserve_observed_version(&root, &opened, "external note", "observed")?;
+        let version_id = list_versions(&root)?.versions[0].version_id.clone();
+
+        let invalid = open_version(&root, "../outside").unwrap_err();
+        assert_eq!(invalid.kind, "invalidVersionId");
+        let mut tampered_id = version_id.clone();
+        tampered_id.replace_range(0..1, if &tampered_id[..1] == "0" { "1" } else { "0" });
+        assert_eq!(
+            open_version(&root, &tampered_id).unwrap_err().kind,
+            "versionNotFound"
+        );
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::symlink;
+            let empty_target = directory.path().join("empty-target");
+            fs::create_dir(&empty_target).unwrap();
+            let linked_root = directory.path().join("linked-preserved");
+            symlink(&empty_target, &linked_root).unwrap();
+            assert_eq!(list_versions(&linked_root).unwrap_err().kind, "unsafePath");
+            assert!(!empty_target.join(".locks").exists());
+        }
+        Ok(())
+    }
+}

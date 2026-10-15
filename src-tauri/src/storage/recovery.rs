@@ -71,6 +71,22 @@ pub(crate) fn create_recovery_snapshot(
         ));
     }
 
+    #[cfg(windows)]
+    let destination = match super::windows_verbatim_path(&destination) {
+        Ok(path) => path,
+        Err(error) => {
+            let mut storage_error = StorageError::io(
+                &format!(
+                    "恢复快照已发布，但无法准备其长路径；文件仍保留于 {}",
+                    destination.display()
+                ),
+                error,
+            );
+            storage_error.recovery_path = Some(destination.to_string_lossy().into_owned());
+            return Err(storage_error);
+        }
+    };
+
     if let Err(error) = super::sync_directory_chain(&directory) {
         let mut storage_error = StorageError::io(
             &format!(

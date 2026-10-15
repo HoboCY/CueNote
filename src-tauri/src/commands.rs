@@ -9,8 +9,8 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::note_format::{AssetManifestEntry, NoteContent, PlainText};
 use crate::workspace::{
-    LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy, Workspace, WorkspaceError,
-    WorkspaceView,
+    ExternalProbe, ExternalReconciliation, LibraryView, NoteSession, RecoveryList, SaveReceipt,
+    SavedCopy, VersionList, Workspace, WorkspaceError, WorkspaceView,
 };
 
 pub type WorkspaceState = Arc<Mutex<Workspace>>;
@@ -40,16 +40,22 @@ async fn work<T: Send + 'static>(
 
 #[tauri::command]
 pub async fn get_workspace(
+    app: AppHandle,
     state: State<'_, WorkspaceState>,
 ) -> Result<WorkspaceView, WorkspaceError> {
-    work(state.inner().clone(), Workspace::snapshot).await
+    let mut view = work(state.inner().clone(), Workspace::snapshot).await?;
+    crate::file_watch::configure(&app, view.library.as_mut());
+    Ok(view)
 }
 
 #[tauri::command]
 pub async fn use_default_library(
+    app: AppHandle,
     state: State<'_, WorkspaceState>,
 ) -> Result<WorkspaceView, WorkspaceError> {
-    work(state.inner().clone(), Workspace::use_default_library).await
+    let mut view = work(state.inner().clone(), Workspace::use_default_library).await?;
+    crate::file_watch::configure(&app, view.library.as_mut());
+    Ok(view)
 }
 
 #[tauri::command]
@@ -58,8 +64,10 @@ pub async fn choose_library(
     state: State<'_, WorkspaceState>,
 ) -> Result<Option<WorkspaceView>, WorkspaceError> {
     // The blocking picker must run off the event-loop thread, especially on macOS.
+    let picker = app.clone();
     let selected = tauri::async_runtime::spawn_blocking(move || {
-        app.dialog()
+        picker
+            .dialog()
             .file()
             .set_title("选择 CueNote 笔记库文件夹")
             .blocking_pick_folder()
@@ -72,10 +80,12 @@ pub async fn choose_library(
     let path = selected
         .into_path()
         .map_err(|error| command_error(format!("请选择本机文件夹：{error}")))?;
-    work(state.inner().clone(), move |workspace| {
+    let mut view = work(state.inner().clone(), move |workspace| {
         workspace.select_library(path).map(Some)
     })
-    .await
+    .await?;
+    crate::file_watch::configure(&app, view.as_mut().and_then(|view| view.library.as_mut()));
+    Ok(view)
 }
 
 #[tauri::command]
@@ -345,6 +355,87 @@ async fn pick_copy_path(app: AppHandle) -> Result<Option<std::path::PathBuf>, Wo
                 .map_err(|error| command_error(format!("请选择本机文件路径：{error}")))
         })
         .transpose()
+}
+
+#[tauri::command]
+pub async fn probe_external_changes(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    session_id: Option<String>,
+) -> Result<ExternalProbe, WorkspaceError> {
+    let mut probe = work(state.inner().clone(), move |workspace| {
+        workspace.probe_external_changes(session_id.as_deref())
+    })
+    .await?;
+    crate::file_watch::configure(&app, probe.library.as_mut());
+    Ok(probe)
+}
+
+#[tauri::command]
+pub async fn reconcile_external_changes(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    content: NoteContent,
+) -> Result<ExternalReconciliation, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.reconcile_external_changes(&session_id, content)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn list_preserved_versions(
+    state: State<'_, WorkspaceState>,
+) -> Result<VersionList, WorkspaceError> {
+    work(state.inner().clone(), Workspace::list_preserved_versions).await
+}
+
+#[tauri::command]
+pub async fn open_preserved_version(
+    state: State<'_, WorkspaceState>,
+    version_id: String,
+) -> Result<NoteSession, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.open_preserved_version(&version_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn restore_preserved_as_copy(
+    state: State<'_, WorkspaceState>,
+    version_id: String,
+) -> Result<SaveReceipt, WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.restore_preserved_as_copy(&version_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn resolve_preserved_version(
+    state: State<'_, WorkspaceState>,
+    version_id: String,
+) -> Result<(), WorkspaceError> {
+    work(state.inner().clone(), move |workspace| {
+        workspace.resolve_preserved_version(&version_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn save_preserved_as(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    version_id: String,
+) -> Result<Option<SavedCopy>, WorkspaceError> {
+    let Some(path) = pick_copy_path(app).await? else {
+        return Ok(None);
+    };
+    work(state.inner().clone(), move |workspace| {
+        workspace.save_preserved_as(&version_id, path).map(Some)
+    })
+    .await
 }
 
 #[tauri::command]

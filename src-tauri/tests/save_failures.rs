@@ -84,10 +84,20 @@ fn missing_library_and_unavailable_recovery_still_allow_a_verified_independent_c
         .join("library/notes")
         .join(format!("{note_id}.cuenote"));
     let before = storage::open_note(&original).unwrap();
-    // Both directories belong exclusively to this newly created fixture.
+    // Both directories belong exclusively to this newly created fixture. The
+    // active Windows baseline lease keeps a lock-file handle under recovery,
+    // so simulate unavailable recovery snapshots at the drafts subdirectory.
     std::fs::rename(root.join("library"), root.join("library-away")).unwrap();
-    std::fs::rename(root.join("recovery"), root.join("recovery-away")).unwrap();
-    std::fs::write(root.join("recovery"), b"unavailable recovery directory").unwrap();
+    std::fs::rename(
+        root.join("recovery/drafts"),
+        root.join("recovery/drafts-away"),
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("recovery/drafts"),
+        b"unavailable recovery drafts directory",
+    )
+    .unwrap();
 
     let draft = text("两个位置均不可达时的最新输入");
     let error = workspace

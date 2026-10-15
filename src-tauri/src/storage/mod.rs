@@ -9,12 +9,16 @@ use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+mod publication;
 mod recovery;
+pub(crate) mod versions;
 
+pub(crate) use publication::recover_pending_publications;
 pub(crate) use recovery::{
     create_recovery_snapshot, list_recovery_drafts, open_recovery_draft, remove_recovery_snapshot,
     save_copy, RecoverySnapshot,
 };
+pub(crate) use versions::{preserve_conflict_version, preserve_observed_version};
 
 const HISTORY_LIMIT: usize = 30;
 const MAX_METADATA_REPLACEMENT_BYTES: u64 = 64 * 1024;
@@ -318,6 +322,32 @@ pub fn save_note(
         None => baseline.is_none(),
     };
     if !expected_matches {
+        let candidate_version = OpenedNote {
+            package: package.clone(),
+            revision: candidate_revision.clone(),
+        };
+        if let Err(preserve_error) = publication::preserve_conflict_pair(
+            &recovery,
+            &target.path,
+            baseline.as_ref(),
+            &candidate_version,
+            "save-baseline-mismatch",
+        ) {
+            let mut error = StorageError::new(
+                "conflict",
+                format!(
+                    "笔记已被其他操作创建、修改或删除；保存基线和草稿副本无法完整归档：{}",
+                    preserve_error.message
+                ),
+            );
+            error.recovery_error = Some(preserve_error.message);
+            return Err(fail_with_snapshot(
+                error,
+                &snapshot,
+                Some(&candidate_path),
+                true,
+            ));
+        }
         return Err(fail_with_snapshot(
             StorageError::new(
                 "conflict",
@@ -330,18 +360,37 @@ pub fn save_note(
     }
     if let Some(baseline) = &baseline {
         if baseline.package.document.note_id != note_id {
+            let candidate_version = OpenedNote {
+                package: package.clone(),
+                revision: candidate_revision.clone(),
+            };
+            let preservation = publication::preserve_conflict_pair(
+                &recovery,
+                &target.path,
+                Some(baseline),
+                &candidate_version,
+                "save-note-identity-mismatch",
+            );
+            let mut error =
+                StorageError::new("conflict", "笔记身份与保存路径中的现有笔记身份不一致。");
+            if let Err(preserve_error) = preservation {
+                error.recovery_error = Some(format!(
+                    "当前版本和草稿副本未能完整归档：{}",
+                    preserve_error.message
+                ));
+            }
             return Err(fail_with_snapshot(
-                StorageError::new("conflict", "笔记身份与保存路径中的现有笔记身份不一致。"),
+                error,
                 &snapshot,
                 Some(&candidate_path),
-                false,
+                true,
             ));
         }
     }
 
-    let history_backup = if let Some(old_revision) = baseline_revision {
+    if let Some(old_revision) = baseline_revision {
         match preserve_history_version(&target.path, &recovery, &note_id, old_revision) {
-            Ok(path) => Some(path),
+            Ok(_) => {}
             Err(error) => {
                 return Err(fail_with_snapshot(
                     error,
@@ -351,9 +400,7 @@ pub fn save_note(
                 ));
             }
         }
-    } else {
-        None
-    };
+    }
     if let Err(error) =
         crate::storage_faults::checkpoint("history_persisted", &target.path, Some(&candidate_path))
     {
@@ -377,6 +424,32 @@ pub fn save_note(
         }
     };
     if current_again.as_ref().map(|note| note.revision.as_str()) != baseline_revision {
+        let candidate_version = OpenedNote {
+            package: package.clone(),
+            revision: candidate_revision.clone(),
+        };
+        if let Err(preserve_error) = publication::preserve_conflict_pair(
+            &recovery,
+            &target.path,
+            current_again.as_ref(),
+            &candidate_version,
+            "save-late-race",
+        ) {
+            let mut error = StorageError::new(
+                "conflict",
+                format!(
+                    "笔记在保存期间发生变化；当前版本与草稿副本无法完整归档：{}",
+                    preserve_error.message
+                ),
+            );
+            error.recovery_error = Some(preserve_error.message);
+            return Err(fail_with_snapshot(
+                error,
+                &snapshot,
+                Some(&candidate_path),
+                true,
+            ));
+        }
         return Err(fail_with_snapshot(
             StorageError::new(
                 "conflict",
@@ -399,19 +472,29 @@ pub fn save_note(
         ));
     }
 
-    let publish_result = if baseline.is_some() {
-        publish_replace(
+    let publish_result = if let Some(expected_revision) = baseline_revision {
+        publication::publish_replace(
+            &recovery,
+            &target.directory,
             &candidate_path,
             &target.path,
-            baseline_revision.unwrap(),
-            history_backup.as_deref(),
+            &note_id,
+            expected_revision,
+            &candidate_revision,
         )
     } else {
-        publish_create(&candidate_path, &target.path)
+        publication::publish_create(
+            &recovery,
+            &target.directory,
+            &candidate_path,
+            &target.path,
+            &note_id,
+            &candidate_revision,
+        )
     };
-    if let Err(error) = publish_result {
-        #[cfg(windows)]
-        if baseline.is_some() {
+    let receipt = match publish_result {
+        Ok(receipt) => receipt,
+        Err(error) => {
             return Err(fail_with_snapshot(
                 error,
                 &snapshot,
@@ -419,47 +502,67 @@ pub fn save_note(
                 true,
             ));
         }
-        return Err(fail_with_snapshot(
-            error,
-            &snapshot,
-            Some(&candidate_path),
-            false,
-        ));
-    }
+    };
 
-    if let Err(error) =
-        crate::storage_faults::checkpoint("publish_after", &target.path, Some(&candidate_path))
-    {
-        let mut error = error;
-        error.message = format!("发布已经完成，后续步骤发生故障：{}", error.message);
-        return Err(fail_with_snapshot(
-            error,
-            &snapshot,
-            Some(&candidate_path),
-            false,
-        ));
-    }
-
-    if let Err(error) = sync_parent_directory(&target.parent) {
+    if let Err(error) = target.directory.sync_publication_directory() {
         return Err(fail_with_snapshot(
             StorageError::io("笔记已发布，但无法同步所在目录", error),
             &snapshot,
             Some(&candidate_path),
-            false,
+            true,
         ));
     }
 
     let published = match inspect_note(&target) {
-        Ok(Some(published)) if published.revision == candidate_revision => published,
-        Ok(_) => {
+        Ok(Some(published))
+            if published.revision == candidate_revision
+                && published.package.document.note_id == note_id =>
+        {
+            published
+        }
+        Ok(Some(published)) => {
+            let candidate_version = OpenedNote {
+                package: package.clone(),
+                revision: candidate_revision.clone(),
+            };
+            if let Err(preserve_error) = publication::preserve_conflict_pair(
+                &recovery,
+                &target.path,
+                Some(&published),
+                &candidate_version,
+                "save-post-publish-race",
+            ) {
+                let mut error = StorageError::new(
+                    "conflict",
+                    format!(
+                        "发布后的笔记已变化，且外部版本与草稿副本未能完整归档：{}",
+                        preserve_error.message
+                    ),
+                );
+                error.recovery_error = Some(preserve_error.message);
+                return Err(fail_with_snapshot(
+                    error,
+                    &snapshot,
+                    Some(&candidate_path),
+                    true,
+                ));
+            }
             return Err(fail_with_snapshot(
                 StorageError::new(
-                    "publish",
-                    "发布后的笔记校验与候选版本不一致；已保留恢复草稿。",
+                    "conflict",
+                    "发布后的笔记已被其他写入者修改；外部版本与恢复草稿均已保留。",
                 ),
                 &snapshot,
                 Some(&candidate_path),
-                false,
+                true,
+            ));
+        }
+        Ok(None) => {
+            return Err(fail_with_snapshot(
+                StorageError::new("publish", "发布后目标路径缺失；发布结果未确认。"),
+                &snapshot,
+                Some(&candidate_path),
+                true,
             ));
         }
         Err(error) => {
@@ -470,24 +573,56 @@ pub fn save_note(
                 ),
                 &snapshot,
                 Some(&candidate_path),
-                false,
+                true,
             ));
         }
     };
-    let _ = published;
+    if let Err(error) = preserve_observed_version(
+        &recovery,
+        &published,
+        &target.path.to_string_lossy(),
+        "confirmed-publication",
+    ) {
+        return Err(fail_with_snapshot(
+            StorageError::new(
+                "publish",
+                format!(
+                    "发布结果已读取，但无法持久保存已观察版本：{}",
+                    error.message
+                ),
+            ),
+            &snapshot,
+            Some(&candidate_path),
+            true,
+        ));
+    }
+
+    if let Err(error) =
+        crate::storage_faults::checkpoint("publish_after", &target.path, Some(&candidate_path))
+    {
+        let mut error = error;
+        error.kind = "postPublishCleanup".into();
+        error.message = format!("发布已确认；清理前检查发生故障：{}", error.message);
+        return Err(fail_with_snapshot(
+            error,
+            &snapshot,
+            Some(&candidate_path),
+            true,
+        ));
+    }
+
+    if let Err(error) = publication::complete_publication(&recovery, &target.directory, &receipt) {
+        return Err(fail_with_snapshot(
+            error,
+            &snapshot,
+            Some(&candidate_path),
+            true,
+        ));
+    }
 
     rotate_history(&history_directory(&recovery, &note_id));
-    if let Err(error) = remove_owned_save_candidate(&candidate_path) {
-        let mut storage_error = StorageError::io("笔记已保存，但无法清理同目录候选文件", error);
-        storage_error.recovery_error = Some(format!(
-            "已验证恢复快照仍保留于 {}；候选清理路径为 {}",
-            snapshot.path.display(),
-            candidate_path.display()
-        ));
-        storage_error.recovery_path = Some(snapshot.path.to_string_lossy().into_owned());
-        return Err(storage_error);
-    }
     if let Err(mut error) = remove_recovery_snapshot(&recovery, &snapshot) {
+        error.kind = "postPublishCleanup".into();
         error.message = format!("笔记已保存，但无法确认清理本次恢复快照：{}", error.message);
         if fs::symlink_metadata(&snapshot.path).is_ok() {
             error.recovery_path = Some(snapshot.path.to_string_lossy().into_owned());
@@ -555,6 +690,7 @@ fn preserve_snapshot_for_unresolved_target(
 
 pub fn probe_directory(path: &Path) -> Result<(), StorageError> {
     let directory = canonical_directory(path)?;
+    let stable_directory = publication::StableDirectory::open(&directory)?;
     let token = Uuid::new_v4().simple().to_string();
     let create_source_path = directory.join(format!(".cuenote-probe-{token}-create-source"));
     let original_path = directory.join(format!(".cuenote-probe-{token}-old"));
@@ -607,7 +743,12 @@ pub fn probe_directory(path: &Path) -> Result<(), StorageError> {
             }
         }
 
-        if let Err(error) = replace_path(&candidate_path, &original_path, &backup_path) {
+        if let Err(error) = replace_path(
+            &stable_directory,
+            &candidate_path,
+            &original_path,
+            &backup_path,
+        ) {
             #[cfg(windows)]
             cleanup.preserve_if_unowned(&backup_path);
             return Err(StorageError::io(
@@ -619,11 +760,11 @@ pub fn probe_directory(path: &Path) -> Result<(), StorageError> {
                 error,
             ));
         }
-        cleanup.forget(&candidate_path);
         cleanup.update_expected(&original_path, REPLACED_BYTES);
 
         #[cfg(windows)]
         {
+            cleanup.forget(&candidate_path);
             if let Err(error) = verify_probe_file(&backup_path, CREATED_BYTES) {
                 cleanup.preserve_if_unowned(&backup_path);
                 return Err(StorageError::new(
@@ -636,6 +777,22 @@ pub fn probe_directory(path: &Path) -> Result<(), StorageError> {
                 ));
             }
             cleanup.record_published(&backup_path, CREATED_BYTES);
+        }
+
+        #[cfg(not(windows))]
+        {
+            if let Err(error) = verify_probe_file(&candidate_path, CREATED_BYTES) {
+                cleanup.preserve_if_unowned(&candidate_path);
+                return Err(StorageError::new(
+                    "publish",
+                    format!(
+                        "目录交换已返回成功，但无法确认被置换文件内容；路径保留于 {}：{}",
+                        candidate_path.display(),
+                        error.message
+                    ),
+                ));
+            }
+            cleanup.update_expected(&candidate_path, CREATED_BYTES);
         }
 
         let published = read_probe_file(&original_path, REPLACED_BYTES.len())
@@ -852,9 +1009,10 @@ mod probe_cleanup_tests {
     }
 }
 
-struct ResolvedTarget {
+pub(crate) struct ResolvedTarget {
     path: PathBuf,
     parent: PathBuf,
+    directory: publication::StableDirectory,
 }
 
 fn resolve_target(path: &Path) -> Result<ResolvedTarget, StorageError> {
@@ -875,9 +1033,11 @@ fn resolve_target(path: &Path) -> Result<ResolvedTarget, StorageError> {
     }
     let parent = fs::canonicalize(parent)
         .map_err(|error| StorageError::io("无法解析笔记所在目录", error))?;
+    let directory = publication::StableDirectory::open(&parent)?;
     Ok(ResolvedTarget {
         path: parent.join(name),
         parent,
+        directory,
     })
 }
 
@@ -1155,6 +1315,21 @@ fn resolve_recovery_path(path: &Path) -> Result<(PathBuf, bool), StorageError> {
 }
 
 fn acquire_save_lock(recovery_root: &Path, target: &Path) -> io::Result<File> {
+    let file = open_save_lock_file(recovery_root, target)?;
+    file.lock()?;
+    Ok(file)
+}
+
+fn try_acquire_save_lock(recovery_root: &Path, target: &Path) -> io::Result<Option<File>> {
+    let file = open_save_lock_file(recovery_root, target)?;
+    match file.try_lock() {
+        Ok(()) => Ok(Some(file)),
+        Err(std::fs::TryLockError::WouldBlock) => Ok(None),
+        Err(std::fs::TryLockError::Error(error)) => Err(error),
+    }
+}
+
+fn open_save_lock_file(recovery_root: &Path, target: &Path) -> io::Result<File> {
     let locks = recovery_root.join(".locks");
     fs::create_dir_all(&locks)?;
     sync_directory_chain(&locks)?;
@@ -1165,7 +1340,6 @@ fn acquire_save_lock(recovery_root: &Path, target: &Path) -> io::Result<File> {
         .create(true)
         .truncate(false)
         .open(locks.join(format!("{key}.lock")))?;
-    file.lock()?;
     Ok(file)
 }
 
@@ -1284,6 +1458,7 @@ fn inspect_recovery_note(path: &Path) -> Result<Option<OpenedNote>, StorageError
     let target = ResolvedTarget {
         path: path.to_path_buf(),
         parent: parent.to_path_buf(),
+        directory: publication::StableDirectory::open(parent)?,
     };
     inspect_note(&target)
 }
@@ -1315,79 +1490,6 @@ fn copy_at_most_package_size<R: Read, W: Write>(
         ));
     }
     Ok(copied)
-}
-
-fn copy_verified_note(
-    source_path: &Path,
-    destination_path: &Path,
-    expected_note_id: &str,
-) -> Result<String, StorageError> {
-    let mut source = open_read_nofollow(source_path)
-        .map_err(|error| StorageError::io("无法读取恢复草稿来源", error))?;
-    let source_note = read_validated_file(&mut source)?;
-    if source_note.package.document.note_id != expected_note_id {
-        return Err(StorageError::new(
-            "invalid_document",
-            "候选草稿的笔记身份与当前保存请求不一致。",
-        ));
-    }
-    let mut destination = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .create_new(true)
-        .open(destination_path)
-        .map_err(|error| StorageError::io("无法创建恢复草稿副本", error))?;
-    let copy_result = (|| {
-        source
-            .seek(SeekFrom::Start(0))
-            .map_err(|error| StorageError::io("无法定位恢复草稿来源", error))?;
-        copy_at_most_package_size(&mut source, &mut destination, "无法复制恢复草稿")?;
-        destination
-            .flush()
-            .map_err(|error| StorageError::io("无法写入恢复草稿副本", error))?;
-        destination
-            .sync_all()
-            .map_err(|error| StorageError::io("无法同步恢复草稿副本", error))
-    })();
-    if let Err(error) = copy_result {
-        let _ = fs::remove_file(destination_path);
-        return Err(error);
-    }
-    let verified_result = (|| {
-        destination
-            .seek(SeekFrom::Start(0))
-            .map_err(|error| StorageError::io("无法重新读取恢复草稿", error))?;
-        read_validated_file(&mut destination)
-    })();
-    let verified = match verified_result {
-        Ok(verified) => verified,
-        Err(error) => {
-            let _ = fs::remove_file(destination_path);
-            return Err(StorageError::io("无法校验恢复草稿副本", error));
-        }
-    };
-    if verified.package.document.note_id != expected_note_id
-        || verified.revision != source_note.revision
-    {
-        let _ = fs::remove_file(destination_path);
-        return Err(StorageError::new(
-            "invalid_archive",
-            "恢复草稿副本与候选文件校验结果不一致。",
-        ));
-    }
-    let parent = destination_path
-        .parent()
-        .ok_or_else(|| StorageError::new("unsafePath", "恢复草稿副本路径缺少父目录。"))?;
-    sync_directory_chain(parent).map_err(|error| {
-        StorageError::io(
-            &format!(
-                "恢复草稿副本已校验但无法同步目录链；文件保留于 {}",
-                destination_path.display()
-            ),
-            error,
-        )
-    })?;
-    Ok(verified.revision)
 }
 
 fn rotate_history(directory: &Path) {
@@ -1446,104 +1548,23 @@ fn publish_create(candidate: &Path, target: &Path) -> Result<(), StorageError> {
     }
 }
 
-fn publish_replace(
+fn replace_path(
+    directory: &publication::StableDirectory,
     candidate: &Path,
     target: &Path,
-    expected_revision: &str,
-    history_backup: Option<&Path>,
-) -> Result<(), StorageError> {
+    backup: &Path,
+) -> io::Result<()> {
     #[cfg(windows)]
     {
-        let backup = target.with_file_name(format!(
-            ".cuenote-publish-backup-{}.tmp",
-            Uuid::new_v4().simple()
-        ));
-        if let Err(error) = replace_windows(target, candidate, &backup) {
-            let restoration = restore_windows_backup_if_target_missing(
-                &backup,
-                target,
-                expected_revision,
-                history_backup,
-            );
-            return Err(StorageError::new(
-                "publish",
-                format!(
-                    "无法安全发布笔记：{error}；{restoration}；候选文件路径为 {}，替换备份路径为 {}。",
-                    candidate.display(),
-                    backup.display()
-                ),
-            ));
-        }
-        match inspect_path_revision(&backup) {
-            Ok(Some(revision)) if revision == expected_revision => {
-                let _ = fs::remove_file(backup);
-                Ok(())
-            }
-            Ok(Some(revision)) => Err(StorageError::new(
-                "conflict",
-                format!(
-                    "替换已完成，但 Windows 备份版本与保存基线不一致（预期 {expected_revision}，实际 {revision}）；备份保留于 {}。",
-                    backup.display()
-                ),
-            )),
-            Ok(None) => Err(StorageError::new(
-                "publish",
-                format!(
-                    "替换已完成，但 Windows 未留下可读取的旧版备份；备份路径保留为 {}。",
-                    backup.display()
-                ),
-            )),
-            Err(error) => Err(StorageError::new(
-                "publish",
-                format!(
-                    "替换已完成，但无法校验 Windows 旧版备份：{}；备份保留于 {}。",
-                    error.message,
-                    backup.display()
-                ),
-            )),
-        }
-    }
-    #[cfg(unix)]
-    {
-        let _ = history_backup;
-        fs::rename(candidate, target)
-            .map_err(|error| StorageError::io("无法原子替换笔记文件", error))
-    }
-    #[cfg(not(any(windows, unix)))]
-    {
-        let _ = candidate;
-        let _ = target;
-        let _ = expected_revision;
-        let _ = history_backup;
-        Err(StorageError::new(
-            "publish",
-            "当前平台没有实现安全原子替换笔记。",
-        ))
-    }
-}
-
-fn inspect_path_revision(path: &Path) -> Result<Option<String>, StorageError> {
-    let parent = path
-        .parent()
-        .ok_or_else(|| StorageError::new("unsafePath", "笔记路径缺少目录。"))?;
-    let target = ResolvedTarget {
-        path: path.to_path_buf(),
-        parent: parent.to_path_buf(),
-    };
-    Ok(inspect_note(&target)?.map(|note| note.revision))
-}
-
-fn replace_path(candidate: &Path, target: &Path, backup: &Path) -> io::Result<()> {
-    #[cfg(windows)]
-    {
+        let _ = directory;
         replace_windows(target, candidate, backup)
     }
-    #[cfg(unix)]
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
     {
         let _ = backup;
-        fs::rename(candidate, target)
+        directory.swap(candidate, target)
     }
-    #[cfg(not(any(windows, unix)))]
+    #[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
     {
         let _ = candidate;
         let _ = target;
@@ -1820,99 +1841,10 @@ fn replace_windows(target: &Path, candidate: &Path, backup: &Path) -> io::Result
 }
 
 #[cfg(windows)]
-fn restore_windows_backup_if_target_missing(
-    backup: &Path,
-    target: &Path,
-    expected_revision: &str,
-    history_backup: Option<&Path>,
-) -> String {
-    match fs::symlink_metadata(target) {
-        Ok(_) => return "目标路径仍存在，未执行恢复移动".to_owned(),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-        Err(error) => {
-            return format!("无法确认目标路径是否缺失，因此未执行恢复移动：{error}");
-        }
-    }
-    let backup_status = match inspect_path_revision(backup) {
-        Ok(Some(revision)) if revision == expected_revision => {
-            return match move_file_no_replace(backup, target) {
-                Ok(()) => "目标路径缺失，已用无覆盖移动恢复校验过的基线备份".to_owned(),
-                Err(error) => format!(
-                    "目标路径缺失；已校验备份仍保留于 {}，无覆盖恢复失败：{error}",
-                    backup.display()
-                ),
-            };
-        }
-        Ok(Some(revision)) => format!(
-            "替换备份版本与基线不同（预期 {expected_revision}，实际 {revision}），备份保留于 {}",
-            backup.display()
-        ),
-        Ok(None) => format!("替换备份路径 {} 不存在或不可读", backup.display()),
-        Err(error) => format!(
-            "无法校验替换备份（{}）：{}",
-            backup.display(),
-            error.message
-        ),
-    };
-    if let Some(history) = history_backup {
-        match restore_from_verified_history(history, target, expected_revision) {
-            Ok(()) => format!(
-                "目标路径缺失；替换备份状态：{backup_status}；已从独立历史副本无覆盖恢复基线版本"
-            ),
-            Err(error) => format!(
-                "目标路径缺失；替换备份状态：{backup_status}；历史副本也无法无覆盖恢复：{error}"
-            ),
-        }
-    } else {
-        format!("目标路径缺失；替换备份状态：{backup_status}；没有独立历史副本可用于恢复")
-    }
-}
-
-#[cfg(windows)]
-fn restore_from_verified_history(
-    history: &Path,
-    target: &Path,
-    expected_revision: &str,
-) -> Result<(), String> {
-    let history_note = open_note(history).map_err(|error| error.message)?;
-    if history_note.revision != expected_revision {
-        return Err(format!(
-            "历史文件 {} 的版本与保存基线不一致",
-            history.display()
-        ));
-    }
-    let parent = target
-        .parent()
-        .ok_or_else(|| "目标笔记路径缺少目录".to_owned())?;
-    let candidate = parent.join(format!(".cuenote-restore-{}.tmp", Uuid::new_v4().simple()));
-    let copied_revision =
-        copy_verified_note(history, &candidate, &history_note.package.document.note_id)
-            .map_err(|error| error.message)?;
-    if copied_revision != expected_revision {
-        let cleanup = match fs::remove_file(&candidate) {
-            Ok(()) => format!("临时候选已删除；历史副本仍保留于 {}", history.display()),
-            Err(error) if error.kind() == io::ErrorKind::NotFound => {
-                format!("临时候选已不存在；历史副本仍保留于 {}", history.display())
-            }
-            Err(error) => format!(
-                "无法清理临时候选（{error}），候选仍在 {}；历史副本保留于 {}",
-                candidate.display(),
-                history.display()
-            ),
-        };
-        return Err(format!("恢复候选版本与基线不一致；{cleanup}"));
-    }
-    move_file_no_replace(&candidate, target).map_err(|error| {
-        format!(
-            "无覆盖移动失败，已验证恢复候选保留于 {}：{error}",
-            candidate.display()
-        )
-    })
-}
-
-#[cfg(windows)]
 fn move_file_no_replace(source: &Path, target: &Path) -> io::Result<()> {
     use std::os::windows::ffi::OsStrExt;
+    let source = windows_verbatim_path(source)?;
+    let target = windows_verbatim_path(target)?;
     let source_wide = source
         .as_os_str()
         .encode_wide()
@@ -1935,6 +1867,67 @@ fn move_file_no_replace(source: &Path, target: &Path) -> io::Result<()> {
     } else {
         Err(io::Error::last_os_error())
     }
+}
+
+#[cfg(windows)]
+pub(super) fn windows_verbatim_path(path: &Path) -> io::Result<PathBuf> {
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+
+    if is_windows_namespace_path(path) {
+        return Ok(path.to_path_buf());
+    }
+
+    let file_name = path.file_name().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "MoveFileExW path must name a file",
+        )
+    })?;
+    let parent = path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+        .unwrap_or(Path::new("."));
+    let canonical_parent = fs::canonicalize(parent)?;
+    let absolute = canonical_parent.join(file_name);
+
+    let mut wide = absolute.as_os_str().encode_wide().collect::<Vec<_>>();
+    for unit in &mut wide {
+        if *unit == b'/' as u16 {
+            *unit = b'\\' as u16;
+        }
+    }
+    if wide.starts_with(&[92, 92, 63, 92]) || wide.starts_with(&[92, 92, 46, 92]) {
+        return Ok(PathBuf::from(std::ffi::OsString::from_wide(&wide)));
+    }
+
+    let verbatim = if wide.starts_with(&[92, 92]) {
+        let mut prefix = r"\\?\UNC\".encode_utf16().collect::<Vec<_>>();
+        prefix.extend_from_slice(&wide[2..]);
+        prefix
+    } else if wide.len() >= 3
+        && ((wide[0] >= b'A' as u16 && wide[0] <= b'Z' as u16)
+            || (wide[0] >= b'a' as u16 && wide[0] <= b'z' as u16))
+        && wide[1] == b':' as u16
+        && wide[2] == b'\\' as u16
+    {
+        let mut prefix = r"\\?\".encode_utf16().collect::<Vec<_>>();
+        prefix.extend_from_slice(&wide);
+        prefix
+    } else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "MoveFileExW path must resolve to an absolute drive or UNC path",
+        ));
+    };
+    Ok(PathBuf::from(std::ffi::OsString::from_wide(&verbatim)))
+}
+
+#[cfg(windows)]
+fn is_windows_namespace_path(path: &Path) -> bool {
+    use std::os::windows::ffi::OsStrExt;
+
+    let encoded = path.as_os_str().encode_wide().take(4).collect::<Vec<_>>();
+    encoded.as_slice() == [92, 92, 63, 92] || encoded.as_slice() == [92, 92, 46, 92]
 }
 
 #[cfg(windows)]

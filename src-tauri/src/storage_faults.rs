@@ -62,6 +62,7 @@ mod enabled {
                 | "candidate_validated"
                 | "history_persisted"
                 | "publish_before"
+                | "publish_os_returned"
                 | "publish_after"
         ) {
             return Ok(());
