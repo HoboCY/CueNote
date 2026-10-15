@@ -19,6 +19,7 @@ pub(crate) mod versions;
 pub(crate) use local_files::{
     ensure_local_directory, ensure_local_file, open_local_read, NoCloudDownload,
 };
+pub(crate) use publication::export::publish_export;
 pub(crate) use publication::StableDirectory;
 pub(crate) use publication::{ensure_no_pending_publications, recover_pending_publications};
 pub(crate) use recovery::{

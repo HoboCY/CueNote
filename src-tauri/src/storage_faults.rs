@@ -98,6 +98,10 @@ mod enabled {
                 | "library_restore_marker_removed"
                 | "library_restore_closed"
                 | "library_restore_pointer_removed"
+                | "markdown_export_write"
+                | "markdown_export_ready"
+                | "markdown_export_published"
+                | "markdown_export_verified"
         ) {
             return Ok(());
         }

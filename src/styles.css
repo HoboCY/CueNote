@@ -670,6 +670,9 @@ button:focus-visible {
 .save-controls .error-notice { margin: 0; }
 .safe-copy-button { min-height: 30px; }
 .safe-copy-path { display: block; color: #72877a; font-size: 9px; line-height: 1.6; overflow-wrap: anywhere; }
+.markdown-export-status { margin: -14px 0 20px; padding: 12px 14px; border: 1px solid #d5e0d7; border-radius: 8px; background: #f2f6ef; color: #536d61; font-size: 10px; line-height: 1.6; overflow-wrap: anywhere; }
+.markdown-export-status p { margin: 4px 0 0; }
+.markdown-export-status code { white-space: normal; }
 .note-actions { align-items: flex-start; }
 
 @media (max-width: 900px) {

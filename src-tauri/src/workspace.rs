@@ -24,6 +24,7 @@ mod backups;
 mod external;
 mod external_notes;
 mod library_restore;
+mod markdown_export;
 mod search;
 pub use crate::storage::versions::{PreservedVersionSummary, VersionList};
 pub use backup_restore::{
@@ -39,6 +40,7 @@ pub use external_notes::ExternalSaveReceipt;
 pub use library_restore::{
     LibraryRestoreAction, LibraryRestorePreview, LibraryRestoreReceipt, LibraryRestoreStatus,
 };
+pub use markdown_export::MarkdownExportReceipt;
 pub use search::{SearchHit, SearchResults, SearchSection, SearchSnippet, SearchStatus};
 
 pub type WorkspaceError = StorageError;

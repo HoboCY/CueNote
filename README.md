@@ -73,7 +73,7 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 
 三分区编辑能力、Markdown 输入、基础表格与文档转换边界见[富文本编辑契约](docs/rich-editor-contract.md)。文件使用应用原生结构，编辑器内部 JSON 不作为磁盘协议。
 
-正文支持反引号行内代码、围栏代码块，以及 JavaScript、TypeScript、Python、Rust、C#、SQL、JSON 的离线高亮。代码块可选择或填写语言；未知语言保留标记并显示纯文本。缩进和空行按原文保存，连续回车留在代码块内，通过工具栏或 Ctrl/⌘+Enter 离开。详见[代码编辑契约](docs/code-editing-contract.md)与[全文搜索契约](docs/search-contract.md)；Markdown 导出仍由后续任务实现。
+正文支持反引号行内代码、围栏代码块，以及 JavaScript、TypeScript、Python、Rust、C#、SQL、JSON 的离线高亮。代码块可选择或填写语言；未知语言保留标记并显示纯文本。缩进和空行按原文保存，连续回车留在代码块内，通过工具栏或 Ctrl/⌘+Enter 离开。详见[代码编辑契约](docs/code-editing-contract.md)与[全文搜索契约](docs/search-contract.md)。
 
 正文支持 `$...$` 行内公式和独占行 `$$` 围起的公式块，也可从工具栏插入，点击公式修改 LaTeX 源码。公式使用随应用打包的 KaTeX 离线排版；语法错误或超出显示限制时显示源码提示，完整源码仍可编辑和保存。确认修改可通过正文撤销。详见[公式编辑契约](docs/math-editing-contract.md)。
 
@@ -88,6 +88,8 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 ## 规格与计划
 
 可通过“打开库外笔记…”直接编辑独立 `.cuenote` 文件，并另存完整副本到指定笔记本。原文件保持独立，库外内容不进入当前库的搜索和整库备份。详见[库外笔记约定](docs/external-notes-contract.md)。
+
+“导出 Markdown…”将当前内容导出为独立目录，保留三分区、代码、公式和相对图片附件；导图提供静态 SVG 预览。特殊语法附原文，移动时保留整个目录。数学显示取决于阅读器，导出不替代原生笔记备份。详见[Markdown 导出约定](docs/markdown-export-contract.md)。
 
 - [首版最终规格与验收标准](https://github.com/HoboCY/CueNote/issues/8#issuecomment-6165724793)
 - [整体技术方案](https://github.com/HoboCY/CueNote/issues/7#issuecomment-6164489548)
@@ -110,6 +112,7 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 - [单篇恢复验证](docs/backup-restore-validation.md)
 - [整库恢复验证](docs/library-restore-validation.md)
 - [库外笔记验证](docs/external-notes-validation.md)
+- [Markdown 导出验证](docs/markdown-export-validation.md)
 
 Mac、真实 OneDrive 双端、完整编辑能力、容量与性能验收仍需后续实现与测试；当前版本不代表已达到日用标准。
 

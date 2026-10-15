@@ -132,6 +132,7 @@ pub fn run() {
             commands::restore_recovery_as_copy,
             commands::save_current_as,
             commands::save_current_content_as,
+            commands::export_current_markdown,
             commands::save_recovery_as,
             commands::probe_external_changes,
             commands::reconcile_external_changes,

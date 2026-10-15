@@ -6,7 +6,7 @@ import { createSaveCoordinator, type SaveCoordinatorState } from './save-coordin
 import { createExternalChangesCoordinator, type ExternalChangeToken } from './external-changes';
 import { createSearchCoordinator, type SearchCoordinatorState } from './search-coordinator';
 import { continueFromVerifiedCopyOrProtect } from './conflict-transition';
-import { copyExternalDraft } from './external-note-copy';
+import { publishDraftSnapshot } from './publish-draft-snapshot';
 import { RichTextEditor, type RichTextSection } from './RichTextEditor';
 import { BackupPanel } from './BackupPanel';
 import { LibraryRestorePanel } from './LibraryRestorePanel';
@@ -26,6 +26,7 @@ import {
   type PreservedVersionSummary,
   type EditorSaveReceipt,
   type SavedCopy,
+  type MarkdownExportReceipt,
   type SearchHit,
   type SearchProgress,
   type SearchSection,
@@ -196,6 +197,7 @@ function App() {
   const [viewPreferencesError, setViewPreferencesError] = useState<WorkspaceError | null>(null);
   const [safeCopyError, setSafeCopyError] = useState<WorkspaceError | null>(null);
   const [currentCopy, setCurrentCopy] = useState<CurrentCopy | null>(null);
+  const [markdownExport, setMarkdownExport] = useState<MarkdownExportReceipt | null>(null);
   const [recoveryList, setRecoveryList] = useState<RecoveryList | null>(null);
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [recoveryError, setRecoveryError] = useState<WorkspaceError | null>(null);
@@ -433,6 +435,7 @@ function App() {
     setSaveError(null);
     setSafeCopyError(null);
     setCurrentCopy(null);
+    setMarkdownExport(null);
     saveCoordinatorRef.current?.reset(
       value?.sessionId ?? null,
       value ? cloneNoteContent(value.content) : null,
@@ -1081,6 +1084,18 @@ function App() {
     }
   };
 
+  const currentPublishSnapshot = (expectedSessionId: string) => {
+    const current = sessionRef.current;
+    const snapshot = draftRef.current;
+    if (!current || current.sessionId !== expectedSessionId || !snapshot) {
+      throw new Error('笔记会话已切换，请重试此次操作。');
+    }
+    const metadataReadOnly = metadataReadOnlySessionIdRef.current === current.sessionId;
+    const storedContent = current.readOnlyReason && !metadataReadOnly || hasInitialEditorIssue();
+    if (hasEditorIssue() && !storedContent) throw new Error('编辑内容尚未整理完成，草稿仍保留。');
+    return { sessionId: current.sessionId, content: cloneNoteContent(storedContent ? current.content : snapshot) };
+  };
+
   const saveCurrentAs = async () => {
     if (externalReconcilePendingRef.current) return;
     try {
@@ -1098,11 +1113,11 @@ function App() {
     ));
     if (!desktopRuntime || isInitializing || operationInProgressRef.current || externalReconcilePendingRef.current
       || hasEditorIssue() && !unchangedReadOnlyCopy || !currentSession || !snapshot || currentSession.trashedAt !== null) return;
-    const copyContent = cloneNoteContent(unchangedReadOnlyCopy ? currentSession.content : snapshot);
     operationInProgressRef.current = true;
     setIsOperationBusy(true);
     setSafeCopyError(null);
     try {
+      const copyContent = currentPublishSnapshot(currentSession.sessionId).content;
       const copy = await workspaceApi.saveCurrentAs(currentSession.sessionId, copyContent);
       if (copy) setCurrentCopy({ ...copy, sessionId: currentSession.sessionId, content: copyContent });
     } catch (cause) {
@@ -1942,21 +1957,40 @@ function App() {
     setIsOperationBusy(true);
     setError(null);
     try {
-      const receipt = await copyExternalDraft({
+      const receipt = await publishDraftSnapshot({
         pauseSaving: pauseAutomaticSaving,
         settleEditors,
-        snapshot: () => {
-          if (sessionRef.current?.sessionId !== current.sessionId || !draftRef.current
-            || hasEditorIssue() && !hasInitialEditorIssue()) throw new Error('编辑内容尚未整理完成，草稿仍保留。');
-          return { sessionId: current.sessionId,
-            content: cloneNoteContent(hasInitialEditorIssue() ? current.content : draftRef.current) };
-        },
+        snapshot: () => currentPublishSnapshot(current.sessionId),
         publish: ({ sessionId, content }) => workspaceApi.saveExternalIntoLibrary(sessionId, notebookId, content),
       });
       applyLibraryView(receipt.library);
       setTrashView(false);
       persistViewPreferences({ ...viewPreferencesRef.current, selectedNotebookId: notebookId });
       applySession(receipt.session);
+    } catch (cause) {
+      setError(toWorkspaceError(cause));
+    } finally {
+      operationInProgressRef.current = false;
+      setIsOperationBusy(false);
+      resumeAutomaticSavingWhenSafe();
+    }
+  };
+
+  const exportMarkdown = async () => {
+    const current = sessionRef.current;
+    if (!desktopRuntime || !current || operationInProgressRef.current
+      || externalReconcilePendingRef.current || pendingTransitionRef.current) return;
+    operationInProgressRef.current = true;
+    setIsOperationBusy(true);
+    setError(null);
+    try {
+      const receipt = await publishDraftSnapshot({
+        pauseSaving: pauseAutomaticSaving,
+        settleEditors,
+        snapshot: () => currentPublishSnapshot(current.sessionId),
+        publish: ({ sessionId, content }) => workspaceApi.exportCurrentMarkdown(sessionId, content),
+      });
+      if (receipt) setMarkdownExport(receipt);
     } catch (cause) {
       setError(toWorkspaceError(cause));
     } finally {
@@ -2796,6 +2830,10 @@ function App() {
             </div>
           </div>
           <div className="header-actions">
+            {desktopRuntime && session && sessionMatchesView && <button className="quiet-button" type="button" data-testid="export-markdown"
+              title="导出当前内容、图片和导图静态预览"
+              disabled={isOperationBusy || isReconcilingExternalChange || isComposing || hasAnyEditorIssue && !hasInitialIssue || Boolean(pendingTransition)}
+              onClick={() => void exportMarkdown()}>导出 Markdown…</button>}
             <span className={`runtime-badge${desktopRuntime ? ' is-desktop' : ' is-browser'}`}>
               <span className="status-dot" aria-hidden="true" />
               {runtimeStatus}
@@ -2803,6 +2841,12 @@ function App() {
             {workspace?.appVersion && <span className="version-badge">v{workspace.appVersion}</span>}
           </div>
         </header>
+
+        {markdownExport && sessionMatchesView && <div className="markdown-export-status" role="status">
+          <strong>上次成功导出 Markdown</strong>
+          <p><code>{markdownExport.markdownPath}</code>（{markdownExport.attachmentCount} 个附件）</p>
+          <p>移动时请保留整个导出文件夹。数学显示取决于阅读器，导图为静态预览。</p>
+        </div>}
 
         <section className="preview-heading" aria-labelledby="page-title">
           <div className="heading-copy">
@@ -3320,6 +3364,7 @@ function App() {
             </section>
             <div className="note-actions">
               <div className="save-controls">
+                <span className="save-hint">导出当前内容与相对附件；数学显示取决于阅读器，导图为静态预览。</span>
                 <span className="save-hint">{isTrashSession
                   ? '回收站中的笔记为只读；恢复后可继续编辑。'
                   : isActivePreservedPreview

@@ -10,6 +10,8 @@ use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
+pub(crate) mod export;
+
 const JOURNAL_DIRECTORY: &str = ".pending-publications";
 const MAX_INTENTS: usize = 256;
 const MAX_JOURNAL_ENTRIES: usize = MAX_INTENTS * 2;

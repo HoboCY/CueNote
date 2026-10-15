@@ -1,5 +1,5 @@
-/** Creating an independent copy must not flush pending edits to the original. */
-export async function copyExternalDraft<Content, Receipt>(options: {
+/** Publish a settled snapshot without flushing pending edits to the original. */
+export async function publishDraftSnapshot<Content, Receipt>(options: {
   pauseSaving: () => Promise<void>;
   settleEditors: () => Promise<void>;
   snapshot: () => { sessionId: string; content: Content };

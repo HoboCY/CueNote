@@ -47,6 +47,7 @@
     "allow-restore-recovery-as-copy",
     "allow-save-current-as",
     "allow-save-current-content-as",
+    "allow-export-current-markdown",
     "allow-save-recovery-as",
     "allow-probe-external-changes",
     "allow-reconcile-external-changes",

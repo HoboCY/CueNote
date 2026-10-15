@@ -13,8 +13,8 @@ use crate::workspace::{
     BackupCatalog, BackupContext, BackupControl, BackupJob, BackupKind, BackupNoteList,
     BackupOutcome, BackupPhase, BackupProgress, BackupRestoreReceipt, ExternalProbe,
     ExternalReconciliation, ExternalSaveReceipt, LibraryRestoreAction, LibraryRestorePreview,
-    LibraryRestoreReceipt, LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy,
-    SearchResults, VersionList, Workspace, WorkspaceError, WorkspaceView,
+    LibraryRestoreReceipt, LibraryView, MarkdownExportReceipt, NoteSession, RecoveryList,
+    SaveReceipt, SavedCopy, SearchResults, VersionList, Workspace, WorkspaceError, WorkspaceView,
 };
 
 #[derive(Clone)]
@@ -1186,6 +1186,40 @@ pub async fn save_current_content_as(
     cached_export(state.inner().clone(), move |workspace| {
         workspace
             .save_current_content_as(&session_id, content, path)
+            .map(Some)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn export_current_markdown(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    content: NoteContent,
+) -> Result<Option<MarkdownExportReceipt>, WorkspaceError> {
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .set_title("选择 Markdown 导出位置（会新建一个完整导出文件夹）")
+            .blocking_pick_folder()
+    })
+    .await
+    .map_err(|error| command_error(format!("无法选择导出目录：{error}")))?;
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let parent = selected
+        .into_path()
+        .map_err(|error| command_error(format!("请选择本机文件夹：{error}")))?;
+    let path = parent.join(format!(
+        "CueNote-{}-{}",
+        chrono::Local::now().format("%Y%m%d-%H%M%S"),
+        uuid::Uuid::new_v4().simple()
+    ));
+    cached_export(state.inner().clone(), move |workspace| {
+        workspace
+            .export_current_markdown_bundle(&session_id, content, path)
             .map(Some)
     })
     .await

@@ -44,6 +44,7 @@ fn main() {
             "restore_recovery_as_copy",
             "save_current_as",
             "save_current_content_as",
+            "export_current_markdown",
             "save_recovery_as",
             "probe_external_changes",
             "reconcile_external_changes",

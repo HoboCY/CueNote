@@ -130,6 +130,12 @@ export interface SavedCopy {
   revision: string;
 }
 
+export interface MarkdownExportReceipt {
+  directory: string;
+  markdownPath: string;
+  attachmentCount: number;
+}
+
 export interface BackupSummary {
   backupId: string;
   kind: 'automatic' | 'manual';
@@ -333,6 +339,8 @@ export const workspaceApi = {
     invoke<void>('resolve_preserved_version', { versionId }),
   saveCurrentAs: (sessionId: string, content: NoteContent) =>
     invoke<SavedCopy | null>('save_current_content_as', { sessionId, content }),
+  exportCurrentMarkdown: (sessionId: string, content: NoteContent) =>
+    invoke<MarkdownExportReceipt | null>('export_current_markdown', { sessionId, content }),
   activateCloseGuard: () => invoke<void>('activate_close_guard'),
   completeClose: () => invoke<void>('complete_close'),
 };
