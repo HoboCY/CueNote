@@ -121,6 +121,37 @@ export interface SavedCopy {
   revision: string;
 }
 
+export interface BackupSummary {
+  backupId: string;
+  kind: 'automatic' | 'manual';
+  createdAt: string;
+  localDate: string;
+  path: string;
+  noteCount: number;
+  notebookCount: number;
+}
+
+export interface BackupCatalog {
+  libraryPath: string;
+  directory: string;
+  backups: BackupSummary[];
+  warnings: string[];
+}
+
+export interface BackupOutcome {
+  catalog: BackupCatalog;
+  created: BackupSummary | null;
+  message: string;
+}
+
+export interface BackupProgress {
+  requestId: string;
+  libraryPath: string;
+  phase: string;
+  checked: number;
+  total: number;
+}
+
 export type ExternalChangeStatus = 'unchanged' | 'changed' | 'missing' | 'unreadable';
 
 export interface ExternalChangeProbe {
@@ -206,6 +237,13 @@ export const workspaceApi = {
   reconcileExternalChanges: (sessionId: string, content: NoteContent) =>
     invoke<ExternalChangeReconciliation>('reconcile_external_changes', { sessionId, content }),
   listPreservedVersions: () => invoke<PreservedVersionList>('list_preserved_versions'),
+  runBackup: (kind: 'automatic' | 'manual', requestId: string, expectedLibraryPath: string) =>
+    invoke<BackupOutcome>('run_backup', { kind, requestId, expectedLibraryPath }),
+  listBackups: (requestId: string, expectedLibraryPath: string) =>
+    invoke<BackupCatalog>('list_backups', { requestId, expectedLibraryPath }),
+  chooseBackupDirectory: (requestId: string, expectedLibraryPath: string) =>
+    invoke<BackupCatalog | null>('choose_backup_directory', { requestId, expectedLibraryPath }),
+  cancelBackup: () => invoke<void>('cancel_backup'),
   openPreservedVersion: (versionId: string) =>
     invoke<NoteSession>('open_preserved_version', { versionId }),
   restorePreservedAsCopy: (versionId: string) =>

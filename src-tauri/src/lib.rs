@@ -6,7 +6,7 @@ mod storage_faults;
 pub mod workspace;
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tauri::{Emitter, Manager};
 
 /// Editing is enabled only after the frontend has subscribed to close requests
@@ -71,7 +71,7 @@ pub fn run() {
                     let _ = emitter.emit("cuenote:search-progress", progress);
                 },
             ));
-            let workspace: commands::WorkspaceState = Arc::new(Mutex::new(workspace));
+            let workspace = commands::WorkspaceState::new(workspace);
             app.manage(workspace);
             Ok(())
         })
@@ -93,6 +93,10 @@ pub fn run() {
             commands::get_workspace,
             commands::search_notes,
             commands::rebuild_search_index,
+            commands::run_backup,
+            commands::list_backups,
+            commands::choose_backup_directory,
+            commands::cancel_backup,
             commands::use_default_library,
             commands::initialize_selected_library,
             commands::choose_library,

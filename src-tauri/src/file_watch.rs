@@ -83,6 +83,11 @@ pub(crate) fn configure(app: &AppHandle, library: Option<&mut crate::workspace::
             };
             if should_check {
                 callback_generation.fetch_add(1, Ordering::AcqRel);
+                // This is an early abort hint only. A backup still compares
+                // exact source collections and content hashes independently.
+                emitter
+                    .state::<crate::commands::WorkspaceState>()
+                    .cancel_backup();
                 let _ = emitter.emit("cuenote:files-changed", ());
             }
         })?;

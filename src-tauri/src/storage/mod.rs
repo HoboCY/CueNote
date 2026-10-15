@@ -24,6 +24,33 @@ pub(crate) use recovery::{
 };
 pub(crate) use versions::{preserve_conflict_version, preserve_observed_version};
 
+/// Publishes a prepared directory beside its destination without replacing an
+/// existing path. The pinned directory handle protects the Windows/macOS
+/// publication boundary and syncs the parent after the move.
+pub(crate) fn publish_directory_no_replace(
+    parent: &Path,
+    source: &Path,
+    destination: &Path,
+) -> io::Result<()> {
+    let directory = publication::StableDirectory::open(parent)
+        .map_err(|error| io::Error::new(io::ErrorKind::Other, error.message))?;
+    directory.move_no_replace(source, destination)?;
+    directory.sync_publication_directory()
+}
+
+/// Isolates one direct child directory under a unique sibling name without
+/// replacing any existing entry. Used before cleanup of retention-owned data.
+pub(crate) fn move_directory_no_replace(
+    parent: &Path,
+    source: &Path,
+    destination: &Path,
+) -> io::Result<()> {
+    let directory = publication::StableDirectory::open(parent)
+        .map_err(|error| io::Error::new(io::ErrorKind::Other, error.message))?;
+    directory.move_no_replace(source, destination)?;
+    directory.sync_publication_directory()
+}
+
 const HISTORY_LIMIT: usize = 30;
 const MAX_METADATA_REPLACEMENT_BYTES: u64 = 64 * 1024;
 const NOTEBOOK_CONFLICT_PREFIX: &str = ".cuenote-notebook-conflict-";

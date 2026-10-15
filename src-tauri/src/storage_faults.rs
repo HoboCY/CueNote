@@ -71,6 +71,7 @@ mod enabled {
                 | "metadata_delete_after_move"
                 | "trashed_delete_before_isolate"
                 | "trashed_delete_after_isolate"
+                | "backup_file_copied"
         ) {
             return Ok(());
         }

@@ -7,6 +7,7 @@ import { createExternalChangesCoordinator, type ExternalChangeToken } from './ex
 import { createSearchCoordinator, type SearchCoordinatorState } from './search-coordinator';
 import { continueFromVerifiedCopyOrProtect } from './conflict-transition';
 import { RichTextEditor, type RichTextSection } from './RichTextEditor';
+import { BackupPanel } from './BackupPanel';
 import type { ImageEditorBridge } from './image-session';
 import type { MindMapEditorBridge } from './mindmap-session';
 import {
@@ -929,6 +930,26 @@ function App() {
     }
   };
   flushCurrentRef.current = () => { void saveCurrent(); };
+
+  const prepareManualBackup = async (): Promise<boolean> => {
+    const libraryPath = workspaceRef.current?.library?.path;
+    if (!desktopRuntime || !libraryPath || isInitializing || operationInProgressRef.current
+      || pendingTransitionRef.current || externalReconcilePendingRef.current
+      || manualSaveInProgressRef.current || externalConflictRef.current || hasBlockingEditorIssue()) return false;
+    manualSaveInProgressRef.current = true;
+    try {
+      await settleEditors();
+      if (workspaceRef.current?.library?.path !== libraryPath || operationInProgressRef.current
+        || pendingTransitionRef.current || externalReconcilePendingRef.current
+        || externalConflictRef.current || hasBlockingEditorIssue()) return false;
+      const saved = await saveCoordinator.flush();
+      return saved && workspaceRef.current?.library?.path === libraryPath
+        && !saveCoordinator.getState().isDirty && !isComposingRef.current
+        && pendingEditorOperationsRef.current.size === 0;
+    } finally {
+      manualSaveInProgressRef.current = false;
+    }
+  };
 
   const saveCurrentAs = async () => {
     if (externalReconcilePendingRef.current) return;
@@ -2701,6 +2722,17 @@ function App() {
               onClick={initializeSelectedLibrary}
             >初始化当前空笔记库</button>
           </div>
+        )}
+
+        {desktopRuntime && (
+          <BackupPanel
+            libraryPath={library?.path ?? null}
+            changeToken={library}
+            automaticAllowed={!navigationLocked && !isDirty && !isSaving && !saveFailed
+              && !isComposing && !hasAnyEditorIssue && !externalConflict
+              && pendingEditorOperationCount === 0 && closeGuardReady}
+            beforeManualBackup={prepareManualBackup}
+          />
         )}
 
         {desktopRuntime && (

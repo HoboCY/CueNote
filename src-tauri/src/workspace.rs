@@ -19,9 +19,14 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use uuid::Uuid;
 
+mod backups;
 mod external;
 mod search;
 pub use crate::storage::versions::{PreservedVersionSummary, VersionList};
+pub use backups::{
+    BackupCatalog, BackupContext, BackupControl, BackupJob, BackupKind, BackupOutcome, BackupPhase,
+    BackupProgress, BackupSummary,
+};
 pub use external::{ExternalProbe, ExternalReconciliation};
 pub use search::{SearchHit, SearchResults, SearchSection, SearchSnippet, SearchStatus};
 
@@ -278,6 +283,50 @@ impl Workspace {
             search_generation: Arc::new(AtomicU64::new(0)),
             search_progress: None,
         }
+    }
+
+    /// Captures the selected library and its local backup destination for work
+    /// that will continue after the workspace mutex is released.
+    pub fn backup_context(&self) -> Result<BackupContext, WorkspaceError> {
+        let library_path = self
+            .library
+            .as_ref()
+            .map(|library| library.path.clone())
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        BackupContext::from_workspace(
+            library_path,
+            self.config_root.clone(),
+            self.recovery_root.clone(),
+        )
+    }
+
+    /// Stores a picker-selected local directory as this device's backup
+    /// preference and returns a context bound to the current library.
+    pub fn set_backup_directory(
+        &mut self,
+        directory: PathBuf,
+    ) -> Result<BackupContext, WorkspaceError> {
+        let library_path = self
+            .library
+            .as_ref()
+            .map(|library| library.path.clone())
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        BackupContext::with_directory(
+            library_path,
+            self.config_root.clone(),
+            self.recovery_root.clone(),
+            directory,
+        )
+    }
+
+    /// Persists a lightweight reminder that the selected library needs an
+    /// automatic-backup check after this process closes. This does not scan
+    /// the library or inspect the configured backup destination.
+    pub fn mark_backup_check_due(&self, observed_local_date: &str) -> Result<(), WorkspaceError> {
+        let Some(library) = self.library.as_ref() else {
+            return Ok(());
+        };
+        backups::mark_backup_check_due(&self.config_root, &library.path, observed_local_date)
     }
 
     pub(crate) fn attach_search_generation(&mut self, generation: Arc<AtomicU64>) {
@@ -4930,7 +4979,7 @@ fn is_valid_timestamp(value: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn display_path(path: &Path) -> String {
+pub(crate) fn display_path(path: &Path) -> String {
     let value = path.to_string_lossy();
     if let Some(rest) = value.strip_prefix(r"\\?\UNC\") {
         format!(r"\\{rest}")

@@ -3,17 +3,35 @@ use std::sync::{Arc, Mutex};
 
 use tauri::{
     ipc::{InvokeBody, Request, Response},
-    AppHandle, Manager, State,
+    AppHandle, Emitter, Manager, State,
 };
 use tauri_plugin_dialog::DialogExt;
 
 use crate::note_format::{AssetManifestEntry, NoteContent, PlainText};
 use crate::workspace::{
-    ExternalProbe, ExternalReconciliation, LibraryView, NoteSession, RecoveryList, SaveReceipt,
-    SavedCopy, SearchResults, VersionList, Workspace, WorkspaceError, WorkspaceView,
+    BackupCatalog, BackupContext, BackupControl, BackupJob, BackupKind, BackupOutcome,
+    BackupProgress, ExternalProbe, ExternalReconciliation, LibraryView, NoteSession, RecoveryList,
+    SaveReceipt, SavedCopy, SearchResults, VersionList, Workspace, WorkspaceError, WorkspaceView,
 };
 
-pub type WorkspaceState = Arc<Mutex<Workspace>>;
+#[derive(Clone)]
+pub struct WorkspaceState {
+    workspace: Arc<Mutex<Workspace>>,
+    backups: BackupControl,
+}
+
+impl WorkspaceState {
+    pub fn new(workspace: Workspace) -> Self {
+        Self {
+            workspace: Arc::new(Mutex::new(workspace)),
+            backups: BackupControl::default(),
+        }
+    }
+
+    pub(crate) fn cancel_backup(&self) {
+        self.backups.cancel();
+    }
+}
 
 fn command_error(message: impl Into<String>) -> WorkspaceError {
     WorkspaceError {
@@ -29,7 +47,7 @@ async fn work<T: Send + 'static>(
     action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
 ) -> Result<T, WorkspaceError> {
     tauri::async_runtime::spawn_blocking(move || {
-        let mut workspace = state.lock().map_err(|_| {
+        let mut workspace = state.workspace.lock().map_err(|_| {
             command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
         })?;
         let _policy = crate::storage::NoCloudDownload::enter()?;
@@ -39,12 +57,178 @@ async fn work<T: Send + 'static>(
     .map_err(|error| command_error(format!("笔记操作未完成：{error}")))?
 }
 
+/// Announce before waiting for the workspace lock. A backup copies outside that
+/// lock; this guard also prevents it publishing between an edit request and the
+/// corresponding filesystem operation (including operations that later fail).
+async fn mutate<T: Send + 'static>(
+    state: WorkspaceState,
+    action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
+) -> Result<T, WorkspaceError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let _mutation = state.backups.begin_mutation();
+        let mut workspace = state.workspace.lock().map_err(|_| {
+            command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
+        })?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        action(&mut workspace)
+    })
+    .await
+    .map_err(|error| command_error(format!("笔记操作未完成：{error}")))?
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DesktopBackupProgress {
+    request_id: String,
+    #[serde(flatten)]
+    progress: BackupProgress,
+}
+
+fn require_backup_library(workspace: &Workspace, expected: &str) -> Result<(), WorkspaceError> {
+    if crate::workspace::display_path(&workspace.library_path()?) != expected {
+        return Err(command_error(
+            "笔记库已切换；此次备份操作已取消，请在当前笔记库重试。",
+        ));
+    }
+    Ok(())
+}
+
+async fn backup_work<T: Send + 'static>(
+    app: AppHandle,
+    state: WorkspaceState,
+    request_id: String,
+    expected_library_path: String,
+    selected_directory: Option<std::path::PathBuf>,
+    action: impl FnOnce(BackupContext, &BackupJob) -> Result<T, WorkspaceError> + Send + 'static,
+) -> Result<T, WorkspaceError> {
+    if request_id.is_empty() || request_id.len() > 128 || request_id.chars().any(char::is_control) {
+        return Err(command_error("备份请求身份无效，请重试。"));
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        // Directory changes invalidate a job just like a library transition.
+        let mutation = selected_directory
+            .as_ref()
+            .map(|_| state.backups.begin_mutation());
+        let mut workspace = state
+            .workspace
+            .lock()
+            .map_err(|_| command_error("笔记服务已中断，请重新启动 CueNote 后重试备份。"))?;
+        require_backup_library(&workspace, &expected_library_path)?;
+        let context = if let Some(directory) = selected_directory {
+            workspace.set_backup_directory(directory)?
+        } else {
+            workspace.backup_context()?
+        };
+        drop(mutation);
+        let job = state.backups.begin_job(Some(Arc::new(move |progress| {
+            let _ = app.emit(
+                "cuenote:backup-progress",
+                DesktopBackupProgress {
+                    request_id: request_id.clone(),
+                    progress,
+                },
+            );
+        })))?;
+        // Hashing, copying and package validation must not hold the editor's
+        // mutex. The coordinator guards the final publication separately.
+        drop(workspace);
+        action(context, &job)
+    })
+    .await
+    .map_err(|error| command_error(format!("备份操作未完成：{error}")))?
+}
+
+#[tauri::command]
+pub async fn run_backup(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    kind: BackupKind,
+    request_id: String,
+    expected_library_path: String,
+) -> Result<BackupOutcome, WorkspaceError> {
+    backup_work(
+        app,
+        state.inner().clone(),
+        request_id,
+        expected_library_path,
+        None,
+        move |context, job| {
+            let local_date = chrono::Local::now().format("%Y-%m-%d").to_string();
+            context.run(kind, &local_date, job)
+        },
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn list_backups(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    request_id: String,
+    expected_library_path: String,
+) -> Result<BackupCatalog, WorkspaceError> {
+    backup_work(
+        app,
+        state.inner().clone(),
+        request_id,
+        expected_library_path,
+        None,
+        |context, job| context.catalog(job),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn choose_backup_directory(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    request_id: String,
+    expected_library_path: String,
+) -> Result<Option<BackupCatalog>, WorkspaceError> {
+    let expected = expected_library_path.clone();
+    work(state.inner().clone(), move |workspace| {
+        require_backup_library(workspace, &expected)
+    })
+    .await?;
+    let picker = app.clone();
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        picker
+            .dialog()
+            .file()
+            .set_title("选择独立本机备份目录（OneDrive 同步目录之外）")
+            .blocking_pick_folder()
+    })
+    .await
+    .map_err(|error| command_error(format!("无法选择备份目录：{error}")))?;
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let directory = selected
+        .into_path()
+        .map_err(|error| command_error(format!("请选择本机文件夹：{error}")))?;
+    backup_work(
+        app,
+        state.inner().clone(),
+        request_id,
+        expected_library_path,
+        Some(directory),
+        |context, job| context.catalog(job).map(Some),
+    )
+    .await
+}
+
+#[tauri::command]
+pub fn cancel_backup(state: State<'_, WorkspaceState>) {
+    state.cancel_backup();
+}
+
 #[tauri::command]
 pub async fn get_workspace(
     app: AppHandle,
     state: State<'_, WorkspaceState>,
 ) -> Result<WorkspaceView, WorkspaceError> {
-    let mut view = work(state.inner().clone(), Workspace::snapshot).await?;
+    let mut view = mutate(state.inner().clone(), Workspace::snapshot).await?;
     crate::file_watch::configure(&app, view.library.as_mut());
     Ok(view)
 }
@@ -77,7 +261,11 @@ pub async fn use_default_library(
     app: AppHandle,
     state: State<'_, WorkspaceState>,
 ) -> Result<WorkspaceView, WorkspaceError> {
-    let mut view = work(state.inner().clone(), Workspace::use_default_library).await?;
+    let mut view = mutate(state.inner().clone(), |workspace| {
+        workspace.mark_backup_check_due(&chrono::Local::now().format("%Y-%m-%d").to_string())?;
+        workspace.use_default_library()
+    })
+    .await?;
     crate::file_watch::configure(&app, view.library.as_mut());
     Ok(view)
 }
@@ -87,10 +275,10 @@ pub async fn initialize_selected_library(
     app: AppHandle,
     state: State<'_, WorkspaceState>,
 ) -> Result<WorkspaceView, WorkspaceError> {
-    let mut view = work(
-        state.inner().clone(),
-        Workspace::initialize_selected_library,
-    )
+    let mut view = mutate(state.inner().clone(), |workspace| {
+        workspace.mark_backup_check_due(&chrono::Local::now().format("%Y-%m-%d").to_string())?;
+        workspace.initialize_selected_library()
+    })
     .await?;
     crate::file_watch::configure(&app, view.library.as_mut());
     Ok(view)
@@ -118,7 +306,8 @@ pub async fn choose_library(
     let path = selected
         .into_path()
         .map_err(|error| command_error(format!("请选择本机文件夹：{error}")))?;
-    let mut view = work(state.inner().clone(), move |workspace| {
+    let mut view = mutate(state.inner().clone(), move |workspace| {
+        workspace.mark_backup_check_due(&chrono::Local::now().format("%Y-%m-%d").to_string())?;
         workspace.select_library(path).map(Some)
     })
     .await?;
@@ -141,7 +330,7 @@ pub async fn new_note(
     state: State<'_, WorkspaceState>,
     notebook_id: Option<String>,
 ) -> Result<NoteSession, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.new_note_in(notebook_id.as_deref())
     })
     .await
@@ -152,7 +341,7 @@ pub async fn create_notebook(
     state: State<'_, WorkspaceState>,
     name: String,
 ) -> Result<LibraryView, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.create_notebook(&name)
     })
     .await
@@ -164,7 +353,7 @@ pub async fn rename_notebook(
     notebook_id: String,
     name: String,
 ) -> Result<LibraryView, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.rename_notebook(&notebook_id, &name)
     })
     .await
@@ -175,7 +364,7 @@ pub async fn delete_notebook(
     state: State<'_, WorkspaceState>,
     notebook_id: String,
 ) -> Result<LibraryView, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.delete_notebook(&notebook_id)
     })
     .await
@@ -188,7 +377,7 @@ pub async fn update_note_organization(
     notebook_id: String,
     pinned: bool,
 ) -> Result<SaveReceipt, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.update_note_organization(&session_id, &notebook_id, pinned)
     })
     .await
@@ -199,7 +388,7 @@ pub async fn trash_note(
     state: State<'_, WorkspaceState>,
     session_id: String,
 ) -> Result<SaveReceipt, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.trash_note(&session_id)
     })
     .await
@@ -211,7 +400,7 @@ pub async fn restore_trashed_note(
     session_id: String,
     target_notebook_id: Option<String>,
 ) -> Result<SaveReceipt, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.restore_trashed_note(&session_id, target_notebook_id.as_deref())
     })
     .await
@@ -223,7 +412,7 @@ pub async fn delete_trashed_note(
     session_id: String,
     confirmed: bool,
 ) -> Result<WorkspaceView, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.delete_trashed_note(&session_id, confirmed)
     })
     .await
@@ -258,7 +447,7 @@ pub async fn save_note_text(
     session_id: String,
     text: PlainText,
 ) -> Result<SaveReceipt, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.save_note_text(&session_id, text)
     })
     .await
@@ -270,7 +459,7 @@ pub async fn save_note_content(
     session_id: String,
     content: NoteContent,
 ) -> Result<SaveReceipt, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.save_note_content(&session_id, content)
     })
     .await
@@ -350,7 +539,14 @@ pub async fn complete_close(
 ) -> Result<(), WorkspaceError> {
     // The frontend freezes new transitions and flushes its latest text before
     // requesting this. Wait for any existing host operation to release its lock.
-    work(state.inner().clone(), Workspace::close).await?;
+    mutate(state.inner().clone(), |workspace| {
+        // Preserve a bounded handoff when a quick close beats the automatic
+        // backup debounce. Do this before releasing the editing session so a
+        // local settings failure leaves the existing close-retry path usable.
+        workspace.mark_backup_check_due(&chrono::Local::now().format("%Y-%m-%d").to_string())?;
+        workspace.close()
+    })
+    .await?;
     app.state::<crate::CloseGate>()
         .approved
         .store(true, std::sync::atomic::Ordering::Release);
@@ -370,7 +566,7 @@ pub async fn restore_recovery_as_copy(
     state: State<'_, WorkspaceState>,
     recovery_id: String,
 ) -> Result<SaveReceipt, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.restore_recovery_as_copy(&recovery_id)
     })
     .await
@@ -415,7 +611,7 @@ pub async fn reconcile_external_changes(
     session_id: String,
     content: NoteContent,
 ) -> Result<ExternalReconciliation, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.reconcile_external_changes(&session_id, content)
     })
     .await
@@ -444,7 +640,7 @@ pub async fn restore_preserved_as_copy(
     state: State<'_, WorkspaceState>,
     version_id: String,
 ) -> Result<SaveReceipt, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.restore_preserved_as_copy(&version_id)
     })
     .await
@@ -470,7 +666,7 @@ pub async fn save_preserved_as(
     let Some(path) = pick_copy_path(app).await? else {
         return Ok(None);
     };
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.save_preserved_as(&version_id, path).map(Some)
     })
     .await
@@ -486,7 +682,7 @@ pub async fn save_current_as(
     let Some(path) = pick_copy_path(app).await? else {
         return Ok(None);
     };
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.save_current_as(&session_id, text, path).map(Some)
     })
     .await
@@ -502,7 +698,7 @@ pub async fn save_current_content_as(
     let Some(path) = pick_copy_path(app).await? else {
         return Ok(None);
     };
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace
             .save_current_content_as(&session_id, content, path)
             .map(Some)
@@ -519,7 +715,7 @@ pub async fn save_recovery_as(
     let Some(path) = pick_copy_path(app).await? else {
         return Ok(None);
     };
-    work(state.inner().clone(), move |workspace| {
+    mutate(state.inner().clone(), move |workspace| {
         workspace.save_recovery_as(&recovery_id, path).map(Some)
     })
     .await

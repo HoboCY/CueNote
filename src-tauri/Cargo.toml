@@ -19,6 +19,10 @@ storage-fault-injection = []
 name = "storage_fault_probe"
 required-features = ["storage-fault-injection"]
 
+[[example]]
+name = "backup_fault_probe"
+required-features = ["storage-fault-injection"]
+
 [build-dependencies]
 tauri-build = { version = "2.7.2", features = [] }
 
