@@ -29,7 +29,7 @@ export interface ViewPreferences {
 export interface LibraryView {
   path: string;
   defaultNotebookName: string;
-  defaultNotebookId: string;
+  defaultNotebookId: string | null;
   notebooks: NotebookSummary[];
   notes: NoteSummary[];
   trashNotes: NoteSummary[];
@@ -94,6 +94,7 @@ export interface ExternalChangeProbe {
   sessionId: string | null;
   status: ExternalChangeStatus;
   revision: string | null;
+  sessionReadOnlyReason: string | null;
   message: string | null;
   library: LibraryView | null;
 }
@@ -125,6 +126,7 @@ export interface PreservedVersionList {
 export const workspaceApi = {
   get: () => invoke<WorkspaceView>('get_workspace'),
   useDefault: () => invoke<WorkspaceView>('use_default_library'),
+  initializeSelectedLibrary: () => invoke<WorkspaceView>('initialize_selected_library'),
   choose: () => invoke<WorkspaceView | null>('choose_library'),
   openFolder: () => invoke<void>('open_library_folder'),
   newNote: (notebookId: string | null = null) => invoke<NoteSession>('new_note', { notebookId }),

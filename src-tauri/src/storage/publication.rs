@@ -82,7 +82,8 @@ impl StableDirectory {
         })
     }
 
-    fn ensure_current(&self) -> Result<(), StorageError> {
+    pub(super) fn ensure_current(&self) -> Result<(), StorageError> {
+        super::ensure_local_directory(&self.path)?;
         let canonical = fs::canonicalize(&self.path)
             .map_err(|error| StorageError::io("无法验证笔记所在目录是否仍是原目录", error))?;
         if canonical != self.path {
@@ -124,6 +125,97 @@ impl StableDirectory {
         self.ensure_current()
             .map_err(|error| io::Error::new(io::ErrorKind::Other, error.message))?;
         self.sync()
+    }
+
+    /// Moves a direct child of this pinned directory without replacing an
+    /// existing destination. A post-operation identity error is ambiguous:
+    /// callers must retain the destination and source paths for recovery.
+    pub(super) fn move_no_replace(&self, source: &Path, destination: &Path) -> io::Result<()> {
+        self.ensure_current()
+            .map_err(|error| io::Error::new(io::ErrorKind::Other, error.message))?;
+        #[cfg(windows)]
+        {
+            self.ensure_child_paths(source, destination)?;
+            super::move_file_no_replace(source, destination)?;
+            return self
+                .ensure_current()
+                .map_err(|error| io::Error::new(io::ErrorKind::Other, error.message));
+        }
+        #[cfg(target_os = "macos")]
+        {
+            use std::os::unix::io::AsRawFd;
+            let source_name = self.child_component(source)?;
+            let destination_name = self.child_component(destination)?;
+            let result = unsafe {
+                renameatx_np(
+                    self.directory_handle().as_raw_fd(),
+                    source_name.as_ptr(),
+                    self.directory_handle().as_raw_fd(),
+                    destination_name.as_ptr(),
+                    RENAME_EXCL,
+                )
+            };
+            if result != 0 {
+                return Err(io::Error::last_os_error());
+            }
+            return self
+                .ensure_current()
+                .map_err(|error| io::Error::new(io::ErrorKind::Other, error.message));
+        }
+        #[cfg(target_os = "linux")]
+        {
+            use std::os::unix::io::AsRawFd;
+            let source_name = self.child_component(source)?;
+            let destination_name = self.child_component(destination)?;
+            let result = unsafe {
+                renameat2(
+                    self.directory_handle().as_raw_fd(),
+                    source_name.as_ptr(),
+                    self.directory_handle().as_raw_fd(),
+                    destination_name.as_ptr(),
+                    RENAME_NOREPLACE,
+                )
+            };
+            if result != 0 {
+                return Err(io::Error::last_os_error());
+            }
+            return self
+                .ensure_current()
+                .map_err(|error| io::Error::new(io::ErrorKind::Other, error.message));
+        }
+        #[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
+        {
+            let _ = (source, destination);
+            return Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "atomic no-replace move is unsupported on this platform",
+            ));
+        }
+    }
+
+    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    fn child_component(&self, path: &Path) -> io::Result<std::ffi::CString> {
+        if path.parent() != Some(self.path.as_path()) {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "atomic metadata operation requires direct children of the pinned directory",
+            ));
+        }
+        component(path)
+    }
+
+    #[cfg(windows)]
+    fn ensure_child_paths(&self, source: &Path, destination: &Path) -> io::Result<()> {
+        if source.parent() == Some(self.path.as_path())
+            && destination.parent() == Some(self.path.as_path())
+        {
+            Ok(())
+        } else {
+            Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "atomic metadata operation requires direct children of the pinned directory",
+            ))
+        }
     }
 
     #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -1252,6 +1344,10 @@ fn component(path: &Path) -> io::Result<std::ffi::CString> {
 const RENAME_SWAP: u32 = 0x0000_0002;
 #[cfg(target_os = "linux")]
 const RENAME_EXCHANGE: u32 = 0x0000_0002;
+#[cfg(target_os = "macos")]
+const RENAME_EXCL: u32 = 0x0000_0004;
+#[cfg(target_os = "linux")]
+const RENAME_NOREPLACE: u32 = 0x0000_0001;
 
 #[cfg(target_os = "macos")]
 unsafe extern "C" {
@@ -1287,7 +1383,6 @@ fn open_directory_handle(path: &Path) -> Result<(File, String), StorageError> {
     const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
     const FILE_FLAG_BACKUP_SEMANTICS: u32 = 0x0200_0000;
     const FILE_ATTRIBUTE_DIRECTORY: u32 = 0x0000_0010;
-    const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x0000_0400;
 
     #[repr(C)]
     struct FileTime {
@@ -1356,14 +1451,15 @@ fn open_directory_handle(path: &Path) -> Result<(File, String), StorageError> {
         ));
     }
     let info = unsafe { info.assume_init() };
-    if info.attributes & FILE_ATTRIBUTE_DIRECTORY == 0
-        || info.attributes & FILE_ATTRIBUTE_REPARSE_POINT != 0
-    {
+    if info.attributes & FILE_ATTRIBUTE_DIRECTORY == 0 {
         return Err(StorageError::new(
             "unsafePath",
             "笔记所在路径不是实际目录。",
         ));
     }
+    // Ancestors may be verified Cloud Files directories without every sibling
+    // being downloaded. The target directory itself is checked before access.
+    super::local_files::check_windows_handle(&handle, false)?;
     let identity = format!(
         "windows:{:08x}:{:08x}:{:08x}",
         info.volume_serial, info.index_high, info.index_low

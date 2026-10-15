@@ -32,6 +32,7 @@ async fn work<T: Send + 'static>(
         let mut workspace = state.lock().map_err(|_| {
             command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
         })?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
         action(&mut workspace)
     })
     .await
@@ -54,6 +55,20 @@ pub async fn use_default_library(
     state: State<'_, WorkspaceState>,
 ) -> Result<WorkspaceView, WorkspaceError> {
     let mut view = work(state.inner().clone(), Workspace::use_default_library).await?;
+    crate::file_watch::configure(&app, view.library.as_mut());
+    Ok(view)
+}
+
+#[tauri::command]
+pub async fn initialize_selected_library(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+) -> Result<WorkspaceView, WorkspaceError> {
+    let mut view = work(
+        state.inner().clone(),
+        Workspace::initialize_selected_library,
+    )
+    .await?;
     crate::file_watch::configure(&app, view.library.as_mut());
     Ok(view)
 }

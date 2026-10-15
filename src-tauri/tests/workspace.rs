@@ -179,34 +179,63 @@ fn saving_and_reopening_preserves_the_note_identity_and_exact_text() {
 }
 
 #[test]
-fn invalid_library_metadata_is_rejected_without_replacing_the_current_session() {
+fn invalid_library_metadata_keeps_the_library_pending_without_replacing_bytes() {
     let temp = workspace_temp();
     let library = temp.path().join("Current");
     let config = temp.path().join("settings");
     let recovery = temp.path().join("recovery");
     let default = temp.path().join("default");
     let mut workspace = Workspace::new(config, recovery, default);
-    let selected = workspace.select_library(library).unwrap();
+    let selected = workspace.select_library(library.clone()).unwrap();
     let draft = workspace.new_note().unwrap();
 
     let invalid = temp.path().join("Invalid");
     std::fs::create_dir_all(invalid.join("notes")).unwrap();
     std::fs::create_dir_all(invalid.join("notebooks")).unwrap();
     let notebook_id = "25ad7e2b-9523-4f0b-9041-426d7f94d924";
-    std::fs::write(
-        invalid.join("notebooks").join(format!("{notebook_id}.json")),
-        r#"{"schemaVersion":1,"id":"25ad7e2b-9523-4f0b-9041-426d7f94d924","name":"默认笔记本","default":true,"timestamps":{"createdAt":"2026-10-14T12:00:00.000Z","modifiedAt":"2026-10-14T12:00:00.000Z"},"unexpected":true}"#,
-    )
-    .unwrap();
+    let invalid_metadata = r#"{"schemaVersion":1,"id":"25ad7e2b-9523-4f0b-9041-426d7f94d924","name":"默认笔记本","default":true,"timestamps":{"createdAt":"2026-10-14T12:00:00.000Z","modifiedAt":"2026-10-14T12:00:00.000Z"},"unexpected":true}"#;
+    let invalid_path = invalid
+        .join("notebooks")
+        .join(format!("{notebook_id}.json"));
+    std::fs::write(&invalid_path, invalid_metadata).unwrap();
 
-    let error = workspace.select_library(invalid).unwrap_err();
-    assert_eq!(error.kind, "libraryMetadata");
+    let pending = workspace.select_library(invalid.clone()).unwrap();
+    let pending_library = pending.library.unwrap();
+    assert_eq!(
+        std::fs::canonicalize(&pending_library.path).unwrap(),
+        std::fs::canonicalize(&invalid).unwrap()
+    );
+    assert_eq!(pending_library.default_notebook_id, None);
+    assert!(pending_library
+        .warnings
+        .iter()
+        .any(|warning| warning.contains("元数据无效") || warning.contains("unexpected")));
+    assert_eq!(
+        std::fs::read_to_string(&invalid_path).unwrap(),
+        invalid_metadata
+    );
+    let stale = workspace
+        .save_note_text(
+            &draft.session_id,
+            PlainText {
+                title: "stale".into(),
+                cue: String::new(),
+                content: "must not write into pending library".into(),
+                summary: String::new(),
+            },
+        )
+        .unwrap_err();
+    assert_eq!(stale.kind, "noSession");
     let current = workspace.snapshot().unwrap();
     assert_eq!(
-        current.library.unwrap().path,
-        selected.library.unwrap().path
+        std::fs::canonicalize(&current.library.unwrap().path).unwrap(),
+        std::fs::canonicalize(&invalid).unwrap()
     );
-    assert_eq!(current.session.unwrap().session_id, draft.session_id);
+    assert!(current.session.is_none());
+    assert_eq!(
+        std::fs::canonicalize(&selected.library.unwrap().path).unwrap(),
+        std::fs::canonicalize(&library).unwrap()
+    );
 }
 
 #[test]
@@ -238,7 +267,7 @@ fn replacing_the_active_note_session_rejects_a_stale_save() {
 }
 
 #[test]
-fn an_existing_note_without_notebook_metadata_is_not_assigned_to_a_new_default() {
+fn an_existing_note_without_notebook_metadata_stays_pending_without_new_default() {
     let temp = workspace_temp();
     let library = temp.path().join("Legacy");
     std::fs::create_dir_all(library.join("notes")).unwrap();
@@ -255,19 +284,31 @@ fn an_existing_note_without_notebook_metadata_is_not_assigned_to_a_new_default()
         temp.path().join("default"),
     );
 
-    let error = workspace.select_library(library.clone()).unwrap_err();
-    assert_eq!(error.kind, "libraryMetadata");
-    assert!(std::fs::read(library.join("notes").join(format!("{note_id}.cuenote"))).is_ok());
+    let original_note = b"keep";
+    let selected = workspace.select_library(library.clone()).unwrap();
+    let view = selected.library.unwrap();
+    assert_eq!(view.default_notebook_id, None);
+    assert!(view
+        .warnings
+        .iter()
+        .any(|warning| warning.contains("笔记") || warning.contains("默认")));
+    let note_path = library.join("notes").join(format!("{note_id}.cuenote"));
+    assert_eq!(std::fs::read(&note_path).unwrap(), original_note);
     assert_eq!(
         std::fs::read_dir(library.join("notebooks"))
             .unwrap()
             .count(),
         0
     );
+    assert_eq!(
+        workspace.new_note().unwrap_err().kind,
+        "libraryMetadataPending"
+    );
+    assert_eq!(std::fs::read(&note_path).unwrap(), original_note);
 }
 
 #[test]
-fn duplicate_notebook_ids_are_rejected_instead_of_overwriting_metadata() {
+fn valid_notebook_metadata_remains_visible_when_a_sibling_has_a_duplicate_id() {
     let temp = workspace_temp();
     let library = temp.path().join("Duplicate");
     std::fs::create_dir_all(library.join("notes")).unwrap();
@@ -290,9 +331,26 @@ fn duplicate_notebook_ids_are_rejected_instead_of_overwriting_metadata() {
         temp.path().join("default"),
     );
 
-    let error = workspace.select_library(library).unwrap_err();
-    assert_eq!(error.kind, "libraryMetadata");
-    assert!(error.message.contains("重复笔记本身份"));
+    let first_path = library.join("notebooks").join(format!("{first_id}.json"));
+    let second_path = library.join("notebooks").join(format!("{second_id}.json"));
+    let first_bytes = std::fs::read(&first_path).unwrap();
+    let second_bytes = std::fs::read(&second_path).unwrap();
+    let selected = workspace.select_library(library.clone()).unwrap();
+    let view = selected.library.unwrap();
+    assert_eq!(view.default_notebook_id.as_deref(), Some(first_id));
+    assert!(view
+        .notebooks
+        .iter()
+        .any(|notebook| notebook.notebook_id == first_id));
+    assert!(!view
+        .notebooks
+        .iter()
+        .any(|notebook| notebook.notebook_id == second_id));
+    assert!(view.warnings.iter().any(|warning| {
+        warning.contains("身份与文件名不一致") && warning.contains(&second_id)
+    }));
+    assert_eq!(std::fs::read(&first_path).unwrap(), first_bytes);
+    assert_eq!(std::fs::read(&second_path).unwrap(), second_bytes);
 }
 
 #[test]

@@ -251,7 +251,7 @@ fn structured_save_preserves_note_identity_organization_and_timestamps() {
     let (settings, recovery, default, library) = workspace_paths(&temp);
     let mut workspace = Workspace::new(settings, recovery.clone(), default);
     let selected = workspace.select_library(library.clone()).unwrap();
-    let notebook_id = selected.library.unwrap().default_notebook_id;
+    let notebook_id = selected.library.unwrap().default_notebook_id.unwrap();
     let mut package = plain_package(&notebook_id, "保存前");
     package.document.organization.pinned = true;
     package.document.timestamps.created_at = "2020-01-02T03:04:05.000Z".into();
@@ -329,7 +329,7 @@ fn malformed_or_unsupported_content_does_not_replace_the_saved_note() {
     let (settings, recovery, default, library) = workspace_paths(&temp);
     let mut workspace = Workspace::new(settings, recovery.clone(), default);
     let selected = workspace.select_library(library.clone()).unwrap();
-    let notebook_id = selected.library.unwrap().default_notebook_id;
+    let notebook_id = selected.library.unwrap().default_notebook_id.unwrap();
     let package = plain_package(&notebook_id, "原件");
     let note_id = package.document.note_id.clone();
     let note_path = library.join("notes").join(format!("{note_id}.cuenote"));
@@ -386,7 +386,7 @@ fn stale_structured_save_preserves_external_version_and_records_recovery() {
     let (settings, recovery, default, library) = workspace_paths(&temp);
     let mut workspace = Workspace::new(settings, recovery.clone(), default);
     let selected = workspace.select_library(library.clone()).unwrap();
-    let notebook_id = selected.library.unwrap().default_notebook_id;
+    let notebook_id = selected.library.unwrap().default_notebook_id.unwrap();
     let package = plain_package(&notebook_id, "初始版本");
     let note_id = package.document.note_id.clone();
     let note_path = library.join("notes").join(format!("{note_id}.cuenote"));
@@ -434,7 +434,7 @@ fn read_only_rich_content_can_be_saved_as_a_full_independent_copy() {
     let (settings, recovery, default, library) = workspace_paths(&temp);
     let mut workspace = Workspace::new(settings, recovery.clone(), default);
     let selected = workspace.select_library(library.clone()).unwrap();
-    let notebook_id = selected.library.unwrap().default_notebook_id;
+    let notebook_id = selected.library.unwrap().default_notebook_id.unwrap();
     let mut package = rich_package(&notebook_id);
     package.document.organization.notebook_id = Some("35ad7e2b-9523-4f0b-9041-426d7f94d924".into());
     package.document.organization.pinned = true;

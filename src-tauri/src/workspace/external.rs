@@ -3,6 +3,15 @@
 use super::*;
 use crate::storage::versions;
 
+fn note_file_is_missing(path: &Path) -> bool {
+    // A missing or unavailable parent says nothing about an individual note.
+    // Preserve that distinction so a temporarily absent library is not shown
+    // as an externally deleted note.
+    path.parent()
+        .is_some_and(|parent| storage::ensure_local_directory(parent).is_ok())
+        && fs::symlink_metadata(path).is_err_and(|error| error.kind() == io::ErrorKind::NotFound)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExternalProbe {
@@ -11,6 +20,7 @@ pub struct ExternalProbe {
     pub revision: Option<String>,
     pub message: Option<String>,
     pub library: Option<LibraryView>,
+    pub session_read_only_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,9 +85,21 @@ impl Workspace {
             revision: None,
             message: None,
             library,
+            session_read_only_reason: None,
         };
         let Some(session) = self.session.as_ref() else {
             return Ok(probe);
+        };
+        probe.session_read_only_reason = if session.preserved_preview || session.external_conflict {
+            session.view.read_only_reason.clone()
+        } else {
+            self.library.as_ref().and_then(|library| {
+                read_only_reason(
+                    &session.package,
+                    session.notebook_id.as_deref(),
+                    &library.notebooks,
+                )
+            })
         };
         if session.preserved_preview {
             return Ok(probe);
@@ -96,13 +118,16 @@ impl Workspace {
                 }
             }
             Err(error) => {
-                let missing = fs::symlink_metadata(&session.path)
-                    .is_err_and(|error| error.kind() == io::ErrorKind::NotFound);
+                let missing = note_file_is_missing(&session.path);
                 if missing && session.baseline_revision.is_none() {
                     return Ok(probe);
                 }
                 probe.status = if missing { "missing" } else { "unreadable" }.into();
-                probe.message = Some(error.message);
+                probe.message = Some(if missing {
+                    error.message
+                } else {
+                    format!("无法读取笔记文件或所在目录：{}", error.message)
+                });
             }
         }
         Ok(probe)
@@ -131,11 +156,7 @@ impl Workspace {
         let current = storage::open_note(&path);
         let same_revision = match &current {
             Ok(opened) => active.baseline_revision.as_deref() == Some(opened.revision.as_str()),
-            Err(_) => {
-                active.baseline_revision.is_none()
-                    && fs::symlink_metadata(&path)
-                        .is_err_and(|error| error.kind() == io::ErrorKind::NotFound)
-            }
+            Err(_) => active.baseline_revision.is_none() && note_file_is_missing(&path),
         };
         let dirty = content != active.package.content();
         if same_revision && !dirty && !active.external_conflict {
@@ -215,7 +236,12 @@ impl Workspace {
                 Ok(_) => "外部文件与本地草稿发生冲突。已分别保留版本，请在历史与冲突中选择或整理。"
                     .to_owned(),
                 Err(error) => format!(
-                    "外部文件已删除或暂不可读，当前内容仍保留；没有建立空白文件。{}",
+                    "{}，当前内容仍保留；没有建立空白文件。{}",
+                    if note_file_is_missing(&path) {
+                        "外部笔记文件已删除"
+                    } else {
+                        "笔记文件或所在目录暂不可读"
+                    },
                     error.message
                 ),
             };
@@ -238,6 +264,7 @@ impl Workspace {
             .ok_or_else(|| StorageError::new("noLibrary", "当前没有笔记库。"))?;
         let notebook_id = opened.package.document.organization.notebook_id.clone();
         let reason = read_only_reason(&opened.package, notebook_id.as_deref(), &library.notebooks);
+        let was_writable = reason.is_none();
         let view = note_session_from_opened(&opened.package.document.note_id, &opened, reason);
         self.session = Some(ActiveNoteSession {
             view: view.clone(),
@@ -249,6 +276,7 @@ impl Workspace {
             baseline_witness: Some(baseline_witness),
             preserved_preview: false,
             external_conflict: false,
+            was_writable,
         });
         self.external_result(
             "refreshed",
@@ -295,6 +323,7 @@ impl Workspace {
             baseline_witness,
             preserved_preview: true,
             external_conflict: false,
+            was_writable: false,
         });
         Ok(view)
     }
@@ -303,13 +332,18 @@ impl Workspace {
         &mut self,
         version_id: &str,
     ) -> Result<SaveReceipt, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let source = versions::open_version(&self.recovery_root, version_id)?;
         let library = self
             .library
             .as_ref()
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?;
+        let default_notebook_id = library
+            .default_notebook_id
+            .as_deref()
+            .ok_or_else(library_metadata_pending)?;
         let mut package = source.opened.package;
-        assign_copy_identity(&mut package, &library.default_notebook_id);
+        assign_copy_identity(&mut package, default_notebook_id);
         let note_id = package.document.note_id.clone();
         let path = library
             .path
@@ -335,13 +369,18 @@ impl Workspace {
         version_id: &str,
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let source = versions::open_version(&self.recovery_root, version_id)?;
         let mut package = source.opened.package;
         let library = self
             .library
             .as_ref()
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?;
-        assign_copy_identity(&mut package, &library.default_notebook_id);
+        if let Some(default_notebook_id) = library.default_notebook_id.as_deref() {
+            assign_copy_identity(&mut package, default_notebook_id);
+        } else {
+            assign_copy_identity_preserving_organization(&mut package);
+        }
         let destination = self.resolve_copy_destination(&path)?;
         let (saved_path, revision) = storage::save_copy(&destination, &package)?;
         Ok(SavedCopy {
@@ -355,22 +394,7 @@ impl Workspace {
     }
 
     fn refresh_external_library(&mut self) -> Result<Option<LibraryView>, WorkspaceError> {
-        let Some(library) = self.library.as_mut() else {
-            return Ok(None);
-        };
-        match scan_library(
-            &library.path,
-            &library.notebooks,
-            &library.default_notebook_id,
-            &self.recovery_root,
-        ) {
-            Ok(view) => library.view = view,
-            Err(error) => {
-                library.view.warnings =
-                    vec![format!("无法核对笔记库；已保留当前列表。{}", error.message)]
-            }
-        }
-        Ok(Some(library.view.clone()))
+        self.refresh_selected_library()
     }
 
     fn external_result(

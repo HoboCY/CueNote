@@ -7,6 +7,7 @@
     "allow-get-app-version",
     "allow-get-workspace",
     "allow-use-default-library",
+    "allow-initialize-selected-library",
     "allow-choose-library",
     "allow-open-library-folder",
     "allow-new-note",

@@ -81,6 +81,7 @@ pub fn run() {
             get_app_version,
             commands::get_workspace,
             commands::use_default_library,
+            commands::initialize_selected_library,
             commands::choose_library,
             commands::open_library_folder,
             commands::new_note,

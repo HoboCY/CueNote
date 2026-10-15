@@ -4,6 +4,7 @@ fn main() {
             "get_app_version",
             "get_workspace",
             "use_default_library",
+            "initialize_selected_library",
             "choose_library",
             "open_library_folder",
             "new_note",

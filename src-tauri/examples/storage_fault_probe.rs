@@ -6,13 +6,54 @@ fn main() {
     use std::path::PathBuf;
 
     let args = std::env::args().skip(1).collect::<Vec<_>>();
-    assert_eq!(
-        args.len() == 2 || args.len() == 5,
-        true,
-        "storage_fault_probe <isolated-root> <note-id> [<content> <ready-file> <start-gate>]"
+    assert!(
+        args.len() == 2
+            || args.len() == 5
+            || (args.len() == 3 && args[1] == "delete-notebook")
+            || (args.len() == 3 && args[1] == "delete-trashed-note")
+            || (args.len() == 4 && args[1] == "rename-notebook"),
+        "storage_fault_probe <isolated-root> <note-id> [<content> <ready-file> <start-gate>] | <isolated-root> delete-notebook <notebook-id> | <isolated-root> delete-trashed-note <note-id> | <isolated-root> rename-notebook <notebook-id> <name>"
     );
     let root = PathBuf::from(&args[0]);
     assert!(root.is_absolute(), "test root must be absolute");
+    if args.get(1).is_some_and(|command| {
+        command == "delete-notebook"
+            || command == "delete-trashed-note"
+            || command == "rename-notebook"
+    }) {
+        let mut workspace = Workspace::new(
+            root.join("settings"),
+            root.join("recovery"),
+            root.join("library"),
+        );
+        workspace.snapshot().expect("reopen isolated workspace");
+        workspace
+            .select_library(root.join("library"))
+            .expect("select isolated library");
+        let result = match args[1].as_str() {
+            "delete-notebook" => workspace
+                .delete_notebook(&args[2])
+                .map(|view| serde_json::to_string(&view).unwrap()),
+            "delete-trashed-note" => {
+                let session = workspace.open_note(&args[2]).expect("open trashed note");
+                workspace
+                    .delete_trashed_note(&session.session_id, true)
+                    .map(|view| serde_json::to_string(&view).unwrap())
+            }
+            "rename-notebook" => workspace
+                .rename_notebook(&args[2], &args[3])
+                .map(|view| serde_json::to_string(&view).unwrap()),
+            _ => unreachable!(),
+        };
+        match result {
+            Ok(view) => println!("{view}"),
+            Err(error) => {
+                println!("{}", serde_json::to_string(&error).unwrap());
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     let mut workspace = Workspace::new(
         root.join("settings"),
         root.join("recovery"),

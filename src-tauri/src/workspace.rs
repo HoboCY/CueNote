@@ -29,6 +29,7 @@ const MAX_NOTEBOOKS: usize = 1024;
 const MAX_NOTE_FILES: usize = 100_000;
 const MAX_WARNINGS: usize = 100;
 const MAX_METADATA_BYTES: u64 = 64 * 1024;
+const NOTEBOOK_CONFLICT_PREFIX: &str = ".cuenote-notebook-conflict-";
 const MAX_NOTE_EXCERPT_CHARS: usize = 180;
 const MAX_PREFERENCE_BYTES: u64 = 16 * 1024;
 const MAX_PREFERENCE_SNAPSHOTS: usize = 64;
@@ -59,7 +60,7 @@ pub struct NotebookSummary {
 pub struct LibraryView {
     pub path: String,
     pub default_notebook_name: String,
-    pub default_notebook_id: String,
+    pub default_notebook_id: Option<String>,
     pub notebooks: Vec<NotebookSummary>,
     pub notes: Vec<NoteSummary>,
     pub trash_notes: Vec<NoteSummary>,
@@ -166,8 +167,17 @@ struct WorkspacePreference {
 struct LibraryState {
     path: PathBuf,
     notebooks: BTreeMap<String, NotebookMetadata>,
-    default_notebook_id: String,
+    default_notebook_id: Option<String>,
+    notebook_metadata_baselines: BTreeMap<String, Option<Vec<u8>>>,
+    metadata_warnings: Vec<String>,
     view: LibraryView,
+}
+
+struct NotebookMetadataScan {
+    notebooks: BTreeMap<String, NotebookMetadata>,
+    bytes: BTreeMap<String, Vec<u8>>,
+    warnings: Vec<String>,
+    directory_available: bool,
 }
 
 struct ActiveNoteSession {
@@ -180,6 +190,7 @@ struct ActiveNoteSession {
     baseline_witness: Option<storage::versions::VersionLease>,
     preserved_preview: bool,
     external_conflict: bool,
+    was_writable: bool,
 }
 
 /// Coordinates one selected library and at most one host-owned editor session.
@@ -237,11 +248,13 @@ impl Workspace {
                     let path = PathBuf::from(preference.library_path);
                     match self.load_existing_library(&path) {
                         Ok(library) => {
-                            if self
-                                .preferences
-                                .selected_notebook_id
-                                .as_ref()
-                                .is_some_and(|id| !library.notebooks.contains_key(id))
+                            if library.default_notebook_id.is_some()
+                                && library.metadata_warnings.is_empty()
+                                && self
+                                    .preferences
+                                    .selected_notebook_id
+                                    .as_ref()
+                                    .is_some_and(|id| !library.notebooks.contains_key(id))
                             {
                                 self.preferences.selected_notebook_id = None;
                                 if let Err(error) = self.persist_preference(
@@ -336,19 +349,7 @@ impl Workspace {
                 }
             }
         }
-        if let Some(library) = self.library.as_mut() {
-            match scan_library(
-                &library.path,
-                &library.notebooks,
-                &library.default_notebook_id,
-                &self.recovery_root,
-            ) {
-                Ok(view) => library.view = view,
-                Err(error) => {
-                    library.view.warnings = vec![format!("无法刷新笔记列表：{}", error.message)]
-                }
-            }
-        }
+        let _ = self.refresh_selected_library();
         if !recovery_warnings.is_empty() {
             if let Some(notice) = self.notice.take() {
                 recovery_warnings.push(notice);
@@ -362,10 +363,12 @@ impl Workspace {
         // Construct the complete candidate before changing the visible workspace.
         let library = self.prepare_library(&path, true)?;
         let mut preferences = self.preferences.clone();
-        if preferences
-            .selected_notebook_id
-            .as_ref()
-            .is_some_and(|id| !library.notebooks.contains_key(id))
+        if library.default_notebook_id.is_some()
+            && library.metadata_warnings.is_empty()
+            && preferences
+                .selected_notebook_id
+                .as_ref()
+                .is_some_and(|id| !library.notebooks.contains_key(id))
         {
             preferences.selected_notebook_id = None;
         }
@@ -383,6 +386,55 @@ impl Workspace {
         self.select_library(self.default_library_path.clone())
     }
 
+    pub fn initialize_selected_library(&mut self) -> Result<WorkspaceView, WorkspaceError> {
+        let path = self
+            .library
+            .as_ref()
+            .map(|library| library.path.clone())
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?;
+        for entry in secure_read_dir(&path, &path)? {
+            let name = entry.file_name();
+            let name = name.to_str().ok_or_else(|| {
+                StorageError::new(
+                    "libraryMetadataPending",
+                    "所选目录包含无法识别的项目，不能安全初始化笔记库。",
+                )
+            })?;
+            if name != "notes" && name != "notebooks" {
+                return Err(StorageError::new(
+                    "libraryMetadataPending",
+                    format!(
+                        "所选目录包含未识别的项目，不能安全初始化笔记库：{}",
+                        display_path(&entry.path())
+                    ),
+                ));
+            }
+        }
+        let notes_path = path.join("notes");
+        let notebooks_path = path.join("notebooks");
+        for directory in [&notes_path, &notebooks_path] {
+            if let Some(entries) = secure_read_dir_if_present(&path, directory)? {
+                if !entries.is_empty() {
+                    return Err(StorageError::new(
+                        "libraryMetadataPending",
+                        format!(
+                            "所选目录仍包含文件，无法安全初始化笔记库：{}",
+                            display_path(directory)
+                        ),
+                    ));
+                }
+            }
+        }
+        ensure_child_directory(&path, &notes_path, true)?;
+        ensure_child_directory(&path, &notebooks_path, true)?;
+        let notebook = new_default_notebook();
+        publish_notebook_metadata(&notebooks_path, &notebook)?;
+        let library = self.prepare_library(&path, false)?;
+        self.library = Some(library);
+        self.notice = None;
+        Ok(self.view())
+    }
+
     pub fn new_note(&mut self) -> Result<NoteSession, WorkspaceError> {
         self.new_note_in(None)
     }
@@ -391,20 +443,31 @@ impl Workspace {
         &mut self,
         notebook_id: Option<&str>,
     ) -> Result<NoteSession, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let (library_path, assigned_notebook_id) = {
             let library = self
                 .library
                 .as_ref()
                 .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
             let assigned = match notebook_id {
-                Some(id) if library.notebooks.contains_key(id) => id.to_owned(),
+                Some(id) if library.notebooks.contains_key(id) => {
+                    ensure_notebook_baseline_current(library, id)?;
+                    id.to_owned()
+                }
                 Some(_) => {
                     return Err(StorageError::new(
                         "unknownNotebook",
                         "所选笔记本不存在于当前笔记库。",
                     ));
                 }
-                None => library.default_notebook_id.clone(),
+                None => {
+                    let id = library
+                        .default_notebook_id
+                        .clone()
+                        .ok_or_else(library_metadata_pending)?;
+                    ensure_notebook_baseline_current(library, &id)?;
+                    id
+                }
             };
             (library.path.clone(), assigned)
         };
@@ -450,12 +513,14 @@ impl Workspace {
             baseline_witness: None,
             preserved_preview: false,
             external_conflict: false,
+            was_writable: true,
         });
         self.last_note_id = Some(view.note_id.clone());
         Ok(view)
     }
 
     pub fn open_note(&mut self, note_id: &str) -> Result<NoteSession, WorkspaceError> {
+        self.refresh_library_metadata()?;
         if !is_canonical_uuid_v4(note_id) {
             return Err(StorageError::new("invalidNoteId", "笔记身份格式无效。"));
         }
@@ -487,6 +552,7 @@ impl Workspace {
                 read_only_reason(&opened.package, notebook_id.as_deref(), &library.notebooks);
             (notebook_id, read_only_reason)
         };
+        let was_writable = read_only_reason.is_none();
         let view = note_session_from_opened(note_id, &opened, read_only_reason.clone());
         let baseline_witness = storage::versions::lease_observed_version(
             &self.recovery_root,
@@ -508,6 +574,7 @@ impl Workspace {
             baseline_witness: Some(baseline_witness),
             preserved_preview: false,
             external_conflict: false,
+            was_writable,
         });
         Ok(view)
     }
@@ -525,6 +592,7 @@ impl Workspace {
         session_id: &str,
         bytes: &[u8],
     ) -> Result<AssetManifestEntry, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let session = self
             .session
             .as_ref()
@@ -535,8 +603,16 @@ impl Workspace {
                 "笔记会话已切换；请重新打开笔记后再插入图片。",
             ));
         }
-        if let Some(reason) = session.view.read_only_reason.as_ref() {
-            return Err(StorageError::new("readOnly", reason.clone()));
+        let notebooks = self
+            .library
+            .as_ref()
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?;
+        if let Some(reason) = read_only_reason(
+            &session.package,
+            session.notebook_id.as_deref(),
+            &notebooks.notebooks,
+        ) {
+            return Err(StorageError::new("readOnly", reason));
         }
         if bytes.len() as u64 > MAX_EXPANDED_BYTES {
             return Err(StorageError::new(
@@ -613,6 +689,7 @@ impl Workspace {
     }
 
     pub fn trash_note(&mut self, session_id: &str) -> Result<SaveReceipt, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let (library_path, default_notebook_id, notebooks) = self
             .library
             .as_ref()
@@ -650,6 +727,10 @@ impl Workspace {
                 "此笔记属于未知笔记本；回收站状态未更改。",
             ));
         }
+        ensure_notebook_baseline_current(
+            self.library.as_ref().expect("library checked above"),
+            notebook_id,
+        )?;
 
         let mut candidate = session.package.clone();
         candidate.document.organization.trashed_at = Some(now_timestamp());
@@ -719,8 +800,9 @@ impl Workspace {
         let mut receipt_library = match scan_library(
             &library_path,
             &library.notebooks,
-            &default_notebook_id,
+            default_notebook_id.as_deref(),
             &self.recovery_root,
+            &library.metadata_warnings,
         ) {
             Ok(view) => {
                 library.view = view.clone();
@@ -769,6 +851,7 @@ impl Workspace {
         session_id: &str,
         target_notebook_id: Option<&str>,
     ) -> Result<SaveReceipt, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let (library_path, default_notebook_id, notebooks) = self
             .library
             .as_ref()
@@ -795,13 +878,23 @@ impl Workspace {
             return Err(StorageError::new("notTrashed", "所选笔记不在回收站中。"));
         }
         let notebook_id = match source_notebook_id {
-            Some(source) if notebooks.contains_key(source) => source.to_owned(),
+            Some(source) if notebooks.contains_key(source) => {
+                ensure_notebook_baseline_current(
+                    self.library.as_ref().expect("library checked above"),
+                    source,
+                )?;
+                source.to_owned()
+            }
             _ => {
                 let target = target_notebook_id.ok_or_else(|| {
-                    StorageError::new(
-                        "restoreTargetRequired",
-                        "原笔记本已不存在，请选择一个现有笔记本后恢复。",
-                    )
+                    if default_notebook_id.is_none() {
+                        library_metadata_pending()
+                    } else {
+                        StorageError::new(
+                            "restoreTargetRequired",
+                            "原笔记本已不存在，请选择一个现有笔记本后恢复。",
+                        )
+                    }
                 })?;
                 if !notebooks.contains_key(target) {
                     return Err(StorageError::new(
@@ -809,6 +902,10 @@ impl Workspace {
                         "恢复目标笔记本不存在于当前笔记库。",
                     ));
                 }
+                ensure_notebook_baseline_current(
+                    self.library.as_ref().expect("library checked above"),
+                    target,
+                )?;
                 target.to_owned()
             }
         };
@@ -875,8 +972,9 @@ impl Workspace {
         let mut receipt_library = match scan_library(
             &library_path,
             &library.notebooks,
-            &default_notebook_id,
+            default_notebook_id.as_deref(),
             &self.recovery_root,
+            &library.metadata_warnings,
         ) {
             Ok(view) => {
                 library.view = view.clone();
@@ -915,10 +1013,11 @@ impl Workspace {
         session_id: &str,
         text: PlainText,
     ) -> Result<SaveReceipt, WorkspaceError> {
-        let library_path = self
+        self.refresh_library_metadata()?;
+        let (library_path, notebooks) = self
             .library
             .as_ref()
-            .map(|library| library.path.clone())
+            .map(|library| (library.path.clone(), library.notebooks.clone()))
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
         let session = self
             .session
@@ -929,9 +1028,6 @@ impl Workspace {
                 "staleSession",
                 "笔记会话已切换；请保留当前文字后重新打开笔记。",
             ));
-        }
-        if let Some(reason) = session.view.read_only_reason.as_ref() {
-            return Err(StorageError::new("readOnly", reason.clone()));
         }
         if session.package.plain_text().is_none() {
             return Err(StorageError::new(
@@ -950,6 +1046,19 @@ impl Workspace {
             return Err(StorageError::new(
                 "format",
                 "简易编辑器不能更改笔记身份或笔记本归属。",
+            ));
+        }
+        if let Some(reason) =
+            read_only_reason(&session.package, session.notebook_id.as_deref(), &notebooks)
+        {
+            let error = StorageError::new("readOnly", reason);
+            let library = self.library.as_ref().expect("library checked above");
+            return Err(preserve_draft_after_metadata_loss(
+                error,
+                session,
+                library,
+                &self.recovery_root,
+                &candidate,
             ));
         }
         let revision = storage::save_note(
@@ -978,6 +1087,8 @@ impl Workspace {
         active.view.text = text;
         active.view.content = active.package.content();
         active.view.revision = Some(revision);
+        active.view.read_only_reason = None;
+        active.was_writable = true;
         active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
@@ -985,8 +1096,9 @@ impl Workspace {
         let receipt_library = match scan_library(
             &library_path,
             &library.notebooks,
-            &library.default_notebook_id,
+            library.default_notebook_id.as_deref(),
             &self.recovery_root,
+            &library.metadata_warnings,
         ) {
             Ok(view) => {
                 library.view = view.clone();
@@ -1013,6 +1125,13 @@ impl Workspace {
         session_id: &str,
         content: NoteContent,
     ) -> Result<(), WorkspaceError> {
+        self.refresh_library_metadata()?;
+        let notebooks = self
+            .library
+            .as_ref()
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?
+            .notebooks
+            .clone();
         let session = self
             .session
             .as_ref()
@@ -1023,7 +1142,9 @@ impl Workspace {
                 "笔记会话已切换；请重新打开笔记后再插入图片。",
             ));
         }
-        if let Some(reason) = session.view.read_only_reason.as_ref() {
+        if let Some(reason) =
+            read_only_reason(&session.package, session.notebook_id.as_deref(), &notebooks)
+        {
             return Err(StorageError::new("readOnly", reason.clone()));
         }
         candidate_for_content(session, &content).map(|_| ())
@@ -1044,7 +1165,15 @@ impl Workspace {
                 "笔记会话已切换；请重新打开笔记后再检查内容。",
             ));
         }
-        if let Some(reason) = session.view.read_only_reason.as_ref() {
+        let notebooks = self
+            .library
+            .as_ref()
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?;
+        if let Some(reason) = read_only_reason(
+            &session.package,
+            session.notebook_id.as_deref(),
+            &notebooks.notebooks,
+        ) {
             return Err(StorageError::new("readOnly", reason.clone()));
         }
         candidate_for_content(session, &content).map(|_| ())
@@ -1118,10 +1247,11 @@ impl Workspace {
         session_id: &str,
         content: NoteContent,
     ) -> Result<SaveReceipt, WorkspaceError> {
-        let library_path = self
+        self.refresh_library_metadata()?;
+        let (library_path, notebooks) = self
             .library
             .as_ref()
-            .map(|library| library.path.clone())
+            .map(|library| (library.path.clone(), library.notebooks.clone()))
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
         let (candidate, note_path, baseline_revision, note_id) = {
             let session = self
@@ -1134,9 +1264,6 @@ impl Workspace {
                     "笔记会话已切换；请保留当前内容后重新打开笔记。",
                 ));
             }
-            if let Some(reason) = session.view.read_only_reason.as_ref() {
-                return Err(StorageError::new("readOnly", reason.clone()));
-            }
             let candidate = candidate_for_content(session, &content)?;
             if candidate.document.note_id != session.view.note_id
                 || candidate.document.organization != session.package.document.organization
@@ -1145,6 +1272,19 @@ impl Workspace {
                 return Err(StorageError::new(
                     "format",
                     "结构化编辑器不能更改笔记身份或组织信息。",
+                ));
+            }
+            if let Some(reason) =
+                read_only_reason(&session.package, session.notebook_id.as_deref(), &notebooks)
+            {
+                let error = StorageError::new("readOnly", reason);
+                let library = self.library.as_ref().expect("library checked above");
+                return Err(preserve_draft_after_metadata_loss(
+                    error,
+                    session,
+                    library,
+                    &self.recovery_root,
+                    &candidate,
                 ));
             }
             (
@@ -1196,6 +1336,8 @@ impl Workspace {
         active.view.assets = candidate.manifest.assets.clone();
         active.view.text = candidate.text_projection();
         active.view.revision = Some(revision);
+        active.view.read_only_reason = None;
+        active.was_writable = true;
         active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
 
@@ -1203,8 +1345,9 @@ impl Workspace {
         let mut receipt_library = match scan_library(
             &library_path,
             &library.notebooks,
-            &library.default_notebook_id,
+            library.default_notebook_id.as_deref(),
             &self.recovery_root,
+            &library.metadata_warnings,
         ) {
             Ok(view) => {
                 library.view = view.clone();
@@ -1231,8 +1374,9 @@ impl Workspace {
     }
 
     pub fn create_notebook(&mut self, name: &str) -> Result<LibraryView, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let name = validated_notebook_name(name)?;
-        let (library_path, default_notebook_id, mut notebooks) = self
+        let (library_path, default_notebook_id, mut notebooks, metadata_warnings) = self
             .library
             .as_ref()
             .map(|library| {
@@ -1240,6 +1384,7 @@ impl Workspace {
                     library.path.clone(),
                     library.default_notebook_id.clone(),
                     library.notebooks.clone(),
+                    library.metadata_warnings.clone(),
                 )
             })
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
@@ -1255,16 +1400,23 @@ impl Workspace {
         let notebook_id = notebook.id.clone();
         let published_notebook = notebook.clone();
         let metadata_path = library_path.join("notebooks");
-        notebooks.insert(notebook_id, notebook);
+        let candidate_bytes = serde_json::to_vec(&published_notebook)
+            .map_err(|error| StorageError::new("libraryMetadata", error.to_string()))?;
+        notebooks.insert(notebook_id.clone(), notebook);
+        ensure_child_directory(&library_path, &metadata_path, true)?;
         let view = scan_library(
             &library_path,
             &notebooks,
-            &default_notebook_id,
+            default_notebook_id.as_deref(),
             &self.recovery_root,
+            &metadata_warnings,
         )?;
         publish_notebook_metadata(&metadata_path, &published_notebook)?;
         let library = self.library.as_mut().expect("library checked above");
         library.notebooks = notebooks;
+        library
+            .notebook_metadata_baselines
+            .insert(notebook_id, Some(candidate_bytes));
         library.view = view.clone();
         Ok(view)
     }
@@ -1274,19 +1426,21 @@ impl Workspace {
         notebook_id: &str,
         name: &str,
     ) -> Result<LibraryView, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let name = validated_notebook_name(name)?;
-        let (library_path, default_notebook_id, current, mut notebooks) = self
-            .library
-            .as_ref()
-            .map(|library| {
-                (
-                    library.path.clone(),
-                    library.default_notebook_id.clone(),
-                    library.notebooks.get(notebook_id).cloned(),
-                    library.notebooks.clone(),
-                )
-            })
-            .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        let (library_path, default_notebook_id, current, mut notebooks, mut metadata_warnings) =
+            self.library
+                .as_ref()
+                .map(|library| {
+                    (
+                        library.path.clone(),
+                        library.default_notebook_id.clone(),
+                        library.notebooks.get(notebook_id).cloned(),
+                        library.notebooks.clone(),
+                        library.metadata_warnings.clone(),
+                    )
+                })
+                .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
         let mut notebook =
             current.ok_or_else(|| StorageError::new("unknownNotebook", "所选笔记本不存在。"))?;
         if notebook.default {
@@ -1296,18 +1450,10 @@ impl Workspace {
             ));
         }
         ensure_unique_notebook_name(&notebooks, &name, Some(notebook_id))?;
-        let (metadata_path, expected_bytes) =
-            read_notebook_metadata_file(&library_path, notebook_id)?;
-        let on_disk: NotebookMetadata =
-            serde_json::from_slice(&expected_bytes).map_err(|error| {
-                StorageError::new("libraryMetadata", format!("笔记本元数据无效：{error}"))
-            })?;
-        if on_disk != notebook {
-            return Err(StorageError::new(
-                "conflict",
-                "笔记本元数据已在其他位置修改；请重新打开笔记库后重试。",
-            ));
-        }
+        let (metadata_path, expected_bytes) = notebook_metadata_cas(
+            self.library.as_ref().expect("library checked above"),
+            notebook_id,
+        )?;
 
         notebook.name = name;
         notebook.timestamps.modified_at = next_timestamp_after(&notebook.timestamps.modified_at);
@@ -1315,37 +1461,59 @@ impl Workspace {
             StorageError::new("libraryMetadata", format!("无法编码笔记本元数据：{error}"))
         })?;
         notebooks.insert(notebook_id.to_owned(), notebook);
+        metadata_warnings.retain(|warning| !warning.starts_with("发现重名笔记本："));
+        for warning in duplicate_notebook_name_warnings(&notebooks) {
+            push_warning(&mut metadata_warnings, warning);
+        }
         let view = scan_library(
             &library_path,
             &notebooks,
-            &default_notebook_id,
+            default_notebook_id.as_deref(),
             &self.recovery_root,
+            &metadata_warnings,
         )?;
-        storage::replace_metadata_file(&metadata_path, &expected_bytes, &candidate_bytes)?;
+        if let Err(error) =
+            storage::replace_metadata_file(&metadata_path, &expected_bytes, &candidate_bytes)
+        {
+            let _ = self.refresh_library_metadata();
+            return Err(error);
+        }
 
         let library = self.library.as_mut().expect("library checked above");
         library.notebooks = notebooks;
+        library
+            .notebook_metadata_baselines
+            .insert(notebook_id.to_owned(), Some(candidate_bytes));
         library.view = view.clone();
         Ok(view)
     }
 
     pub fn delete_notebook(&mut self, notebook_id: &str) -> Result<LibraryView, WorkspaceError> {
-        let (library_path, default_notebook_id, current, mut notebooks, unsaved_session_uses_it) =
-            self.library
-                .as_ref()
-                .map(|library| {
-                    (
-                        library.path.clone(),
-                        library.default_notebook_id.clone(),
-                        library.notebooks.get(notebook_id).cloned(),
-                        library.notebooks.clone(),
-                        self.session.as_ref().is_some_and(|session| {
-                            session.baseline_revision.is_none()
-                                && session.notebook_id.as_deref() == Some(notebook_id)
-                        }),
-                    )
-                })
-                .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        self.refresh_library_metadata()?;
+        let (
+            library_path,
+            default_notebook_id,
+            current,
+            mut notebooks,
+            unsaved_session_uses_it,
+            metadata_warnings,
+        ) = self
+            .library
+            .as_ref()
+            .map(|library| {
+                (
+                    library.path.clone(),
+                    library.default_notebook_id.clone(),
+                    library.notebooks.get(notebook_id).cloned(),
+                    library.notebooks.clone(),
+                    self.session.as_ref().is_some_and(|session| {
+                        session.baseline_revision.is_none()
+                            && session.notebook_id.as_deref() == Some(notebook_id)
+                    }),
+                    library.metadata_warnings.clone(),
+                )
+            })
+            .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
         let notebook =
             current.ok_or_else(|| StorageError::new("unknownNotebook", "所选笔记本不存在。"))?;
         if notebook.default {
@@ -1368,24 +1536,17 @@ impl Workspace {
             ));
         }
 
-        let (metadata_path, expected_bytes) =
-            read_notebook_metadata_file(&library_path, notebook_id)?;
-        let on_disk: NotebookMetadata =
-            serde_json::from_slice(&expected_bytes).map_err(|error| {
-                StorageError::new("libraryMetadata", format!("笔记本元数据无效：{error}"))
-            })?;
-        if on_disk != notebook {
-            return Err(StorageError::new(
-                "conflict",
-                "笔记本元数据已在其他位置修改；请重新打开笔记库后重试。",
-            ));
-        }
+        let (metadata_path, expected_bytes) = notebook_metadata_cas(
+            self.library.as_ref().expect("library checked above"),
+            notebook_id,
+        )?;
         notebooks.remove(notebook_id);
         let mut view = scan_library(
             &library_path,
             &notebooks,
-            &default_notebook_id,
+            default_notebook_id.as_deref(),
             &self.recovery_root,
+            &metadata_warnings,
         )?;
         let (_, current_bytes) = read_notebook_metadata_file(&library_path, notebook_id)?;
         if current_bytes != expected_bytes {
@@ -1394,8 +1555,12 @@ impl Workspace {
                 "笔记本元数据在删除前发生变化；原文件已保留。",
             ));
         }
-        fs::remove_file(&metadata_path)
-            .map_err(|error| StorageError::new("io", format!("无法删除笔记本元数据：{error}")))?;
+        if let Err(error) =
+            storage::delete_metadata_file_if_matches(&metadata_path, &expected_bytes)
+        {
+            let _ = self.refresh_library_metadata();
+            return Err(error);
+        }
         if let Err(error) = sync_directory(
             metadata_path
                 .parent()
@@ -1411,6 +1576,11 @@ impl Workspace {
             .as_mut()
             .expect("library checked above")
             .notebooks = notebooks;
+        self.library
+            .as_mut()
+            .expect("library checked above")
+            .notebook_metadata_baselines
+            .insert(notebook_id.to_owned(), None);
         let removed_filter = self.preferences.selected_notebook_id.as_deref() == Some(notebook_id);
         let library_path_for_preferences = library_path.clone();
         if removed_filter {
@@ -1439,6 +1609,7 @@ impl Workspace {
         notebook_id: &str,
         pinned: bool,
     ) -> Result<SaveReceipt, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let (library_path, default_notebook_id, notebook_exists) = self
             .library
             .as_ref()
@@ -1455,6 +1626,10 @@ impl Workspace {
                 "unknownNotebook",
                 "目标笔记本不存在于当前笔记库。",
             ));
+        }
+        {
+            let library = self.library.as_ref().expect("library checked above");
+            ensure_notebook_baseline_current(library, notebook_id)?;
         }
         let session = self
             .session
@@ -1496,6 +1671,10 @@ impl Workspace {
                 "此笔记属于未知笔记本，组织信息未更改。",
             ));
         }
+        ensure_notebook_baseline_current(
+            self.library.as_ref().expect("library checked above"),
+            source_notebook_id,
+        )?;
 
         if source_notebook_id == notebook_id
             && session.package.document.organization.pinned == pinned
@@ -1565,8 +1744,9 @@ impl Workspace {
         let mut receipt_library = match scan_library(
             &library_path,
             &library.notebooks,
-            &default_notebook_id,
+            default_notebook_id.as_deref(),
             &self.recovery_root,
+            &library.metadata_warnings,
         ) {
             Ok(view) => {
                 library.view = view.clone();
@@ -1665,8 +1845,9 @@ impl Workspace {
         let mut updated = match scan_library(
             &library_path,
             &library.notebooks,
-            &default_notebook_id,
+            default_notebook_id.as_deref(),
             &self.recovery_root,
+            &library.metadata_warnings,
         ) {
             Ok(view) => view,
             Err(error) => {
@@ -1695,6 +1876,7 @@ impl Workspace {
         sidebar_collapsed: bool,
         selected_notebook_id: Option<String>,
     ) -> Result<(), WorkspaceError> {
+        self.refresh_library_metadata()?;
         if let Some(id) = selected_notebook_id.as_deref() {
             if !is_canonical_uuid_v4(id) {
                 return Err(StorageError::new(
@@ -1750,11 +1932,13 @@ impl Workspace {
         &mut self,
         recovery_id: &str,
     ) -> Result<SaveReceipt, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let (library_path, default_notebook_id) = self
             .library
             .as_ref()
             .map(|library| (library.path.clone(), library.default_notebook_id.clone()))
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        let default_notebook_id = default_notebook_id.ok_or_else(library_metadata_pending)?;
         let source = storage::open_recovery_draft(&self.recovery_root, recovery_id)?;
         let mut package = source.package;
         assign_copy_identity(&mut package, &default_notebook_id);
@@ -1825,14 +2009,16 @@ impl Workspace {
             baseline_witness: Some(baseline_witness),
             preserved_preview: false,
             external_conflict: false,
+            was_writable: session.read_only_reason.is_none(),
         });
         self.last_note_id = Some(note_id.clone());
         self.notice = preference_warning.clone();
         let receipt_library = match scan_library(
             &library_path,
             &library.notebooks,
-            &library.default_notebook_id,
+            library.default_notebook_id.as_deref(),
             &self.recovery_root,
+            &library.metadata_warnings,
         ) {
             Ok(view) => {
                 library.view = view.clone();
@@ -1867,6 +2053,7 @@ impl Workspace {
         text: PlainText,
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let (mut package, default_notebook_id) = {
             let library = self
                 .library
@@ -1885,7 +2072,11 @@ impl Workspace {
             (session.package.clone(), library.default_notebook_id.clone())
         };
         replace_plain_text_for_copy(&mut package, text)?;
-        assign_copy_identity(&mut package, &default_notebook_id);
+        if let Some(default_notebook_id) = default_notebook_id.as_deref() {
+            assign_copy_identity(&mut package, default_notebook_id);
+        } else {
+            assign_copy_identity_preserving_organization(&mut package);
+        }
         let destination = self.resolve_copy_destination(&path)?;
         let (saved_path, revision) = storage::save_copy(&destination, &package)?;
         Ok(SavedCopy {
@@ -1900,6 +2091,7 @@ impl Workspace {
         content: NoteContent,
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let (mut package, default_notebook_id) = {
             let library = self
                 .library
@@ -1929,7 +2121,11 @@ impl Workspace {
             };
             (package, library.default_notebook_id.clone())
         };
-        assign_copy_identity(&mut package, &default_notebook_id);
+        if let Some(default_notebook_id) = default_notebook_id.as_deref() {
+            assign_copy_identity(&mut package, default_notebook_id);
+        } else {
+            assign_copy_identity_preserving_organization(&mut package);
+        }
         let destination = self.resolve_copy_destination(&path)?;
         let (saved_path, revision) = storage::save_copy(&destination, &package)?;
         Ok(SavedCopy {
@@ -1943,10 +2139,11 @@ impl Workspace {
         recovery_id: &str,
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
+        self.refresh_library_metadata()?;
         let default_notebook_id = self
             .library
             .as_ref()
-            .map(|library| library.default_notebook_id.clone());
+            .and_then(|library| library.default_notebook_id.clone());
         let source = storage::open_recovery_draft(&self.recovery_root, recovery_id)?;
         let mut package = source.package;
         if let Some(default_notebook_id) = default_notebook_id.as_deref() {
@@ -1987,22 +2184,108 @@ impl Workspace {
     }
 
     fn view(&self) -> WorkspaceView {
+        let session = self.session.as_ref().map(|session| {
+            let mut view = session.view.clone();
+            if !session.preserved_preview && !session.external_conflict {
+                if let Some(library) = self.library.as_ref() {
+                    view.read_only_reason = read_only_reason(
+                        &session.package,
+                        session.notebook_id.as_deref(),
+                        &library.notebooks,
+                    );
+                }
+            }
+            view
+        });
         WorkspaceView {
             app_version: env!("CARGO_PKG_VERSION").to_owned(),
             default_library_path: display_path(&self.default_library_path),
             library: self.library.as_ref().map(|library| library.view.clone()),
-            session: self.session.as_ref().map(|session| session.view.clone()),
+            session,
             preferences: self.preferences.clone(),
             notice: self.notice.clone(),
         }
     }
 
+    pub(super) fn refresh_library_metadata(&mut self) -> Result<(), WorkspaceError> {
+        self.refresh_library_metadata_inner(false)
+    }
+
+    fn refresh_library_metadata_inner(
+        &mut self,
+        accept_visible_baseline: bool,
+    ) -> Result<(), WorkspaceError> {
+        let Some(path) = self.library.as_ref().map(|library| library.path.clone()) else {
+            return Ok(());
+        };
+        let mut metadata = read_library_metadata(&path);
+        let library = self.library.as_mut().expect("library path was checked");
+        if metadata.directory_available {
+            for (id, bytes) in &metadata.bytes {
+                if accept_visible_baseline {
+                    library
+                        .notebook_metadata_baselines
+                        .insert(id.clone(), Some(bytes.clone()));
+                } else {
+                    library
+                        .notebook_metadata_baselines
+                        .entry(id.clone())
+                        .or_insert_with(|| Some(bytes.clone()));
+                }
+            }
+            library.default_notebook_id =
+                resolved_default_notebook_id(&metadata.notebooks, &mut metadata.warnings);
+            library.notebooks = metadata.notebooks;
+        }
+        library.metadata_warnings = metadata.warnings;
+        apply_notebook_metadata_to_view(library);
+        if let Some(session) = self.session.as_mut() {
+            if !session.preserved_preview
+                && !session.external_conflict
+                && read_only_reason(
+                    &session.package,
+                    session.notebook_id.as_deref(),
+                    &library.notebooks,
+                )
+                .is_none()
+            {
+                session.was_writable = true;
+            }
+        }
+        Ok(())
+    }
+
+    pub(super) fn refresh_selected_library(
+        &mut self,
+    ) -> Result<Option<LibraryView>, WorkspaceError> {
+        self.refresh_library_metadata_inner(true)?;
+        let Some(library) = self.library.as_mut() else {
+            return Ok(None);
+        };
+        match scan_library_with_previous(
+            &library.path,
+            &library.notebooks,
+            library.default_notebook_id.as_deref(),
+            &self.recovery_root,
+            &library.metadata_warnings,
+            Some(&library.view),
+        ) {
+            Ok(view) => library.view = view,
+            Err(error) => {
+                library.view.warnings = vec![format!("无法刷新笔记列表：{}", error.message)]
+            }
+        }
+        Ok(Some(library.view.clone()))
+    }
+
     fn prepare_library(
         &self,
         requested: &Path,
-        create: bool,
+        initialize_if_new: bool,
     ) -> Result<LibraryState, WorkspaceError> {
-        let path = resolve_candidate_directory(requested, create)?;
+        let path = resolve_candidate_directory(requested, initialize_if_new)?;
+        let new_path =
+            fs::symlink_metadata(&path).is_err_and(|error| error.kind() == io::ErrorKind::NotFound);
         let recovery = resolve_future_path(&self.recovery_root)?;
         if path == recovery || recovery.starts_with(&path) || path.starts_with(&recovery) {
             return Err(StorageError::new(
@@ -2018,7 +2301,7 @@ impl Workspace {
             ));
         }
 
-        if create {
+        if initialize_if_new && new_path {
             fs::create_dir_all(&path)
                 .map_err(|error| StorageError::new("io", format!("无法创建笔记库目录：{error}")))?;
         }
@@ -2038,70 +2321,37 @@ impl Workspace {
                 "笔记库不能包含 CueNote 的本机设置目录；请选择其他位置。",
             ));
         }
-        if create {
+        if initialize_if_new && new_path {
             storage::probe_directory(&canonical)?;
-        }
-        let notes_path = canonical.join("notes");
-        let notebooks_path = canonical.join("notebooks");
-        if create {
+            let notes_path = canonical.join("notes");
+            let notebooks_path = canonical.join("notebooks");
             ensure_child_directory(&canonical, &notes_path, true)?;
             ensure_child_directory(&canonical, &notebooks_path, true)?;
-        } else {
-            ensure_child_directory(&canonical, &notes_path, false)?;
-            ensure_child_directory(&canonical, &notebooks_path, false)?;
-        }
-
-        let notes = secure_read_dir(&canonical, &notes_path)?;
-        let notebooks = secure_read_dir(&canonical, &notebooks_path)?;
-        let mut metadata = read_notebooks(&notebooks_path, notebooks)?;
-        if metadata.is_empty() {
-            let has_existing_notes = notes.iter().any(|entry| {
-                entry
-                    .path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    .is_some_and(|ext| ext.eq_ignore_ascii_case("cuenote"))
-            });
-            if has_existing_notes || !create {
-                return Err(StorageError::new(
-                    "libraryMetadata",
-                    "笔记库缺少笔记本元数据；已有笔记不会被自动归入新建笔记本。",
-                ));
-            }
             let notebook = new_default_notebook();
             publish_notebook_metadata(&notebooks_path, &notebook)?;
-            metadata.insert(notebook.id.clone(), notebook);
         }
-        let defaults = metadata
-            .values()
-            .filter(|notebook| notebook.default)
-            .count();
-        if defaults != 1 {
-            return Err(StorageError::new(
-                "libraryMetadata",
-                if defaults == 0 {
-                    "笔记库没有默认笔记本元数据。"
-                } else {
-                    "笔记库包含多个默认笔记本元数据。"
-                },
-            ));
-        }
-        let default_notebook_id = metadata
-            .values()
-            .find(|notebook| notebook.default)
-            .expect("exactly one default notebook was checked")
-            .id
-            .clone();
+
+        let mut metadata = read_library_metadata(&canonical);
+        let default_notebook_id =
+            resolved_default_notebook_id(&metadata.notebooks, &mut metadata.warnings);
         let view = scan_library(
             &canonical,
-            &metadata,
-            &default_notebook_id,
+            &metadata.notebooks,
+            default_notebook_id.as_deref(),
             &self.recovery_root,
+            &metadata.warnings,
         )?;
+        let notebook_metadata_baselines = metadata
+            .bytes
+            .iter()
+            .map(|(id, bytes)| (id.clone(), Some(bytes.clone())))
+            .collect();
         Ok(LibraryState {
             path: canonical,
-            notebooks: metadata,
+            notebooks: metadata.notebooks,
             default_notebook_id,
+            notebook_metadata_baselines,
+            metadata_warnings: metadata.warnings,
             view,
         })
     }
@@ -2768,6 +3018,36 @@ fn read_only_reason(
     None
 }
 
+fn preserve_draft_after_metadata_loss(
+    error: StorageError,
+    session: &ActiveNoteSession,
+    library: &LibraryState,
+    recovery_root: &Path,
+    candidate: &NotePackage,
+) -> StorageError {
+    if !session.was_writable
+        || session.preserved_preview
+        || session.external_conflict
+        || session.package.document.organization.trashed_at.is_some()
+        || !supports_editable_content(&session.package.content())
+    {
+        return error;
+    }
+    let Some(notebook_id) = session.notebook_id.as_deref() else {
+        return error;
+    };
+    if library.notebooks.contains_key(notebook_id)
+        || library
+            .notebook_metadata_baselines
+            .get(notebook_id)
+            .and_then(Option::as_ref)
+            .is_none()
+    {
+        return error;
+    }
+    storage::preserve_snapshot_for_unresolved_target(error, &session.path, recovery_root, candidate)
+}
+
 fn supports_editable_content(content: &NoteContent) -> bool {
     supports_editable_blocks(&content.sections.cue, true, false)
         && supports_editable_blocks(&content.sections.content, false, true)
@@ -2915,11 +3195,69 @@ fn note_session_from_opened(
 fn scan_library(
     library_path: &Path,
     notebooks: &BTreeMap<String, NotebookMetadata>,
-    default_notebook_id: &str,
+    default_notebook_id: Option<&str>,
     recovery_root: &Path,
+    metadata_warnings: &[String],
+) -> Result<LibraryView, WorkspaceError> {
+    scan_library_with_previous(
+        library_path,
+        notebooks,
+        default_notebook_id,
+        recovery_root,
+        metadata_warnings,
+        None,
+    )
+}
+
+fn scan_library_with_previous(
+    library_path: &Path,
+    notebooks: &BTreeMap<String, NotebookMetadata>,
+    default_notebook_id: Option<&str>,
+    recovery_root: &Path,
+    metadata_warnings: &[String],
+    previous: Option<&LibraryView>,
 ) -> Result<LibraryView, WorkspaceError> {
     let notes_path = library_path.join("notes");
-    let mut entries = secure_read_dir(library_path, &notes_path)?;
+    let mut warnings = metadata_warnings.to_vec();
+    let mut entries = match secure_read_dir_if_present(library_path, &notes_path) {
+        Ok(Some(entries)) => entries,
+        Ok(None) => {
+            if let Some(previous) = previous {
+                return Ok(preserve_unavailable_notes_view(
+                    previous,
+                    notebooks,
+                    default_notebook_id,
+                    &notes_path,
+                    "目录尚未到达",
+                ));
+            }
+            push_warning(
+                &mut warnings,
+                format!("笔记目录尚未到达：{}", display_path(&notes_path)),
+            );
+            Vec::new()
+        }
+        Err(error) => {
+            if let Some(previous) = previous {
+                return Ok(preserve_unavailable_notes_view(
+                    previous,
+                    notebooks,
+                    default_notebook_id,
+                    &notes_path,
+                    &error.message,
+                ));
+            }
+            push_warning(
+                &mut warnings,
+                format!(
+                    "无法读取笔记目录 {}：{}",
+                    display_path(&notes_path),
+                    error.message
+                ),
+            );
+            Vec::new()
+        }
+    };
     entries.sort_by_key(|entry| entry.file_name());
     if entries.len() > MAX_NOTE_FILES {
         return Err(StorageError::new(
@@ -2929,7 +3267,6 @@ fn scan_library(
     }
     let mut notes = Vec::new();
     let mut trash_notes = Vec::new();
-    let mut warnings = Vec::new();
     let mut seen_file_ids = HashSet::new();
     let mut seen_package_ids = HashMap::<String, (String, String, bool)>::new();
     let mut omitted_warnings = 0usize;
@@ -2939,6 +3276,18 @@ fn scan_library(
             continue;
         };
         if !extension.eq_ignore_ascii_case("cuenote") {
+            continue;
+        }
+        if let Err(error) = storage::ensure_local_file(&path) {
+            push_warning_counted(
+                &mut warnings,
+                &mut omitted_warnings,
+                format!(
+                    "无法读取笔记文件 {}：{}",
+                    display_path(&path),
+                    error.message
+                ),
+            );
             continue;
         }
         let file_metadata = match fs::symlink_metadata(&path) {
@@ -2952,7 +3301,7 @@ fn scan_library(
                 continue;
             }
         };
-        if is_link_or_reparse(&file_metadata) || !file_metadata.is_file() {
+        if !file_metadata.is_file() {
             push_warning_counted(
                 &mut warnings,
                 &mut omitted_warnings,
@@ -3074,34 +3423,46 @@ fn scan_library(
     }
     sort_note_summaries(&mut notes);
     sort_trash_notes(&mut trash_notes);
-    let default_notebook_name = notebooks
-        .get(default_notebook_id)
+    let default_notebook_name = default_notebook_id
+        .and_then(|id| notebooks.get(id))
         .map(|metadata| metadata.name.clone())
         .unwrap_or_else(|| "默认笔记本".into());
-    let mut notebook_summaries = notebooks
-        .values()
-        .map(|notebook| NotebookSummary {
-            notebook_id: notebook.id.clone(),
-            name: notebook.name.clone(),
-            is_default: notebook.default,
-        })
-        .collect::<Vec<_>>();
-    notebook_summaries.sort_by(|left, right| {
-        right
-            .is_default
-            .cmp(&left.is_default)
-            .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
-            .then_with(|| left.notebook_id.cmp(&right.notebook_id))
-    });
     Ok(LibraryView {
         path: display_path(library_path),
         default_notebook_name,
-        default_notebook_id: default_notebook_id.to_owned(),
-        notebooks: notebook_summaries,
+        default_notebook_id: default_notebook_id.map(str::to_owned),
+        notebooks: notebook_summaries(notebooks),
         notes,
         trash_notes,
         warnings,
     })
+}
+
+fn preserve_unavailable_notes_view(
+    previous: &LibraryView,
+    notebooks: &BTreeMap<String, NotebookMetadata>,
+    default_notebook_id: Option<&str>,
+    notes_path: &Path,
+    reason: &str,
+) -> LibraryView {
+    let mut view = previous.clone();
+    view.default_notebook_id = default_notebook_id.map(str::to_owned);
+    view.default_notebook_name = default_notebook_id
+        .and_then(|id| notebooks.get(id))
+        .map(|metadata| metadata.name.clone())
+        .unwrap_or_else(|| "默认笔记本".into());
+    view.notebooks = notebook_summaries(notebooks);
+    view.warnings.retain(|warning| {
+        !warning.starts_with("笔记目录尚未到达：") && !warning.starts_with("无法读取笔记目录 ")
+    });
+    push_warning(
+        &mut view.warnings,
+        format!(
+            "笔记目录暂不可用，已保留上次可见列表 {}：{reason}",
+            display_path(notes_path)
+        ),
+    );
+    view
 }
 
 fn sort_note_summaries(notes: &mut [NoteSummary]) {
@@ -3114,13 +3475,50 @@ fn sort_note_summaries(notes: &mut [NoteSummary]) {
     });
 }
 
-fn read_notebooks(
-    notebooks_path: &Path,
-    entries: Vec<fs::DirEntry>,
-) -> Result<BTreeMap<String, NotebookMetadata>, WorkspaceError> {
-    let mut metadata = BTreeMap::new();
+fn read_library_metadata(library_path: &Path) -> NotebookMetadataScan {
+    let notebooks_path = library_path.join("notebooks");
+    let entries = match secure_read_dir_if_present(library_path, &notebooks_path) {
+        Ok(Some(entries)) => entries,
+        Ok(None) => {
+            return NotebookMetadataScan {
+                notebooks: BTreeMap::new(),
+                bytes: BTreeMap::new(),
+                warnings: vec![format!(
+                    "笔记本元数据目录尚未到达：{}",
+                    display_path(&notebooks_path)
+                )],
+                directory_available: false,
+            };
+        }
+        Err(error) => {
+            return NotebookMetadataScan {
+                notebooks: BTreeMap::new(),
+                bytes: BTreeMap::new(),
+                warnings: vec![format!(
+                    "无法读取笔记本元数据目录 {}：{}",
+                    display_path(&notebooks_path),
+                    error.message
+                )],
+                directory_available: false,
+            };
+        }
+    };
+    let mut scan = read_notebooks(entries);
+    scan.directory_available = true;
+    scan
+}
+
+fn read_notebooks(entries: Vec<fs::DirEntry>) -> NotebookMetadataScan {
+    let mut scan = NotebookMetadataScan {
+        notebooks: BTreeMap::new(),
+        bytes: BTreeMap::new(),
+        warnings: Vec::new(),
+        directory_available: true,
+    };
     let mut sorted = entries;
     sorted.sort_by_key(|entry| entry.file_name());
+    let mut metadata_file_count = 0usize;
+    let mut omitted_warnings = 0usize;
     for entry in sorted {
         let path = entry.path();
         let Some(extension) = path.extension().and_then(|extension| extension.to_str()) else {
@@ -3129,75 +3527,197 @@ fn read_notebooks(
         if !extension.eq_ignore_ascii_case("json") {
             continue;
         }
-        let file_metadata = fs::symlink_metadata(&path).map_err(|error| {
-            StorageError::new("libraryMetadata", format!("无法检查笔记本元数据：{error}"))
-        })?;
-        if is_link_or_reparse(&file_metadata) || !file_metadata.is_file() {
-            return Err(StorageError::new(
-                "unsafePath",
-                format!("笔记本元数据不是普通文件：{}", display_path(&path)),
-            ));
+        if path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .is_some_and(|name| name.starts_with(NOTEBOOK_CONFLICT_PREFIX))
+        {
+            push_warning_counted(
+                &mut scan.warnings,
+                &mut omitted_warnings,
+                format!(
+                    "发现未解决的笔记本元数据冲突副本（不会作为笔记本加载）：{}",
+                    display_path(&path)
+                ),
+            );
+            continue;
         }
-        let bytes = read_bounded(&path, MAX_METADATA_BYTES, "笔记本元数据")?;
-        let notebook: NotebookMetadata = serde_json::from_slice(&bytes).map_err(|error| {
-            StorageError::new(
-                "libraryMetadata",
-                format!("笔记本元数据无效 {}：{error}", display_path(&path)),
-            )
-        })?;
-        let filename_id = path
-            .file_stem()
-            .and_then(|stem| stem.to_str())
-            .ok_or_else(|| StorageError::new("libraryMetadata", "笔记本元数据文件名无法读取。"))?;
-        if notebook.schema_version != LIBRARY_SCHEMA_VERSION {
-            return Err(StorageError::new(
-                "unsupportedLibraryVersion",
-                format!("笔记本元数据版本不受支持：{}", display_path(&path)),
-            ));
+        metadata_file_count += 1;
+        if metadata_file_count > MAX_NOTEBOOKS {
+            push_warning_counted(
+                &mut scan.warnings,
+                &mut omitted_warnings,
+                format!("笔记本元数据文件数量超出当前上限：{}", display_path(&path)),
+            );
+            continue;
         }
-        if metadata.contains_key(&notebook.id) {
-            return Err(StorageError::new(
-                "libraryMetadata",
-                format!("发现重复笔记本身份：{}", notebook.id),
-            ));
-        }
-        if !is_canonical_uuid_v4(&notebook.id) || notebook.id != filename_id {
-            return Err(StorageError::new(
-                "libraryMetadata",
-                format!("笔记本元数据身份与文件名不一致：{}", display_path(&path)),
-            ));
-        }
-        if notebook.name.trim().is_empty()
+        let bytes = match read_sync_bounded(&path, MAX_METADATA_BYTES, "笔记本元数据") {
+            Ok(bytes) => bytes,
+            Err(error) => {
+                push_warning_counted(
+                    &mut scan.warnings,
+                    &mut omitted_warnings,
+                    format!(
+                        "无法读取笔记本元数据 {}：{}",
+                        display_path(&path),
+                        error.message
+                    ),
+                );
+                continue;
+            }
+        };
+        let filename_id = match path.file_stem().and_then(|stem| stem.to_str()) {
+            Some(id) => id,
+            None => {
+                push_warning_counted(
+                    &mut scan.warnings,
+                    &mut omitted_warnings,
+                    format!("笔记本元数据文件名无法读取：{}", display_path(&path)),
+                );
+                continue;
+            }
+        };
+        let notebook: NotebookMetadata = match serde_json::from_slice(&bytes) {
+            Ok(notebook) => notebook,
+            Err(error) => {
+                push_warning_counted(
+                    &mut scan.warnings,
+                    &mut omitted_warnings,
+                    format!("笔记本元数据无效 {}：{error}", display_path(&path)),
+                );
+                continue;
+            }
+        };
+        let validation_error = if notebook.schema_version != LIBRARY_SCHEMA_VERSION {
+            Some("元数据版本不受支持".to_owned())
+        } else if !is_canonical_uuid_v4(&notebook.id) || notebook.id != filename_id {
+            Some(format!("元数据身份与文件名不一致（ID {}）", notebook.id))
+        } else if notebook.name.trim().is_empty()
             || notebook.name.chars().count() > 256
             || notebook.name.chars().any(char::is_control)
         {
-            return Err(StorageError::new(
-                "libraryMetadata",
-                format!("笔记本名称无效：{}", display_path(&path)),
-            ));
-        }
-        if !is_valid_timestamp(&notebook.timestamps.created_at)
+            Some(format!("笔记本名称无效（ID {}）", notebook.id))
+        } else if !is_valid_timestamp(&notebook.timestamps.created_at)
             || !is_valid_timestamp(&notebook.timestamps.modified_at)
         {
-            return Err(StorageError::new(
-                "libraryMetadata",
-                format!("笔记本时间格式无效：{}", display_path(&path)),
-            ));
+            Some(format!("笔记本时间格式无效（ID {}）", notebook.id))
+        } else if scan.notebooks.contains_key(&notebook.id) {
+            Some(format!("发现重复笔记本身份（ID {}）", notebook.id))
+        } else if scan.notebooks.len() >= MAX_NOTEBOOKS {
+            Some("笔记本元数据数量超出当前上限".to_owned())
+        } else {
+            None
+        };
+        if let Some(error) = validation_error {
+            push_warning_counted(
+                &mut scan.warnings,
+                &mut omitted_warnings,
+                format!("{error}：{}", display_path(&path)),
+            );
+            continue;
         }
-        if metadata.insert(notebook.id.clone(), notebook).is_some() {
-            return Err(StorageError::new(
-                "libraryMetadata",
-                format!("发现重复笔记本身份：{}", display_path(notebooks_path)),
-            ));
+        scan.bytes.insert(notebook.id.clone(), bytes);
+        scan.notebooks.insert(notebook.id.clone(), notebook);
+    }
+    for warning in duplicate_notebook_name_warnings(&scan.notebooks) {
+        push_warning_counted(&mut scan.warnings, &mut omitted_warnings, warning);
+    }
+    if omitted_warnings > 0 {
+        scan.warnings.push(format!(
+            "另有 {omitted_warnings} 条笔记本元数据警告未显示。"
+        ));
+    }
+    scan
+}
+
+fn duplicate_notebook_name_warnings(notebooks: &BTreeMap<String, NotebookMetadata>) -> Vec<String> {
+    let mut names = BTreeMap::<String, Vec<&NotebookMetadata>>::new();
+    for notebook in notebooks.values() {
+        names
+            .entry(notebook.name.trim().to_lowercase())
+            .or_default()
+            .push(notebook);
+    }
+    names
+        .values()
+        .filter(|matches| matches.len() > 1)
+        .map(|same_name| {
+            let entries = same_name
+                .iter()
+                .map(|notebook| format!("{}（ID {}）", notebook.name, notebook.id))
+                .collect::<Vec<_>>()
+                .join("、");
+            format!("发现重名笔记本：{entries}。元数据和笔记归属均已保留，请重命名冲突项。")
+        })
+        .collect()
+}
+
+fn resolved_default_notebook_id(
+    notebooks: &BTreeMap<String, NotebookMetadata>,
+    warnings: &mut Vec<String>,
+) -> Option<String> {
+    let defaults = notebooks
+        .values()
+        .filter(|notebook| notebook.default)
+        .count();
+    match defaults {
+        1 => notebooks
+            .values()
+            .find(|notebook| notebook.default)
+            .map(|notebook| notebook.id.clone()),
+        0 => {
+            push_warning(
+                warnings,
+                "默认笔记本元数据尚未完整到达；新建和恢复副本已暂停。".into(),
+            );
+            None
         }
-        if metadata.len() > MAX_NOTEBOOKS {
-            return Err(StorageError::new(
-                "libraryTooLarge",
-                "笔记本元数据数量超出当前上限。",
-            ));
+        _ => {
+            push_warning(
+                warnings,
+                "笔记库包含多个默认笔记本；新建和恢复副本已暂停。".into(),
+            );
+            None
         }
     }
-    Ok(metadata)
+}
+
+fn apply_notebook_metadata_to_view(library: &mut LibraryState) {
+    library.view.default_notebook_id = library.default_notebook_id.clone();
+    library.view.default_notebook_name = library
+        .default_notebook_id
+        .as_ref()
+        .and_then(|id| library.notebooks.get(id))
+        .map(|notebook| notebook.name.clone())
+        .unwrap_or_else(|| "默认笔记本".into());
+    library.view.notebooks = notebook_summaries(&library.notebooks);
+    library
+        .view
+        .warnings
+        .retain(|warning| !warning.contains("笔记本元数据") && !warning.contains("默认笔记本"));
+    library
+        .view
+        .warnings
+        .extend(library.metadata_warnings.clone());
+}
+
+fn notebook_summaries(notebooks: &BTreeMap<String, NotebookMetadata>) -> Vec<NotebookSummary> {
+    let mut summaries = notebooks
+        .values()
+        .map(|notebook| NotebookSummary {
+            notebook_id: notebook.id.clone(),
+            name: notebook.name.clone(),
+            is_default: notebook.default,
+        })
+        .collect::<Vec<_>>();
+    summaries.sort_by(|left, right| {
+        right
+            .is_default
+            .cmp(&left.is_default)
+            .then_with(|| left.name.to_lowercase().cmp(&right.name.to_lowercase()))
+            .then_with(|| left.notebook_id.cmp(&right.notebook_id))
+    });
+    summaries
 }
 
 fn validated_notebook_name(name: &str) -> Result<String, WorkspaceError> {
@@ -3241,7 +3761,8 @@ fn read_notebook_metadata_file(
     let metadata = fs::symlink_metadata(&path).map_err(|error| {
         StorageError::new("libraryMetadata", format!("无法检查笔记本元数据：{error}"))
     })?;
-    if is_link_or_reparse(&metadata) || !metadata.is_file() {
+    storage::ensure_local_file(&path)?;
+    if !metadata.is_file() {
         return Err(StorageError::new(
             "unsafePath",
             "笔记本元数据必须是笔记库内的普通文件。",
@@ -3256,8 +3777,55 @@ fn read_notebook_metadata_file(
             "笔记本元数据路径解析到了笔记库之外。",
         ));
     }
-    let bytes = read_bounded(&canonical, MAX_METADATA_BYTES, "笔记本元数据")?;
+    let bytes = read_sync_bounded(&canonical, MAX_METADATA_BYTES, "笔记本元数据")?;
     Ok((canonical, bytes))
+}
+
+fn notebook_metadata_cas(
+    library: &LibraryState,
+    notebook_id: &str,
+) -> Result<(PathBuf, Vec<u8>), WorkspaceError> {
+    let expected = library
+        .notebook_metadata_baselines
+        .get(notebook_id)
+        .and_then(Option::as_ref)
+        .ok_or_else(|| {
+            StorageError::new(
+                "conflict",
+                "笔记本元数据已变化或尚未取得本机基线；请重新选择笔记库后重试。",
+            )
+        })?;
+    let (path, current) = read_notebook_metadata_file(&library.path, notebook_id)?;
+    if &current != expected {
+        return Err(StorageError::new(
+            "conflict",
+            "笔记本元数据已在其他位置变化；原文件已保留，请刷新列表并确认当前元数据后重试。",
+        ));
+    }
+    let on_disk: NotebookMetadata = serde_json::from_slice(&current).map_err(|error| {
+        StorageError::new("libraryMetadata", format!("笔记本元数据无效：{error}"))
+    })?;
+    if library.notebooks.get(notebook_id) != Some(&on_disk) {
+        return Err(StorageError::new(
+            "conflict",
+            "笔记本元数据与当前列表不一致；请刷新笔记库后重试。",
+        ));
+    }
+    Ok((path, expected.clone()))
+}
+
+fn ensure_notebook_baseline_current(
+    library: &LibraryState,
+    notebook_id: &str,
+) -> Result<(), WorkspaceError> {
+    notebook_metadata_cas(library, notebook_id).map(|_| ())
+}
+
+fn library_metadata_pending() -> WorkspaceError {
+    StorageError::new(
+        "libraryMetadataPending",
+        "笔记库默认笔记本元数据尚未完整到达；请等待同步完成后重试。",
+    )
 }
 
 fn count_notebook_notes(
@@ -3266,7 +3834,19 @@ fn count_notebook_notes(
     notebooks: &BTreeMap<String, NotebookMetadata>,
 ) -> Result<usize, WorkspaceError> {
     let notes_path = library_path.join("notes");
-    let entries = secure_read_dir(library_path, &notes_path)?;
+    let entries = secure_read_dir_if_present(library_path, &notes_path)
+        .map_err(|error| {
+            StorageError::new(
+                "notebookUsageUnknown",
+                format!("无法读取笔记目录；不能确认笔记本为空：{}", error.message),
+            )
+        })?
+        .ok_or_else(|| {
+            StorageError::new(
+                "notebookUsageUnknown",
+                "笔记目录尚未到达；不能确认笔记本为空。",
+            )
+        })?;
     let mut assigned = 0usize;
     for entry in entries {
         let path = entry.path();
@@ -3277,6 +3857,12 @@ fn count_notebook_notes(
         {
             continue;
         }
+        storage::ensure_local_file(&path).map_err(|error| {
+            StorageError::new(
+                "notebookUsageUnknown",
+                format!("无法读取笔记文件；不能确认笔记本为空：{}", error.message),
+            )
+        })?;
         let file_metadata = fs::symlink_metadata(&path).map_err(|error| {
             StorageError::new(
                 "notebookUsageUnknown",
@@ -3481,7 +4067,8 @@ fn ensure_child_directory(
 ) -> Result<PathBuf, WorkspaceError> {
     match fs::symlink_metadata(child) {
         Ok(metadata) => {
-            if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+            storage::ensure_local_directory(child)?;
+            if !metadata.is_dir() {
                 return Err(StorageError::new(
                     "unsafePath",
                     format!("笔记库子目录必须是实际目录：{}", display_path(child)),
@@ -3520,11 +4107,13 @@ fn ensure_child_directory(
 }
 
 fn ensure_regular_child(root: &Path, path: &Path) -> Result<(), WorkspaceError> {
+    storage::ensure_local_directory(root)?;
+    storage::ensure_local_file(path)?;
     let root = fs::canonicalize(root)
         .map_err(|error| StorageError::new("io", format!("无法解析笔记库目录：{error}")))?;
     let metadata = fs::symlink_metadata(path)
         .map_err(|error| StorageError::new("io", format!("无法检查笔记文件：{error}")))?;
-    if is_link_or_reparse(&metadata) || !metadata.is_file() {
+    if !metadata.is_file() {
         return Err(StorageError::new(
             "unsafePath",
             "笔记路径必须指向笔记库内的普通文件。",
@@ -3542,11 +4131,30 @@ fn ensure_regular_child(root: &Path, path: &Path) -> Result<(), WorkspaceError> 
 }
 
 fn secure_read_dir(root: &Path, directory: &Path) -> Result<Vec<fs::DirEntry>, WorkspaceError> {
+    secure_read_dir_if_present(root, directory)?.ok_or_else(|| {
+        StorageError::new(
+            "io",
+            format!("笔记库缺少必要目录：{}", display_path(directory)),
+        )
+    })
+}
+
+fn secure_read_dir_if_present(
+    root: &Path,
+    directory: &Path,
+) -> Result<Option<Vec<fs::DirEntry>>, WorkspaceError> {
+    storage::ensure_local_directory(root)?;
     let canonical_root = fs::canonicalize(root)
         .map_err(|error| StorageError::new("io", format!("无法解析笔记库目录：{error}")))?;
-    let metadata = fs::symlink_metadata(directory)
-        .map_err(|error| StorageError::new("io", format!("无法检查库目录：{error}")))?;
-    if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+    let metadata = match fs::symlink_metadata(directory) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => {
+            return Err(StorageError::new("io", format!("无法检查库目录：{error}")));
+        }
+    };
+    storage::ensure_local_directory(directory)?;
+    if !metadata.is_dir() {
         return Err(StorageError::new(
             "unsafePath",
             "笔记库子目录必须是实际目录。",
@@ -3560,10 +4168,11 @@ fn secure_read_dir(root: &Path, directory: &Path) -> Result<Vec<fs::DirEntry>, W
             "库子目录解析到了笔记库之外的位置。",
         ));
     }
-    fs::read_dir(canonical_dir)
+    let entries = fs::read_dir(canonical_dir)
         .map_err(|error| StorageError::new("io", format!("无法读取库目录：{error}")))?
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| StorageError::new("io", format!("无法读取库目录项目：{error}")))
+        .map_err(|error| StorageError::new("io", format!("无法读取库目录项目：{error}")))?;
+    Ok(Some(entries))
 }
 
 fn resolve_candidate_directory(
@@ -3579,7 +4188,8 @@ fn resolve_candidate_directory(
     });
     match fs::symlink_metadata(&requested) {
         Ok(metadata) => {
-            if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+            storage::ensure_local_directory(&requested)?;
+            if !metadata.is_dir() {
                 return Err(StorageError::new(
                     "unsafePath",
                     "所选笔记库必须是实际目录，不能是文件或重解析点。",
@@ -3675,9 +4285,10 @@ fn ensure_real_directory(
     path: &Path,
     required_parent: Option<&Path>,
 ) -> Result<PathBuf, WorkspaceError> {
+    storage::ensure_local_directory(path)?;
     let metadata = fs::symlink_metadata(path)
         .map_err(|error| StorageError::new("io", format!("无法检查所选目录：{error}")))?;
-    if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+    if !metadata.is_dir() {
         return Err(StorageError::new(
             "unsafePath",
             "所选位置必须是实际目录，不能通过符号链接或重解析点访问。",
@@ -3712,6 +4323,32 @@ fn read_bounded(path: &Path, limit: u64, label: &str) -> Result<Vec<u8>, Workspa
     let file = File::open(path)
         .map_err(|error| StorageError::new("io", format!("无法打开{label}：{error}")))?;
     let mut bytes = Vec::with_capacity(metadata.len() as usize);
+    file.take(limit + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| StorageError::new("io", format!("无法读取{label}：{error}")))?;
+    if bytes.len() as u64 > limit {
+        return Err(StorageError::new(
+            "libraryMetadata",
+            format!("{label}超过大小上限。"),
+        ));
+    }
+    Ok(bytes)
+}
+
+fn read_sync_bounded(path: &Path, limit: u64, label: &str) -> Result<Vec<u8>, WorkspaceError> {
+    let _no_cloud_download = storage::NoCloudDownload::enter()?;
+    let file = storage::open_local_read(path)?;
+    let length = file
+        .metadata()
+        .map_err(|error| StorageError::new("io", format!("无法检查{label}：{error}")))?
+        .len();
+    if length > limit {
+        return Err(StorageError::new(
+            "libraryMetadata",
+            format!("{label}超过大小上限。"),
+        ));
+    }
+    let mut bytes = Vec::with_capacity(length as usize);
     file.take(limit + 1)
         .read_to_end(&mut bytes)
         .map_err(|error| StorageError::new("io", format!("无法读取{label}：{error}")))?;

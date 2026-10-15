@@ -72,7 +72,7 @@ fn note_organization_keeps_content_time_and_sorts_pinned_notes_first() {
         .unwrap()
         .notebook_id
         .clone();
-    let default_notebook_id = custom.default_notebook_id.clone();
+    let default_notebook_id = custom.default_notebook_id.clone().unwrap();
 
     let first_text = PlainText {
         title: String::new(),
@@ -200,7 +200,8 @@ fn notebook_names_are_trimmed_unique_and_default_notebook_is_protected() {
         .unwrap()
         .library
         .unwrap()
-        .default_notebook_id;
+        .default_notebook_id
+        .unwrap();
     assert_eq!(
         workspace.delete_notebook(&default_id).unwrap_err().kind,
         "defaultNotebook"
@@ -357,7 +358,7 @@ fn organization_update_preserves_rich_package_assets_and_noop_bytes() {
         .unwrap()
         .notebook_id
         .clone();
-    let default_id = target_library.default_notebook_id.clone();
+    let default_id = target_library.default_notebook_id.clone().unwrap();
     let mut package = cuenote_lib::note_format::read_package(std::io::Cursor::new(include_bytes!(
         "fixtures/valid-rich-v1.cuenote"
     )))

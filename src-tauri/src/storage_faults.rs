@@ -64,6 +64,13 @@ mod enabled {
                 | "publish_before"
                 | "publish_os_returned"
                 | "publish_after"
+                | "metadata_replace_before"
+                | "metadata_replace_before_swap"
+                | "metadata_replace_after"
+                | "metadata_delete_before"
+                | "metadata_delete_after_move"
+                | "trashed_delete_before_isolate"
+                | "trashed_delete_after_isolate"
         ) {
             return Ok(());
         }

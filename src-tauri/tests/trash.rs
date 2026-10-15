@@ -114,7 +114,7 @@ fn soft_deleting_a_note_moves_it_to_read_only_trash_without_changing_content_tim
 fn restoring_a_note_returns_it_to_its_original_notebook_without_changing_content_time() {
     let (_temp, mut workspace, _library, _config, _recovery) = selected_workspace();
     let initial_library = workspace.snapshot().unwrap().library.unwrap();
-    let original_notebook_id = initial_library.default_notebook_id;
+    let original_notebook_id = initial_library.default_notebook_id.unwrap();
     let created = workspace.new_note().unwrap();
     let saved = workspace
         .save_note_text(
@@ -167,7 +167,8 @@ fn trash_and_restore_preserve_rich_sections_embedded_assets_and_pin_state() {
         .unwrap()
         .library
         .unwrap()
-        .default_notebook_id;
+        .default_notebook_id
+        .unwrap();
     let mut package = NotePackage::new_plain(
         default_notebook_id.clone(),
         PlainText {
@@ -238,7 +239,8 @@ fn trash_listing_sorts_by_trash_time_then_note_id() {
         .unwrap()
         .library
         .unwrap()
-        .default_notebook_id;
+        .default_notebook_id
+        .unwrap();
     let fixtures = [
         (
             "30000000-0000-4000-8000-000000000003",
@@ -510,7 +512,7 @@ fn deleting_the_original_notebook_requires_an_explicit_restore_target() {
         .unwrap()
         .notebook_id
         .clone();
-    let default_notebook_id = notebooks.default_notebook_id;
+    let default_notebook_id = notebooks.default_notebook_id.unwrap();
     let created = workspace.new_note_in(Some(&original_notebook_id)).unwrap();
     let saved = workspace
         .save_note_text(
