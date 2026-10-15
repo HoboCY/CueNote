@@ -7,6 +7,8 @@ fn main() {
             "rebuild_search_index",
             "run_backup",
             "list_backups",
+            "list_backup_notes",
+            "restore_backup_note",
             "choose_backup_directory",
             "cancel_backup",
             "use_default_library",

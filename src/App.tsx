@@ -12,6 +12,7 @@ import type { ImageEditorBridge } from './image-session';
 import type { MindMapEditorBridge } from './mindmap-session';
 import {
   workspaceApi,
+  type BackupRestoreReceipt,
   type NoteSession,
   type NoteContent,
   type ExternalChangeProbe,
@@ -948,6 +949,57 @@ function App() {
         && pendingEditorOperationsRef.current.size === 0;
     } finally {
       manualSaveInProgressRef.current = false;
+    }
+  };
+
+  const runRestoreWithSavedEditor = async (
+    run: () => Promise<BackupRestoreReceipt>,
+  ): Promise<BackupRestoreReceipt | null> => {
+    const libraryPath = workspaceRef.current?.library?.path;
+    if (!libraryPath || !await prepareManualBackup()) return null;
+    if (workspaceRef.current?.library?.path !== libraryPath || operationInProgressRef.current
+      || pendingTransitionRef.current || externalReconcilePendingRef.current || externalConflictRef.current
+      || saveCoordinator.getState().isDirty || isComposingRef.current
+      || pendingEditorOperationsRef.current.size > 0 || hasBlockingEditorIssue()) return null;
+
+    operationInProgressRef.current = true;
+    flushSync(() => setIsOperationBusy(true));
+    setError(null);
+    try {
+      await pauseAutomaticSaving();
+      if (workspaceRef.current?.library?.path !== libraryPath || pendingTransitionRef.current
+        || externalReconcilePendingRef.current || externalConflictRef.current
+        || saveCoordinator.getState().isDirty) return null;
+      const receipt = await run();
+      // The host has already published and reopened the note. A later UI or
+      // catalog refresh failure must not be presented as an aborted restore.
+      try {
+        const currentWorkspace = workspaceRef.current;
+        if (!currentWorkspace || currentWorkspace.library?.path !== receipt.library.path) {
+          throw new Error('当前界面笔记库与恢复结果不一致。');
+        }
+        setTrashView(receipt.session.trashedAt !== null);
+        persistViewPreferences({
+          ...viewPreferencesRef.current,
+          selectedNotebookId: receipt.session.notebookId === receipt.library.defaultNotebookId
+            ? null : receipt.session.notebookId,
+        });
+        updateWorkspace({ ...currentWorkspace, library: receipt.library, session: receipt.session });
+        applySession(receipt.session);
+        void refreshRecoveryDrafts();
+        void refreshPreservedVersions();
+      } catch (cause) {
+        setError({
+          kind: 'restoreViewRefresh',
+          message: `笔记已恢复并重新读取，但界面刷新未完成：${toWorkspaceError(cause).message} 请重新打开笔记。`,
+          recoveryPath: receipt.preRestoreBackup.path,
+        });
+      }
+      return receipt;
+    } finally {
+      operationInProgressRef.current = false;
+      setIsOperationBusy(false);
+      resumeAutomaticSavingWhenSafe();
     }
   };
 
@@ -2728,6 +2780,9 @@ function App() {
           <BackupPanel
             libraryPath={library?.path ?? null}
             changeToken={library}
+            notebooks={library?.notebooks ?? []}
+            restoreAllowed={!navigationLocked && !externalConflict && !hasAnyEditorIssue && closeGuardReady}
+            runRestoreWithSavedEditor={runRestoreWithSavedEditor}
             automaticAllowed={!navigationLocked && !isDirty && !isSaving && !saveFailed
               && !isComposing && !hasAnyEditorIssue && !externalConflict
               && pendingEditorOperationCount === 0 && closeGuardReady}

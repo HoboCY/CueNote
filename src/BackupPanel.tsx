@@ -1,14 +1,24 @@
 import { useEffect, useRef, useState } from 'react';
 import { isTauri } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { createBackupCoordinator, type BackupCoordinatorState } from './backup-coordinator';
-import { workspaceApi, type BackupProgress, type BackupSummary } from './workspace-api';
+import { createBackupCoordinator, type BackupCoordinatorState, type RunRestoreWithSavedEditor } from './backup-coordinator';
+import {
+  workspaceApi,
+  type BackupNoteRestoreSelection,
+  type BackupNoteSummary,
+  type BackupProgress,
+  type BackupSummary,
+  type NotebookSummary,
+} from './workspace-api';
 
 export interface BackupPanelProps {
   libraryPath: string | null;
   changeToken: unknown;
   automaticAllowed: boolean;
   beforeManualBackup: () => Promise<boolean>;
+  notebooks: NotebookSummary[];
+  restoreAllowed: boolean;
+  runRestoreWithSavedEditor: RunRestoreWithSavedEditor;
 }
 
 const desktopRuntime = isTauri();
@@ -16,6 +26,7 @@ const desktopRuntime = isTauri();
 const initialState: BackupCoordinatorState = {
   libraryPath: null,
   catalog: null,
+  backupNotes: null,
   catalogLoading: false,
   operation: null,
   progress: null,
@@ -23,6 +34,7 @@ const initialState: BackupCoordinatorState = {
   elapsedSeconds: 0,
   error: null,
   notice: null,
+  restoreReceipt: null,
 };
 
 const phaseLabels: Record<string, string> = {
@@ -31,8 +43,15 @@ const phaseLabels: Record<string, string> = {
   copying: '正在复制数据',
   verifying: '正在验证备份',
   publishing: '正在发布备份',
+  restoring: '正在恢复备份笔记',
   complete: '备份校验完成',
 };
+
+interface RestoreCandidate {
+  backupId: string;
+  note: BackupNoteSummary;
+  targetNotebookId: string | null;
+}
 
 function formatCreatedAt(backup: BackupSummary) {
   const date = new Date(backup.createdAt);
@@ -41,19 +60,30 @@ function formatCreatedAt(backup: BackupSummary) {
   });
 }
 
+function formatNoteDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('zh-CN', {
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
+}
+
 function operationLabel(state: BackupCoordinatorState) {
   if (state.operation === 'preparing') return '正在保存当前编辑…';
+  if (state.operation === 'preparingRestore') return '正在保存当前编辑…';
   if (state.operation === 'choosing') return '正在选择备份位置…';
   if (state.operation === 'cancelling') {
     const counts = state.progress ? ` · 已检查 ${state.progress.checked}/${state.progress.total}` : '';
     const elapsed = state.elapsedSeconds > 2 ? ` · 已用 ${state.elapsedSeconds} 秒` : '';
     return `正在取消当前任务${counts}${elapsed}…`;
   }
-  if (state.operation === 'automatic' || state.operation === 'manual' || state.operation === 'listing') {
+  if (state.operation === 'automatic' || state.operation === 'manual' || state.operation === 'listing'
+    || state.operation === 'listingNotes' || state.operation === 'restoring') {
     const progress = state.progress;
     const label = progress
       ? phaseLabels[progress.phase] ?? '处理中'
-      : state.operation === 'listing' ? '正在校验备份列表' : '正在创建备份';
+      : state.operation === 'listing' ? '正在校验备份列表'
+        : state.operation === 'listingNotes' ? '正在读取备份中的笔记'
+          : state.operation === 'restoring' ? '正在恢复备份中的笔记' : '正在创建备份';
     const counts = progress ? ` · 已检查 ${progress.checked}/${progress.total}` : '';
     const elapsed = state.elapsedSeconds > 2 ? ` · 已用 ${state.elapsedSeconds} 秒` : '';
     return `${label}${counts}${elapsed}…`;
@@ -61,12 +91,25 @@ function operationLabel(state: BackupCoordinatorState) {
   return null;
 }
 
-export function BackupPanel({ libraryPath, changeToken, automaticAllowed, beforeManualBackup }: BackupPanelProps) {
+export function BackupPanel({
+  libraryPath,
+  changeToken,
+  automaticAllowed,
+  beforeManualBackup,
+  notebooks,
+  restoreAllowed,
+  runRestoreWithSavedEditor,
+}: BackupPanelProps) {
   const [state, setState] = useState<BackupCoordinatorState>(initialState);
   const [collapsed, setCollapsed] = useState(true);
+  const [viewingBackupId, setViewingBackupId] = useState<string | null>(null);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [restoreCandidate, setRestoreCandidate] = useState<RestoreCandidate | null>(null);
   const coordinatorRef = useRef<ReturnType<typeof createBackupCoordinator> | null>(null);
-  const propsRef = useRef<BackupPanelProps>({ libraryPath, changeToken, automaticAllowed, beforeManualBackup });
-  propsRef.current = { libraryPath, changeToken, automaticAllowed, beforeManualBackup };
+  const propsRef = useRef<BackupPanelProps>({
+    libraryPath, changeToken, automaticAllowed, beforeManualBackup, notebooks, restoreAllowed, runRestoreWithSavedEditor,
+  });
+  propsRef.current = { libraryPath, changeToken, automaticAllowed, beforeManualBackup, notebooks, restoreAllowed, runRestoreWithSavedEditor };
 
   if (coordinatorRef.current === null) {
     coordinatorRef.current = createBackupCoordinator({
@@ -75,6 +118,10 @@ export function BackupPanel({ libraryPath, changeToken, automaticAllowed, before
           workspaceApi.runBackup(kind, requestId, expectedLibraryPath),
         listBackups: (requestId, expectedLibraryPath) =>
           workspaceApi.listBackups(requestId, expectedLibraryPath),
+        listBackupNotes: (backupId, requestId, expectedLibraryPath) =>
+          workspaceApi.listBackupNotes(backupId, requestId, expectedLibraryPath),
+        restoreBackupNote: (selection, requestId, expectedLibraryPath) =>
+          workspaceApi.restoreBackupNote(selection, requestId, expectedLibraryPath),
         chooseBackupDirectory: (requestId, expectedLibraryPath) =>
           workspaceApi.chooseBackupDirectory(requestId, expectedLibraryPath),
         cancelBackup: () => workspaceApi.cancelBackup(),
@@ -95,6 +142,16 @@ export function BackupPanel({ libraryPath, changeToken, automaticAllowed, before
   }, [coordinator, libraryPath, changeToken, automaticAllowed]);
 
   useEffect(() => {
+    setViewingBackupId(null);
+    setSelectedEntryId(null);
+    setRestoreCandidate(null);
+  }, [libraryPath]);
+
+  useEffect(() => {
+    setSelectedEntryId(null);
+  }, [state.backupNotes]);
+
+  useEffect(() => {
     if (!desktopRuntime) return;
     let active = true;
     let unlisten: (() => void) | null = null;
@@ -113,10 +170,15 @@ export function BackupPanel({ libraryPath, changeToken, automaticAllowed, before
   if (!desktopRuntime || !libraryPath) return null;
 
   const busy = state.operation !== null;
-  const runningBackup = state.operation === 'automatic' || state.operation === 'manual'
-    || state.operation === 'listing' || state.operation === 'cancelling';
+  const cancelableOperation = state.operation === 'automatic' || state.operation === 'manual'
+    || state.operation === 'listing' || state.operation === 'listingNotes'
+    || state.operation === 'preparingRestore' || state.operation === 'restoring' || state.operation === 'cancelling';
+  const tooLateToCancelRestore = state.operation === 'restoring'
+    && (state.progress?.phase === 'restoring' || state.progress?.phase === 'publishing' || state.progress?.phase === 'complete');
   const status = operationLabel(state) ?? (state.catalogLoading ? '正在读取备份列表…' : null);
   const catalog = state.catalog;
+  const availableNotebooks = notebooks.filter(notebook =>
+    state.backupNotes?.availableNotebookIds.includes(notebook.notebookId));
 
   const createManualBackup = () => {
     const expectedLibraryPath = libraryPath;
@@ -124,6 +186,49 @@ export function BackupPanel({ libraryPath, changeToken, automaticAllowed, before
       if (propsRef.current.libraryPath !== expectedLibraryPath) return false;
       const ready = await propsRef.current.beforeManualBackup();
       return ready && propsRef.current.libraryPath === expectedLibraryPath;
+    });
+  };
+
+  const openBackupNotes = (backup: BackupSummary) => {
+    setViewingBackupId(backup.backupId);
+    setSelectedEntryId(null);
+    setRestoreCandidate(null);
+    void coordinator.loadBackupNotes(backup.backupId);
+  };
+
+  const selectRestoreCandidate = (backupNotes: NonNullable<BackupCoordinatorState['backupNotes']>, note: BackupNoteSummary) => {
+    const currentNotebook = note.notebookId === null
+      ? undefined
+      : propsRef.current.notebooks.find(notebook => notebook.notebookId === note.notebookId
+        && backupNotes.availableNotebookIds.includes(notebook.notebookId));
+    setRestoreCandidate({
+      backupId: backupNotes.backupId,
+      note: { ...note },
+      targetNotebookId: currentNotebook?.notebookId ?? null,
+    });
+  };
+
+  const confirmRestore = () => {
+    const candidate = restoreCandidate;
+    const expectedLibraryPath = libraryPath;
+    if (!candidate || !expectedLibraryPath || !propsRef.current.restoreAllowed || busy) return;
+    const targetNotebookId = candidate.targetNotebookId;
+    if (!targetNotebookId || !availableNotebooks.some(notebook => notebook.notebookId === targetNotebookId)) return;
+    const selection: BackupNoteRestoreSelection = {
+      backupId: candidate.backupId,
+      entryId: candidate.note.entryId,
+      expectedRevision: candidate.note.revision,
+      targetNotebookId,
+    };
+    setRestoreCandidate(null);
+    void coordinator.restoreBackupNote(selection, run => {
+      if (propsRef.current.libraryPath !== expectedLibraryPath) return Promise.resolve(null);
+      return propsRef.current.runRestoreWithSavedEditor(async () => {
+        if (propsRef.current.libraryPath !== expectedLibraryPath) {
+          throw { kind: 'backupCancelled', message: '笔记库已切换，恢复未开始。' };
+        }
+        return run();
+      });
     });
   };
 
@@ -150,9 +255,16 @@ export function BackupPanel({ libraryPath, changeToken, automaticAllowed, before
           )}
         </div>
         <div className="backup-panel-actions">
-          {runningBackup ? (
-            <button className="backup-button backup-button-secondary" type="button" disabled={state.operation === 'cancelling'} onClick={() => coordinator.cancel()}>
-              {state.operation === 'listing' ? '取消校验' : '取消'}
+          {cancelableOperation ? (
+            <button
+              className="backup-button backup-button-secondary"
+              type="button"
+              disabled={state.operation === 'cancelling' || tooLateToCancelRestore}
+              onClick={() => coordinator.cancel()}
+            >
+              {state.operation === 'listing' || state.operation === 'listingNotes'
+                ? '取消读取'
+                : state.operation === 'restoring' || state.operation === 'preparingRestore' ? '取消恢复' : '取消'}
             </button>
           ) : (
             <button className="backup-button backup-button-primary" type="button" disabled={busy || state.catalogLoading} onClick={createManualBackup}>
@@ -168,6 +280,17 @@ export function BackupPanel({ libraryPath, changeToken, automaticAllowed, before
           {catalog.warnings.length > 1 ? `（共 ${catalog.warnings.length} 条提示，展开查看）` : ''}
         </p>
       ) : null}
+
+      {state.restoreReceipt && (
+        <div className="backup-message backup-restore-result" role="status" aria-live="polite">
+          <strong>{state.restoreReceipt.message || '备份中的笔记已恢复。'}</strong>
+          <span>恢复前手动备份已创建：{formatCreatedAt(state.restoreReceipt.preRestoreBackup)}</span>
+          {state.restoreReceipt.reassignedNotebook && <span>已按所选笔记本调整归属。</span>}
+          {state.restoreReceipt.warnings.map((warning, index) => (
+            <span key={`${index}-${warning}`}>{warning}</span>
+          ))}
+        </div>
+      )}
 
       {!collapsed && (
         <div className="backup-panel-body">
@@ -216,12 +339,133 @@ export function BackupPanel({ libraryPath, changeToken, automaticAllowed, before
                   <div className="backup-list-item-meta">
                     <span>{backup.noteCount} 篇笔记</span>
                     <span>{backup.notebookCount} 个笔记本</span>
+                    <button
+                      className="backup-refresh-button"
+                      type="button"
+                      disabled={busy}
+                      onClick={() => openBackupNotes(backup)}
+                    >
+                      {state.operation === 'listingNotes' && viewingBackupId === backup.backupId
+                        ? '正在读取…' : '查看笔记'}
+                    </button>
                   </div>
                 </li>
               ))}
             </ul>
           ) : (
             <p className="backup-empty-state">{catalog ? '还没有备份记录。' : '备份列表尚未加载。'}</p>
+          )}
+
+          {viewingBackupId && (
+            <section className="backup-note-browser" aria-label="备份中的笔记">
+              <div className="backup-note-browser-heading">
+                <strong>备份中的笔记</strong>
+                <button
+                  className="backup-refresh-button"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setViewingBackupId(null)}
+                >返回备份列表</button>
+              </div>
+              {state.operation === 'listingNotes' && state.backupNotes?.backupId !== viewingBackupId ? (
+                <p className="backup-empty-state">正在读取经过校验的笔记条目…</p>
+              ) : state.backupNotes?.libraryPath === libraryPath && state.backupNotes.backupId === viewingBackupId ? (
+                state.backupNotes.notes.length ? (
+                  <>
+                    <ul className="backup-note-list">
+                      {state.backupNotes.notes.map(note => (
+                        <li className="backup-note-item" key={note.entryId}>
+                          <label className="backup-note-choice">
+                            <input
+                              type="radio"
+                              name="backup-note-entry"
+                              value={note.entryId}
+                              checked={selectedEntryId === note.entryId}
+                              disabled={busy}
+                              onChange={() => setSelectedEntryId(note.entryId)}
+                            />
+                            <span className="backup-note-copy">
+                              <strong>{note.title || '未命名笔记'}</strong>
+                              <span>{formatNoteDate(note.modifiedAt)} · {note.notebookName || '笔记本归属待选择'}</span>
+                              <span>{note.pinned ? '已置顶 · ' : ''}{note.trashedAt ? '来自回收站，恢复后仍为只读' : '普通笔记'}</span>
+                              {note.excerpt && <span className="backup-note-excerpt">{note.excerpt}</span>}
+                            </span>
+                          </label>
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      className="backup-button backup-button-primary"
+                      type="button"
+                      disabled={!selectedEntryId || busy}
+                      onClick={() => {
+                        const note = state.backupNotes?.notes.find(item => item.entryId === selectedEntryId);
+                        if (note && state.backupNotes) selectRestoreCandidate(state.backupNotes, note);
+                      }}
+                    >选择并确认恢复…</button>
+                  </>
+                ) : (
+                  <p className="backup-empty-state">此备份中没有笔记条目。</p>
+                )
+              ) : state.operation !== 'listingNotes' ? (
+                <div className="backup-note-load-error">
+                  {state.error && <p className="backup-message is-error" role="alert">{state.error}</p>}
+                  <button
+                    className="backup-refresh-button"
+                    type="button"
+                    disabled={busy}
+                    onClick={() => { void coordinator.loadBackupNotes(viewingBackupId); }}
+                  >重新读取</button>
+                </div>
+              ) : null}
+            </section>
+          )}
+
+          {restoreCandidate && (
+            <section className="backup-restore-confirmation" aria-label="确认恢复笔记">
+              <strong>确认恢复“{restoreCandidate.note.title || '未命名笔记'}”？</strong>
+              <p>将使用备份中的同一笔记 ID；当前库若已有该 ID 会覆盖原笔记，否则创建为新笔记。恢复前会创建手动备份，该备份不会自动清理。</p>
+              {restoreCandidate.note.notebookId !== null
+                && availableNotebooks.some(notebook => notebook.notebookId === restoreCandidate.note.notebookId) ? (
+                <p className="backup-note-assignment">
+                  将沿用当前笔记本名称“{notebooks.find(notebook => notebook.notebookId === restoreCandidate.note.notebookId)?.name}”。
+                </p>
+              ) : (
+                <label className="backup-notebook-picker">
+                  <span>原笔记本不存在或有冲突，请选择当前有效笔记本</span>
+                  <select
+                    value={restoreCandidate.targetNotebookId ?? ''}
+                    disabled={!restoreAllowed || busy || availableNotebooks.length === 0}
+                    onChange={event => setRestoreCandidate(current => current
+                      ? { ...current, targetNotebookId: event.target.value || null }
+                      : null)}
+                  >
+                    <option value="">请选择笔记本…</option>
+                    {availableNotebooks.map(notebook => (
+                      <option key={notebook.notebookId} value={notebook.notebookId}>{notebook.name}</option>
+                    ))}
+                  </select>
+                  {availableNotebooks.length === 0 && <small>当前没有可用笔记本，暂时无法恢复此条目。</small>}
+                </label>
+              )}
+              {restoreCandidate.note.trashedAt && (
+                <p className="backup-note-assignment">此条目来自回收站，恢复后仍留在回收站并保持只读。</p>
+              )}
+              <div className="backup-confirmation-actions">
+                <button
+                  className="backup-button backup-button-secondary"
+                  type="button"
+                  onClick={() => setRestoreCandidate(null)}
+                >取消</button>
+                <button
+                  className="backup-button backup-button-primary"
+                  type="button"
+                  disabled={!restoreAllowed || busy || !restoreCandidate.targetNotebookId
+                    || !availableNotebooks.some(notebook => notebook.notebookId === restoreCandidate.targetNotebookId)}
+                  onClick={confirmRestore}
+                >确认恢复此笔记</button>
+              </div>
+            </section>
           )}
           <p className="backup-retention-note">自动备份保留最近 30 份；手动备份会一直保留。</p>
         </div>

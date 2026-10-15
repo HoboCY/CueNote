@@ -1,7 +1,11 @@
 import type {
   BackupCatalog,
+  BackupNoteList,
+  BackupNoteRestoreSelection,
+  BackupNoteSummary,
   BackupOutcome,
   BackupProgress,
+  BackupRestoreReceipt,
   BackupSummary,
   LibraryView,
 } from './workspace-api';
@@ -9,11 +13,13 @@ import type {
 export const BACKUP_CHANGE_DEBOUNCE_MS = 5_000;
 export const BACKUP_FALLBACK_INTERVAL_MS = 60_000;
 
-export type BackupOperation = 'preparing' | 'automatic' | 'manual' | 'listing' | 'cancelling' | 'choosing';
+export type BackupOperation = 'preparing' | 'preparingRestore' | 'automatic' | 'manual' | 'listing'
+  | 'listingNotes' | 'restoring' | 'cancelling' | 'choosing';
 
 export interface BackupCoordinatorState {
   libraryPath: string | null;
   catalog: BackupCatalog | null;
+  backupNotes: BackupNoteList | null;
   catalogLoading: boolean;
   operation: BackupOperation | null;
   progress: BackupProgress | null;
@@ -21,11 +27,14 @@ export interface BackupCoordinatorState {
   elapsedSeconds: number;
   error: string | null;
   notice: string | null;
+  restoreReceipt: BackupRestoreReceipt | null;
 }
 
 export interface BackupCoordinatorApi {
   runBackup: (kind: 'automatic' | 'manual', requestId: string, expectedLibraryPath: string) => Promise<BackupOutcome>;
   listBackups: (requestId: string, expectedLibraryPath: string) => Promise<BackupCatalog>;
+  listBackupNotes: (backupId: string, requestId: string, expectedLibraryPath: string) => Promise<BackupNoteList>;
+  restoreBackupNote: (selection: BackupNoteRestoreSelection, requestId: string, expectedLibraryPath: string) => Promise<BackupRestoreReceipt>;
   chooseBackupDirectory: (requestId: string, expectedLibraryPath: string) => Promise<BackupCatalog | null>;
   cancelBackup: () => Promise<void>;
 }
@@ -44,6 +53,10 @@ export interface BackupCoordinatorOptions {
   clock?: BackupCoordinatorClock;
   createRequestId?: () => string;
 }
+
+export type RunRestoreWithSavedEditor = (
+  run: () => Promise<BackupRestoreReceipt>,
+) => Promise<BackupRestoreReceipt | null>;
 
 export interface BackupCoordinatorInput {
   libraryPath: string | null;
@@ -120,6 +133,65 @@ export function validateBackupCatalog(value: unknown, expectedLibraryPath: strin
   };
 }
 
+function validateBackupNotes(value: unknown, expectedLibraryPath: string, backupId: string): BackupNoteList {
+  if (!isRecord(value) || value.libraryPath !== expectedLibraryPath || value.backupId !== backupId
+    || !Array.isArray(value.notes) || !Array.isArray(value.availableNotebookIds)
+    || !value.availableNotebookIds.every(id => typeof id === 'string' && id.length > 0)) {
+    throw new Error('备份笔记列表与当前笔记库或所选备份不一致，已拒绝显示。');
+  }
+  const entryIds = new Set<string>();
+  const notes = value.notes.map((item): BackupNoteSummary => {
+    if (!isRecord(item)
+      || typeof item.entryId !== 'string' || item.entryId.length === 0
+      || typeof item.revision !== 'string' || item.revision.length === 0
+      || typeof item.noteId !== 'string' || item.noteId.length === 0
+      || typeof item.title !== 'string'
+      || typeof item.modifiedAt !== 'string'
+      || (item.notebookId !== null && typeof item.notebookId !== 'string')
+      || (item.notebookName !== null && typeof item.notebookName !== 'string')
+      || typeof item.pinned !== 'boolean'
+      || typeof item.excerpt !== 'string'
+      || (item.trashedAt !== null && typeof item.trashedAt !== 'string')) {
+      throw new Error('备份中包含无效的笔记条目，已拒绝显示。');
+    }
+    if (entryIds.has(item.entryId)) throw new Error('备份笔记条目标识重复，已拒绝显示。');
+    entryIds.add(item.entryId);
+    return {
+      entryId: item.entryId,
+      revision: item.revision,
+      noteId: item.noteId,
+      title: item.title,
+      modifiedAt: item.modifiedAt,
+      notebookId: item.notebookId,
+      notebookName: item.notebookName,
+      pinned: item.pinned,
+      excerpt: item.excerpt,
+      trashedAt: item.trashedAt,
+    };
+  });
+  return { libraryPath: expectedLibraryPath, backupId, availableNotebookIds: [...value.availableNotebookIds], notes };
+}
+
+function validateRestoreReceipt(value: unknown, expectedLibraryPath: string, expectedNoteId: string): BackupRestoreReceipt {
+  if (!isRecord(value)
+    || !isRecord(value.library) || value.library.path !== expectedLibraryPath
+    || !isRecord(value.session) || value.session.noteId !== expectedNoteId
+    || !isRecord(value.preRestoreBackup)
+    || typeof value.reassignedNotebook !== 'boolean'
+    || typeof value.message !== 'string'
+    || !Array.isArray(value.warnings) || !value.warnings.every(warning => typeof warning === 'string')) {
+    throw new Error('恢复结果与当前笔记库或所选笔记不一致，已拒绝应用。');
+  }
+  return {
+    library: value.library as unknown as BackupRestoreReceipt['library'],
+    session: value.session as unknown as BackupRestoreReceipt['session'],
+    preRestoreBackup: validateBackupSummary(value.preRestoreBackup),
+    reassignedNotebook: value.reassignedNotebook,
+    message: value.message,
+    warnings: [...value.warnings],
+  };
+}
+
 function validateBackupOutcome(value: unknown, expectedLibraryPath: string): BackupOutcome {
   if (!isRecord(value) || typeof value.message !== 'string') {
     throw new Error('备份操作返回了无效结果。');
@@ -164,7 +236,7 @@ function validProgress(value: unknown): value is BackupProgress {
 }
 
 type ActiveJob = {
-  kind: 'automatic' | 'manual';
+  kind: 'automatic' | 'manual' | 'listingNotes' | 'restoring';
   requestId: string;
   libraryPath: string;
   generation: number;
@@ -174,6 +246,7 @@ type ActiveJob = {
   cancellationAcknowledged: boolean;
   cancellationSettlement: Promise<void> | null;
   suppressedChange: boolean;
+  hostStarted: boolean;
 };
 
 type ManualPreparation = {
@@ -200,6 +273,7 @@ type CancelReason = 'user' | 'library-change' | 'unmount';
 const idleState = (libraryPath: string | null): BackupCoordinatorState => ({
   libraryPath,
   catalog: null,
+  backupNotes: null,
   catalogLoading: false,
   operation: null,
   progress: null,
@@ -207,6 +281,7 @@ const idleState = (libraryPath: string | null): BackupCoordinatorState => ({
   elapsedSeconds: 0,
   error: null,
   notice: null,
+  restoreReceipt: null,
 });
 
 export function createBackupCoordinator(options: BackupCoordinatorOptions) {
@@ -333,6 +408,7 @@ export function createBackupCoordinator(options: BackupCoordinatorOptions) {
       cancellationAcknowledged: false,
       cancellationSettlement: null,
       suppressedChange: false,
+      hostStarted: true,
     };
     activeJob = job;
     if (kind === 'manual') {
@@ -398,12 +474,15 @@ export function createBackupCoordinator(options: BackupCoordinatorOptions) {
     if (job.cancellationRequestInFlight) return;
     if (job.cancellationRequested && reason !== 'user') return;
     job.cancellationRequested = true;
-    job.cancellationRequestInFlight = true;
     if (reason === 'user' && mounted && libraryPath === job.libraryPath && generation === job.generation) {
       pendingAutomatic = false;
       clearAutomaticTimer();
       update({ operation: 'cancelling', progress: null, error: null, notice: null });
     }
+    // A restore can spend time waiting for the App save gate before the host
+    // command exists. Mark it locally and let its run closure refuse late work.
+    if (!job.hostStarted) return;
+    job.cancellationRequestInFlight = true;
     job.cancellationSettlement = options.api.cancelBackup().then(() => {
       job.cancellationRequestInFlight = false;
       job.cancellationAcknowledged = true;
@@ -481,7 +560,7 @@ export function createBackupCoordinator(options: BackupCoordinatorOptions) {
       startedAt: request.startedAt,
       elapsedSeconds: 0,
       error: null,
-      notice: null,
+      notice: state.restoreReceipt ? state.notice : null,
     });
     elapsedTimer = clock.setInterval(() => updateCatalogElapsed(request), 1_000);
     try {
@@ -491,15 +570,15 @@ export function createBackupCoordinator(options: BackupCoordinatorOptions) {
       );
       if (request.cancellationSettlement) await request.cancellationSettlement;
       if (!isCurrentCatalogRequest(request)) return false;
-      update({ catalog, catalogLoading: false, error: null, notice: null });
+      update({ catalog, catalogLoading: false, error: null, notice: state.restoreReceipt ? state.notice : null });
       return true;
     } catch (cause) {
       if (request.cancellationSettlement) await request.cancellationSettlement;
       if (!isCurrentCatalogRequest(request)) return false;
       if (request.cancellationAcknowledged && isBackupCancelled(cause)) {
-        update({ catalogLoading: false, error: null, notice: '备份列表检查已取消。' });
+        update({ catalogLoading: false, error: null, notice: state.restoreReceipt ? state.notice : '备份列表检查已取消。' });
       } else {
-        update({ catalogLoading: false, error: errorMessage(cause), notice: null });
+        update({ catalogLoading: false, error: errorMessage(cause), notice: state.restoreReceipt ? state.notice : null });
       }
       return false;
     } finally {
@@ -516,6 +595,181 @@ export function createBackupCoordinator(options: BackupCoordinatorOptions) {
         void refresh();
       } else if (mounted) {
         scheduleAutomatic(false);
+      }
+    }
+  };
+
+  const loadBackupNotes = async (backupId: string): Promise<boolean> => {
+    const expectedPath = libraryPath;
+    if (!mounted || expectedPath === null || activeJob !== null || catalogInFlight !== null
+      || pendingPicker !== null || manualPreparation !== null
+      || !state.catalog?.backups.some(backup => backup.backupId === backupId)) return false;
+    const job: ActiveJob = {
+      kind: 'listingNotes',
+      requestId: requestId(),
+      libraryPath: expectedPath,
+      generation,
+      startedAt: clock.now(),
+      cancellationRequested: false,
+      cancellationRequestInFlight: false,
+      cancellationAcknowledged: false,
+      cancellationSettlement: null,
+      suppressedChange: false,
+      hostStarted: true,
+    };
+    activeJob = job;
+    clearAutomaticTimer();
+    update({
+      operation: 'listingNotes',
+      backupNotes: null,
+      progress: null,
+      startedAt: job.startedAt,
+      elapsedSeconds: 0,
+      error: null,
+      notice: null,
+    });
+    elapsedTimer = clock.setInterval(() => updateElapsed(job), 1_000);
+    try {
+      const notes = validateBackupNotes(
+        await options.api.listBackupNotes(backupId, job.requestId, job.libraryPath),
+        job.libraryPath,
+        backupId,
+      );
+      if (job.cancellationSettlement) await job.cancellationSettlement;
+      if (!isCurrentJob(job)) return false;
+      update({ backupNotes: notes, error: null, notice: null });
+      return true;
+    } catch (cause) {
+      if (job.cancellationSettlement) await job.cancellationSettlement;
+      if (!isCurrentJob(job)) return false;
+      if (job.cancellationAcknowledged && isBackupCancelled(cause)) {
+        update({ backupNotes: null, error: null, notice: '备份笔记列表检查已取消。' });
+      } else {
+        update({ backupNotes: null, error: errorMessage(cause), notice: '无法读取所选备份中的笔记。' });
+      }
+      return false;
+    } finally {
+      if (job.cancellationSettlement) await job.cancellationSettlement;
+      if (activeJob === job) {
+        clearElapsedTimer();
+        activeJob = null;
+        if (mounted && generation === job.generation && libraryPath === job.libraryPath) {
+          update({ operation: null, progress: null, startedAt: null, elapsedSeconds: 0 });
+        }
+        if (mounted && pendingCatalogRefresh) {
+          pendingCatalogRefresh = false;
+          void refresh();
+        } else if (mounted) scheduleAutomatic(false);
+      }
+    }
+  };
+
+  const restoreBackupNote = async (
+    confirmedSelection: BackupNoteRestoreSelection,
+    runWithSavedEditor: RunRestoreWithSavedEditor,
+  ): Promise<boolean> => {
+    const expectedPath = libraryPath;
+    const sourceList = state.backupNotes;
+    const source = sourceList?.notes.find(note => note.entryId === confirmedSelection.entryId);
+    if (!mounted || expectedPath === null || !sourceList || sourceList.libraryPath !== expectedPath
+      || sourceList.backupId !== confirmedSelection.backupId || !source
+      || source.revision !== confirmedSelection.expectedRevision
+      || typeof confirmedSelection.targetNotebookId !== 'string'
+      || !sourceList.availableNotebookIds.includes(confirmedSelection.targetNotebookId)
+      || activeJob !== null || catalogInFlight !== null || pendingPicker !== null
+      || manualPreparation !== null) return false;
+    const frozenSource = { ...source };
+    const selection: BackupNoteRestoreSelection = {
+      backupId: confirmedSelection.backupId,
+      entryId: confirmedSelection.entryId,
+      expectedRevision: confirmedSelection.expectedRevision,
+      targetNotebookId: confirmedSelection.targetNotebookId,
+    };
+    const job: ActiveJob = {
+      kind: 'restoring',
+      requestId: requestId(),
+      libraryPath: expectedPath,
+      generation,
+      startedAt: clock.now(),
+      cancellationRequested: false,
+      cancellationRequestInFlight: false,
+      cancellationAcknowledged: false,
+      cancellationSettlement: null,
+      suppressedChange: false,
+      hostStarted: false,
+    };
+    activeJob = job;
+    pendingAutomatic = false;
+    clearAutomaticTimer();
+    update({
+      operation: 'preparingRestore',
+      restoreReceipt: null,
+      progress: null,
+      startedAt: job.startedAt,
+      elapsedSeconds: 0,
+      error: null,
+      notice: '正在保存当前编辑，然后恢复所选笔记。',
+    });
+    elapsedTimer = clock.setInterval(() => updateElapsed(job), 1_000);
+    let runInvoked = false;
+    try {
+      const receipt = await runWithSavedEditor(async () => {
+        if (runInvoked) throw new Error('恢复任务不能重复启动。');
+        runInvoked = true;
+        if (!isCurrentJob(job) || job.cancellationRequested) {
+          throw { kind: 'backupCancelled', message: '恢复任务已取消。' };
+        }
+        job.hostStarted = true;
+        update({ operation: 'restoring', notice: '正在恢复备份中的笔记。' });
+        return validateRestoreReceipt(
+          await options.api.restoreBackupNote(selection, job.requestId, job.libraryPath),
+          job.libraryPath,
+          frozenSource.noteId,
+        );
+      });
+      if (job.cancellationSettlement) await job.cancellationSettlement;
+      if (!isCurrentJob(job)) return false;
+      if (receipt === null) {
+        if (job.cancellationRequested) {
+          update({ error: null, notice: '笔记恢复已取消。' });
+        } else {
+          update({ error: null, notice: '当前编辑未能确认保存，已跳过恢复。' });
+        }
+        return false;
+      }
+      if (!runInvoked) throw new Error('恢复前置流程未启动宿主恢复操作。');
+      const validatedReceipt = validateRestoreReceipt(receipt, job.libraryPath, frozenSource.noteId);
+      update({
+        restoreReceipt: validatedReceipt,
+        error: null,
+        notice: validatedReceipt.message || '备份中的笔记已恢复。',
+      });
+      return true;
+    } catch (cause) {
+      if (job.cancellationSettlement) await job.cancellationSettlement;
+      if (!isCurrentJob(job)) return false;
+      if (job.cancellationRequested && isBackupCancelled(cause)) {
+        update({ error: null, notice: '笔记恢复已取消。' });
+      } else {
+        const message = errorMessage(cause);
+        update({
+          error: message,
+          notice: job.hostStarted ? `笔记恢复失败：${message}` : `恢复未开始：${message}`,
+        });
+      }
+      return false;
+    } finally {
+      if (job.cancellationSettlement) await job.cancellationSettlement;
+      if (activeJob === job) {
+        clearElapsedTimer();
+        activeJob = null;
+        if (mounted && generation === job.generation && libraryPath === job.libraryPath) {
+          update({ operation: null, progress: null, startedAt: null, elapsedSeconds: 0 });
+        }
+        if (mounted && pendingCatalogRefresh) {
+          pendingCatalogRefresh = false;
+          void refresh();
+        } else if (mounted) scheduleAutomatic(false);
       }
     }
   };
@@ -685,8 +939,16 @@ export function createBackupCoordinator(options: BackupCoordinatorOptions) {
     refresh,
     changeDirectory,
     createManualBackup,
+    loadBackupNotes,
+    restoreBackupNote,
     cancel: () => {
-      if (activeJob) cancelJob(activeJob, 'user');
+      if (activeJob) {
+        if (activeJob.kind === 'restoring'
+          && (state.progress?.phase === 'restoring'
+            || state.progress?.phase === 'publishing'
+            || state.progress?.phase === 'complete')) return false;
+        cancelJob(activeJob, 'user');
+      }
       else if (catalogInFlight && isCurrentCatalogRequest(catalogInFlight)) cancelCatalogRequest(catalogInFlight, 'user');
       else return false;
       return true;

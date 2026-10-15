@@ -10,6 +10,8 @@
     "allow-rebuild-search-index",
     "allow-run-backup",
     "allow-list-backups",
+    "allow-list-backup-notes",
+    "allow-restore-backup-note",
     "allow-choose-backup-directory",
     "allow-cancel-backup",
     "allow-use-default-library",

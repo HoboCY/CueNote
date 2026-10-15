@@ -6,10 +6,10 @@
 
 use super::{
     is_canonical_uuid_v4, is_link_or_reparse, is_valid_timestamp, read_bounded,
-    resolve_future_path, sync_directory, NotebookMetadata, WorkspaceError, MAX_METADATA_BYTES,
-    MAX_NOTEBOOKS, MAX_NOTE_FILES,
+    resolve_future_path, sync_directory, NotebookMetadata, WorkspaceError, LIBRARY_SCHEMA_VERSION,
+    MAX_METADATA_BYTES, MAX_NOTEBOOKS, MAX_NOTE_FILES,
 };
-use crate::note_format::MAX_PACKAGE_BYTES;
+use crate::note_format::{NotePackage, MAX_PACKAGE_BYTES};
 use crate::storage::{self, StorageError};
 use chrono::{NaiveDate, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
@@ -52,6 +52,7 @@ pub enum BackupPhase {
     Copying,
     Verifying,
     Publishing,
+    Restoring,
     Complete,
 }
 
@@ -91,6 +92,61 @@ pub struct BackupOutcome {
     pub catalog: BackupCatalog,
     pub created: Option<BackupSummary>,
     pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BackupNoteList {
+    pub library_path: String,
+    pub backup_id: String,
+    /// Current notebook IDs that the Workspace has freshly validated as
+    /// available restore targets. The desktop host fills this after listing
+    /// the immutable backup entries.
+    pub available_notebook_ids: Vec<String>,
+    pub notes: Vec<BackupNoteSummary>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BackupNoteSummary {
+    pub entry_id: String,
+    pub revision: String,
+    pub note_id: String,
+    pub title: String,
+    pub modified_at: String,
+    pub notebook_id: Option<String>,
+    pub notebook_name: Option<String>,
+    pub pinned: bool,
+    pub trashed_at: Option<String>,
+    pub excerpt: String,
+}
+
+/// A package loaded from a complete immutable backup. Construction is limited
+/// to `BackupContext::load_note_entry`; the workspace restore stages consume
+/// this proof without accepting caller-provided paths or package bytes.
+#[derive(Debug)]
+pub struct VerifiedBackupNote {
+    pub(in crate::workspace) backup_id: String,
+    pub(in crate::workspace) entry_id: String,
+    pub(in crate::workspace) revision: String,
+    pub(in crate::workspace) note_id: String,
+    pub(in crate::workspace) relative_path: String,
+    pub(in crate::workspace) source_library_key: String,
+    pub(in crate::workspace) package: NotePackage,
+}
+
+impl VerifiedBackupNote {
+    pub(super) fn has_valid_provenance(&self) -> bool {
+        is_canonical_uuid_v4(&self.backup_id)
+            && is_sha256(&self.entry_id)
+            && is_sha256(&self.revision)
+            && self.relative_path.starts_with("notes/")
+            && valid_manifest_path(&self.relative_path)
+            && backup_note_entry_id(&self.backup_id, &self.relative_path, &self.revision)
+                == self.entry_id
+            && is_canonical_uuid_v4(&self.note_id)
+            && self.package.document.note_id == self.note_id
+    }
 }
 
 #[derive(Clone)]
@@ -207,6 +263,23 @@ impl BackupJob {
         }
     }
 
+    /// Atomically ends the cancellable backup phase and transfers its
+    /// coordinator slot into an exclusive workspace mutation guard.
+    pub fn into_mutation(self) -> Result<BackupMutationGuard, WorkspaceError> {
+        let control = self.control.clone();
+        let inner = Arc::clone(&control.inner);
+        let mut state = lock_control(&inner);
+        if !job_is_current(&state, self.id, self.epoch) {
+            return Err(backup_cancelled());
+        }
+        state.active_job = None;
+        state.epoch = state.epoch.wrapping_add(1);
+        state.pending_mutations = state.pending_mutations.saturating_add(1);
+        drop(state);
+        drop(self);
+        Ok(BackupMutationGuard { control })
+    }
+
     fn commit_if_current<T>(
         &self,
         action: impl FnOnce() -> Result<T, WorkspaceError>,
@@ -243,6 +316,12 @@ impl BackupJob {
                 total,
             });
         }
+    }
+
+    /// Emits a host-visible progress phase without holding the backup
+    /// coordinator lock while invoking application code.
+    pub fn report_progress(&self, phase: BackupPhase, checked: usize, total: usize) {
+        self.report(phase, checked, total);
     }
 
     fn publish(
@@ -371,6 +450,10 @@ impl BackupContext {
         &self.directory
     }
 
+    pub(super) fn source_library_key(&self) -> &str {
+        &self.source_key
+    }
+
     pub fn catalog(&self, job: &BackupJob) -> Result<BackupCatalog, WorkspaceError> {
         let job = job;
         job.bind_library(&self.library_path);
@@ -381,6 +464,220 @@ impl BackupContext {
             .ok_or_else(|| StorageError::new("io", "无法准备本机备份目录。"))?;
         let _lock = acquire_backup_root_lock(&backup_root)?;
         self.catalog_locked(&backup_root, job)
+    }
+
+    /// Lists native notes inside one verified backup. The caller supplies only
+    /// the opaque backup identity; all paths are derived from this context and
+    /// the validated manifest.
+    pub fn list_notes(
+        &self,
+        backup_id: &str,
+        job: &BackupJob,
+    ) -> Result<BackupNoteList, WorkspaceError> {
+        job.bind_library(&self.library_path);
+        job.checkpoint()?;
+        if !is_canonical_uuid_v4(backup_id) {
+            return Err(StorageError::new("backupNotFound", "备份身份无效。"));
+        }
+        self.validate_destination_now(false)?;
+        let backup_root = self
+            .library_backup_root(false)?
+            .ok_or_else(|| StorageError::new("backupNotFound", "指定备份不存在。"))?;
+        let _lock = acquire_backup_root_lock(&backup_root)?;
+        let backup_path = backup_root.join(backup_id);
+        let validated = validate_backup_directory(&backup_path, &self.source_key, job)?;
+        if validated.summary.backup_id != backup_id {
+            return Err(StorageError::new(
+                "backupIncomplete",
+                "指定备份身份与已验证清单不一致。",
+            ));
+        }
+
+        let mut notebook_names = BTreeMap::<String, Option<String>>::new();
+        let notebook_files = validated
+            .inventory
+            .files
+            .values()
+            .filter(|file| file.path.starts_with("notebooks/"))
+            .collect::<Vec<_>>();
+        let note_files = validated
+            .inventory
+            .files
+            .values()
+            .filter(|file| file.path.starts_with("notes/"))
+            .collect::<Vec<_>>();
+        let total = notebook_files.len().saturating_add(note_files.len());
+        let mut checked = 0usize;
+        for file in notebook_files {
+            job.checkpoint()?;
+            let path = backup_path.join(relative_path(&file.path)?);
+            let bytes =
+                super::read_sync_bounded(&path, MAX_METADATA_BYTES, "备份中的笔记本元数据")?;
+            if bytes.len() as u64 != file.length || sha256_hex(&bytes) != file.sha256 {
+                return Err(StorageError::new(
+                    "backupChanged",
+                    format!("读取笔记本元数据期间备份发生变化：{}", file.path),
+                ));
+            }
+            let notebook: super::NotebookMetadata =
+                serde_json::from_slice(&bytes).map_err(|error| {
+                    StorageError::new(
+                        "backupIncomplete",
+                        format!("备份中的笔记本元数据无效 {}：{error}", file.path),
+                    )
+                })?;
+            validate_notebook_metadata(&notebook, &path, &file.path)?;
+            match notebook_names.entry(notebook.id) {
+                std::collections::btree_map::Entry::Vacant(entry) => {
+                    entry.insert(Some(notebook.name));
+                }
+                std::collections::btree_map::Entry::Occupied(mut entry) => {
+                    entry.insert(None);
+                }
+            }
+            checked += 1;
+            job.report(BackupPhase::Verifying, checked, total);
+        }
+
+        let mut notes = Vec::with_capacity(note_files.len());
+        for file in note_files {
+            job.checkpoint()?;
+            let path = backup_path.join(relative_path(&file.path)?);
+            storage::ensure_local_file(&path)?;
+            let metadata = fs::symlink_metadata(&path).map_err(|error| {
+                StorageError::new("backupIncomplete", format!("无法检查备份笔记：{error}"))
+            })?;
+            if is_link_or_reparse(&metadata) || !metadata.is_file() || metadata.len() != file.length
+            {
+                return Err(StorageError::new(
+                    "backupChanged",
+                    format!("备份笔记在读取期间发生变化：{}", file.path),
+                ));
+            }
+            let opened = storage::open_note(&path)?;
+            if opened.revision != file.sha256 {
+                return Err(StorageError::new(
+                    "backupChanged",
+                    format!("备份笔记在读取期间发生变化：{}", file.path),
+                ));
+            }
+            let note_id = opened.package.document.note_id.clone();
+            let summary = super::note_summary_from_package(&note_id, &opened.package);
+            notes.push(BackupNoteSummary {
+                entry_id: backup_note_entry_id(backup_id, &file.path, &opened.revision),
+                revision: opened.revision,
+                note_id: summary.note_id,
+                title: summary.title,
+                modified_at: summary.modified_at,
+                notebook_name: summary
+                    .notebook_id
+                    .as_ref()
+                    .and_then(|id| notebook_names.get(id))
+                    .and_then(Clone::clone),
+                notebook_id: summary.notebook_id,
+                pinned: summary.pinned,
+                trashed_at: summary.trashed_at,
+                excerpt: summary.excerpt,
+            });
+            checked += 1;
+            job.report(BackupPhase::Verifying, checked, total);
+        }
+
+        let revalidated = validate_backup_directory(&backup_path, &self.source_key, job)?;
+        if revalidated.manifest_sha256 != validated.manifest_sha256
+            || !revalidated.inventory.same_facts(&validated.inventory)
+        {
+            return Err(StorageError::new(
+                "backupChanged",
+                "列出备份笔记期间备份内容发生变化。",
+            ));
+        }
+        job.checkpoint()?;
+        Ok(BackupNoteList {
+            library_path: super::display_path(&self.library_path),
+            backup_id: backup_id.to_owned(),
+            available_notebook_ids: Vec::new(),
+            notes,
+        })
+    }
+
+    pub fn load_note_entry(
+        &self,
+        backup_id: &str,
+        entry_id: &str,
+        expected_revision: &str,
+        job: &BackupJob,
+    ) -> Result<VerifiedBackupNote, WorkspaceError> {
+        job.bind_library(&self.library_path);
+        job.checkpoint()?;
+        if !is_canonical_uuid_v4(backup_id) || !is_sha256(entry_id) || !is_sha256(expected_revision)
+        {
+            return Err(StorageError::new(
+                "backupNoteNotFound",
+                "备份笔记身份无效。",
+            ));
+        }
+        let backup_root = self
+            .library_backup_root(false)?
+            .ok_or_else(|| StorageError::new("backupNotFound", "指定备份不存在。"))?;
+        let _lock = acquire_backup_root_lock(&backup_root)?;
+        let backup_path = backup_root.join(backup_id);
+        let validated = validate_backup_directory(&backup_path, &self.source_key, job)?;
+        let file = validated
+            .inventory
+            .files
+            .values()
+            .find(|file| {
+                file.path.starts_with("notes/")
+                    && backup_note_entry_id(backup_id, &file.path, &file.sha256) == entry_id
+            })
+            .ok_or_else(|| {
+                StorageError::new("backupNoteNotFound", "所选笔记不在指定的已验证备份中。")
+            })?;
+        if file.sha256 != expected_revision {
+            return Err(StorageError::new(
+                "backupChanged",
+                "所选备份笔记版本与当前选择不一致；请重新读取备份列表。",
+            ));
+        }
+        let path = backup_path.join(relative_path(&file.path)?);
+        storage::ensure_local_file(&path)?;
+        let metadata = fs::symlink_metadata(&path).map_err(|error| {
+            StorageError::new("backupIncomplete", format!("无法检查所选备份笔记：{error}"))
+        })?;
+        if is_link_or_reparse(&metadata) || !metadata.is_file() || metadata.len() != file.length {
+            return Err(StorageError::new(
+                "backupChanged",
+                "所选备份笔记在读取期间发生变化。",
+            ));
+        }
+        let opened = storage::open_note(&path)?;
+        if opened.revision != expected_revision {
+            return Err(StorageError::new(
+                "backupChanged",
+                "所选备份笔记在读取期间发生变化。",
+            ));
+        }
+        let note_id = opened.package.document.note_id.clone();
+        let revalidated = validate_backup_directory(&backup_path, &self.source_key, job)?;
+        if revalidated.manifest_sha256 != validated.manifest_sha256
+            || !revalidated.inventory.same_facts(&validated.inventory)
+        {
+            return Err(StorageError::new(
+                "backupChanged",
+                "读取备份笔记期间备份内容发生变化。",
+            ));
+        }
+        job.checkpoint()?;
+        Ok(VerifiedBackupNote {
+            backup_id: backup_id.to_owned(),
+            entry_id: entry_id.to_owned(),
+            revision: opened.revision,
+            note_id,
+            relative_path: file.path.clone(),
+            source_library_key: self.source_key.clone(),
+            package: opened.package,
+        })
     }
 
     fn catalog_locked(
@@ -1205,7 +1502,23 @@ fn validate_notebook_metadata(
     path: &Path,
     relative: &str,
 ) -> Result<(), WorkspaceError> {
-    if notebook.schema_version != 1 {
+    validate_notebook_metadata_fields(notebook, relative)?;
+    if let Some(stem) = path.file_stem().and_then(|stem| stem.to_str()) {
+        if is_canonical_uuid_v4(stem) && notebook.id != stem {
+            return Err(StorageError::new(
+                "libraryMetadata",
+                format!("标准笔记本文件名与元数据身份不一致：{relative}"),
+            ));
+        }
+    }
+    Ok(())
+}
+
+pub(super) fn validate_notebook_metadata_fields(
+    notebook: &NotebookMetadata,
+    relative: &str,
+) -> Result<(), WorkspaceError> {
+    if notebook.schema_version != LIBRARY_SCHEMA_VERSION {
         return Err(StorageError::new(
             "libraryMetadata",
             format!("笔记本元数据版本不受支持：{relative}"),
@@ -1216,14 +1529,6 @@ fn validate_notebook_metadata(
             "libraryMetadata",
             format!("笔记本元数据身份无效：{relative}"),
         ));
-    }
-    if let Some(stem) = path.file_stem().and_then(|stem| stem.to_str()) {
-        if is_canonical_uuid_v4(stem) && notebook.id != stem {
-            return Err(StorageError::new(
-                "libraryMetadata",
-                format!("标准笔记本文件名与元数据身份不一致：{relative}"),
-            ));
-        }
     }
     if notebook.name.trim().is_empty()
         || notebook.name.chars().count() > 256
@@ -2142,6 +2447,16 @@ fn is_sha256(value: &str) -> bool {
 
 fn sha256_hex(bytes: &[u8]) -> String {
     hex_digest(Sha256::digest(bytes).as_slice())
+}
+
+fn backup_note_entry_id(backup_id: &str, relative_path: &str, revision: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(backup_id.as_bytes());
+    hasher.update([0]);
+    hasher.update(relative_path.as_bytes());
+    hasher.update([0]);
+    hasher.update(revision.as_bytes());
+    hex_digest(hasher.finalize().as_slice())
 }
 
 fn hex_digest(bytes: &[u8]) -> String {

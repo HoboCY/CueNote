@@ -144,6 +144,33 @@ export interface BackupOutcome {
   message: string;
 }
 
+export interface BackupNoteSummary extends NoteSummary {
+  entryId: string;
+  revision: string;
+  notebookName: string | null;
+}
+
+export interface BackupNoteList {
+  libraryPath: string;
+  backupId: string;
+  availableNotebookIds: string[];
+  notes: BackupNoteSummary[];
+}
+
+export interface BackupNoteRestoreSelection {
+  backupId: string;
+  entryId: string;
+  expectedRevision: string;
+  targetNotebookId: string | null;
+}
+
+export interface BackupRestoreReceipt extends SaveReceipt {
+  preRestoreBackup: BackupSummary;
+  reassignedNotebook: boolean;
+  message: string;
+  warnings: string[];
+}
+
 export interface BackupProgress {
   requestId: string;
   libraryPath: string;
@@ -241,6 +268,10 @@ export const workspaceApi = {
     invoke<BackupOutcome>('run_backup', { kind, requestId, expectedLibraryPath }),
   listBackups: (requestId: string, expectedLibraryPath: string) =>
     invoke<BackupCatalog>('list_backups', { requestId, expectedLibraryPath }),
+  listBackupNotes: (backupId: string, requestId: string, expectedLibraryPath: string) =>
+    invoke<BackupNoteList>('list_backup_notes', { backupId, requestId, expectedLibraryPath }),
+  restoreBackupNote: (selection: BackupNoteRestoreSelection, requestId: string, expectedLibraryPath: string) =>
+    invoke<BackupRestoreReceipt>('restore_backup_note', { ...selection, requestId, expectedLibraryPath }),
   chooseBackupDirectory: (requestId: string, expectedLibraryPath: string) =>
     invoke<BackupCatalog | null>('choose_backup_directory', { requestId, expectedLibraryPath }),
   cancelBackup: () => invoke<void>('cancel_backup'),

@@ -19,13 +19,18 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use uuid::Uuid;
 
+mod backup_restore;
 mod backups;
 mod external;
 mod search;
 pub use crate::storage::versions::{PreservedVersionSummary, VersionList};
+pub use backup_restore::{
+    BackupRestoreReceipt, PreparedBackupNoteRestore, ProtectedBackupNoteRestore,
+};
 pub use backups::{
-    BackupCatalog, BackupContext, BackupControl, BackupJob, BackupKind, BackupOutcome, BackupPhase,
-    BackupProgress, BackupSummary,
+    BackupCatalog, BackupContext, BackupControl, BackupJob, BackupKind, BackupNoteList,
+    BackupNoteSummary, BackupOutcome, BackupPhase, BackupProgress, BackupSummary,
+    VerifiedBackupNote,
 };
 pub use external::{ExternalProbe, ExternalReconciliation};
 pub use search::{SearchHit, SearchResults, SearchSection, SearchSnippet, SearchStatus};
@@ -745,23 +750,34 @@ impl Workspace {
 
     pub fn open_note(&mut self, note_id: &str) -> Result<NoteSession, WorkspaceError> {
         self.refresh_library_metadata()?;
+        let staged = self.stage_open_note(note_id)?;
+        let view = staged.view.clone();
+        if view.trashed_at.is_none() {
+            let library_path = self
+                .library
+                .as_ref()
+                .map(|library| library.path.clone())
+                .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+            self.persist_preference(&library_path, Some(note_id), &self.preferences)?;
+            self.last_note_id = Some(note_id.to_owned());
+        }
+        self.session = Some(staged);
+        Ok(view)
+    }
+
+    fn stage_open_note(&self, note_id: &str) -> Result<ActiveNoteSession, WorkspaceError> {
         if !is_canonical_uuid_v4(note_id) {
             return Err(StorageError::new("invalidNoteId", "笔记身份格式无效。"));
         }
-        let (library_path, path) = self
+        let library = self
             .library
             .as_ref()
-            .map(|library| {
-                (
-                    library.path.clone(),
-                    library
-                        .path
-                        .join("notes")
-                        .join(format!("{note_id}.cuenote")),
-                )
-            })
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
-        ensure_regular_child(&library_path, &path)?;
+        let path = library
+            .path
+            .join("notes")
+            .join(format!("{note_id}.cuenote"));
+        ensure_regular_child(&library.path, &path)?;
         let opened = storage::open_note(&path)?;
         if opened.package.document.note_id != note_id {
             return Err(StorageError::new(
@@ -770,7 +786,6 @@ impl Workspace {
             ));
         }
         let (notebook_id, read_only_reason) = {
-            let library = self.library.as_ref().expect("library was checked above");
             let notebook_id = opened.package.document.organization.notebook_id.clone();
             let read_only_reason =
                 read_only_reason(&opened.package, notebook_id.as_deref(), &library.notebooks);
@@ -784,11 +799,7 @@ impl Workspace {
             &display_path(&path),
             "打开的笔记版本",
         )?;
-        if view.trashed_at.is_none() {
-            self.persist_preference(&library_path, Some(note_id), &self.preferences)?;
-            self.last_note_id = Some(note_id.to_owned());
-        }
-        self.session = Some(ActiveNoteSession {
+        Ok(ActiveNoteSession {
             view: view.clone(),
             path,
             package: opened.package,
@@ -799,8 +810,7 @@ impl Workspace {
             preserved_preview: false,
             external_conflict: false,
             was_writable,
-        });
-        Ok(view)
+        })
     }
 
     pub fn stage_image(

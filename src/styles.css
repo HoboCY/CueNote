@@ -963,6 +963,25 @@ button:focus-visible {
 .backup-list-item-meta { display: flex; flex: none; flex-wrap: wrap; justify-content: flex-end; gap: 3px 8px; }
 .backup-empty-state, .backup-retention-note { margin: 0; color: #98a299; font-size: 8px; line-height: 1.5; }
 .backup-retention-note { padding-top: 2px; border-top: 1px solid #e6e9e1; }
+.backup-restore-result { display: grid; gap: 3px; }
+.backup-restore-result strong { color: #456b5c; font-weight: 650; }
+.backup-note-browser, .backup-restore-confirmation { display: grid; min-width: 0; gap: 8px; padding: 9px; border: 1px solid #dce5db; border-radius: 8px; background: #fbfbf5; }
+.backup-note-browser-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #667c70; font-size: 9px; }
+.backup-note-list { display: grid; max-height: 230px; gap: 5px; overflow: auto; margin: 0; padding: 0; list-style: none; }
+.backup-note-item { min-width: 0; border: 1px solid #e3e8df; border-radius: 7px; background: #fffef9; }
+.backup-note-choice { display: flex; min-width: 0; align-items: flex-start; gap: 8px; padding: 8px; cursor: pointer; }
+.backup-note-choice input { flex: none; margin: 2px 0 0; accent-color: #54806f; }
+.backup-note-copy { display: grid; min-width: 0; gap: 3px; color: #89968c; font-size: 8px; line-height: 1.45; }
+.backup-note-copy strong { overflow: hidden; color: #5d7468; font-size: 9px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.backup-note-excerpt { overflow: hidden; color: #9aa49b; text-overflow: ellipsis; white-space: nowrap; }
+.backup-note-browser > .backup-button { justify-self: start; }
+.backup-restore-confirmation > strong { color: #506d60; font-size: 10px; }
+.backup-restore-confirmation p { margin: 0; color: #77877c; font-size: 8px; line-height: 1.55; }
+.backup-note-assignment { padding: 6px 8px; border-radius: 6px; background: #f0f4eb; }
+.backup-notebook-picker { display: grid; gap: 5px; color: #77877c; font-size: 8px; }
+.backup-notebook-picker select { min-height: 29px; padding: 0 8px; border: 1px solid #d7dfd7; border-radius: 6px; background: #fffef9; color: #5d7468; font: inherit; }
+.backup-notebook-picker small { color: #9a7860; }
+.backup-confirmation-actions { display: flex; justify-content: flex-end; gap: 6px; }
 
 @media (max-width: 700px) {
   .backup-panel-heading { align-items: flex-start; }
@@ -971,4 +990,6 @@ button:focus-visible {
   .backup-panel-actions { padding-top: 1px; }
   .backup-list-item { align-items: flex-start; flex-direction: column; }
   .backup-list-item-meta { justify-content: flex-start; }
+  .backup-note-browser-heading { align-items: flex-start; }
+  .backup-note-excerpt { white-space: normal; }
 }

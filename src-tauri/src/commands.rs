@@ -9,9 +9,10 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::note_format::{AssetManifestEntry, NoteContent, PlainText};
 use crate::workspace::{
-    BackupCatalog, BackupContext, BackupControl, BackupJob, BackupKind, BackupOutcome,
-    BackupProgress, ExternalProbe, ExternalReconciliation, LibraryView, NoteSession, RecoveryList,
-    SaveReceipt, SavedCopy, SearchResults, VersionList, Workspace, WorkspaceError, WorkspaceView,
+    BackupCatalog, BackupContext, BackupControl, BackupJob, BackupKind, BackupNoteList,
+    BackupOutcome, BackupPhase, BackupProgress, BackupRestoreReceipt, ExternalProbe,
+    ExternalReconciliation, LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy,
+    SearchResults, VersionList, Workspace, WorkspaceError, WorkspaceView,
 };
 
 #[derive(Clone)]
@@ -93,6 +94,29 @@ fn require_backup_library(workspace: &Workspace, expected: &str) -> Result<(), W
     Ok(())
 }
 
+fn validate_backup_request_id(request_id: &str) -> Result<(), WorkspaceError> {
+    if request_id.is_empty() || request_id.len() > 128 || request_id.chars().any(char::is_control) {
+        return Err(command_error("备份请求身份无效，请重试。"));
+    }
+    Ok(())
+}
+
+fn begin_desktop_backup_job(
+    app: AppHandle,
+    state: &WorkspaceState,
+    request_id: String,
+) -> Result<BackupJob, WorkspaceError> {
+    state.backups.begin_job(Some(Arc::new(move |progress| {
+        let _ = app.emit(
+            "cuenote:backup-progress",
+            DesktopBackupProgress {
+                request_id: request_id.clone(),
+                progress,
+            },
+        );
+    })))
+}
+
 async fn backup_work<T: Send + 'static>(
     app: AppHandle,
     state: WorkspaceState,
@@ -101,9 +125,7 @@ async fn backup_work<T: Send + 'static>(
     selected_directory: Option<std::path::PathBuf>,
     action: impl FnOnce(BackupContext, &BackupJob) -> Result<T, WorkspaceError> + Send + 'static,
 ) -> Result<T, WorkspaceError> {
-    if request_id.is_empty() || request_id.len() > 128 || request_id.chars().any(char::is_control) {
-        return Err(command_error("备份请求身份无效，请重试。"));
-    }
+    validate_backup_request_id(&request_id)?;
     tauri::async_runtime::spawn_blocking(move || {
         let _policy = crate::storage::NoCloudDownload::enter()?;
         // Directory changes invalidate a job just like a library transition.
@@ -121,15 +143,7 @@ async fn backup_work<T: Send + 'static>(
             workspace.backup_context()?
         };
         drop(mutation);
-        let job = state.backups.begin_job(Some(Arc::new(move |progress| {
-            let _ = app.emit(
-                "cuenote:backup-progress",
-                DesktopBackupProgress {
-                    request_id: request_id.clone(),
-                    progress,
-                },
-            );
-        })))?;
+        let job = begin_desktop_backup_job(app, &state, request_id)?;
         // Hashing, copying and package validation must not hold the editor's
         // mutex. The coordinator guards the final publication separately.
         drop(workspace);
@@ -177,6 +191,103 @@ pub async fn list_backups(
         |context, job| context.catalog(job),
     )
     .await
+}
+
+#[tauri::command]
+pub async fn list_backup_notes(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    backup_id: String,
+    request_id: String,
+    expected_library_path: String,
+) -> Result<BackupNoteList, WorkspaceError> {
+    validate_backup_request_id(&request_id)?;
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        let mut workspace = state
+            .workspace
+            .lock()
+            .map_err(|_| command_error("笔记服务已中断，请重新启动 CueNote 后重试备份。"))?;
+        require_backup_library(&workspace, &expected_library_path)?;
+        let context = workspace.backup_context()?;
+        let job = begin_desktop_backup_job(app, &state, request_id)?;
+        let available_notebook_ids = workspace.backup_restore_notebook_ids()?;
+        job.checkpoint()?;
+        drop(workspace);
+
+        let mut result = context.list_notes(&backup_id, &job)?;
+        job.checkpoint()?;
+        result.available_notebook_ids = available_notebook_ids;
+        Ok(result)
+    })
+    .await
+    .map_err(|error| command_error(format!("备份操作未完成：{error}")))?
+}
+
+#[tauri::command]
+pub async fn restore_backup_note(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    backup_id: String,
+    entry_id: String,
+    expected_revision: String,
+    target_notebook_id: Option<String>,
+    request_id: String,
+    expected_library_path: String,
+) -> Result<BackupRestoreReceipt, WorkspaceError> {
+    validate_backup_request_id(&request_id)?;
+    let state = state.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        let (context, job) = {
+            let workspace = state
+                .workspace
+                .lock()
+                .map_err(|_| command_error("笔记服务已中断，请重新启动 CueNote 后重试恢复。"))?;
+            require_backup_library(&workspace, &expected_library_path)?;
+            let context = workspace.backup_context()?;
+            let job = begin_desktop_backup_job(app.clone(), &state, request_id.clone())?;
+            (context, job)
+        };
+        let source = context.load_note_entry(&backup_id, &entry_id, &expected_revision, &job)?;
+        let prepared = {
+            let workspace = state
+                .workspace
+                .lock()
+                .map_err(|_| command_error("笔记服务已中断，恢复尚未进入写入阶段。"))?;
+            require_backup_library(&workspace, &expected_library_path)?;
+            job.checkpoint()?;
+            workspace.prepare_backup_note_restore(source, target_notebook_id.as_deref())?
+        };
+        // Protecting the whole current library can take time. Keep the editing
+        // mutex available for cancellation/close and the existing read paths.
+        let local_date = chrono::Local::now().format("%Y-%m-%d").to_string();
+        let protected = prepared.protect_current(&local_date, &job)?;
+        let mut workspace = state.workspace.lock().map_err(|_| {
+            command_error("恢复前备份已生成，但笔记服务已中断；恢复未进入写入阶段。")
+        })?;
+        require_backup_library(&workspace, &expected_library_path)?;
+        // Atomically hand the job slot to a mutation guard. A cancellation
+        // accepted before this point aborts; after it, report the actual safe
+        // publication result and do not pretend a late cancel rolled it back.
+        let _mutation = job.into_mutation()?;
+        let _ = app.emit(
+            "cuenote:backup-progress",
+            DesktopBackupProgress {
+                request_id,
+                progress: BackupProgress {
+                    library_path: expected_library_path,
+                    phase: BackupPhase::Restoring,
+                    checked: 0,
+                    total: 1,
+                },
+            },
+        );
+        workspace.restore_backup_note(protected)
+    })
+    .await
+    .map_err(|error| command_error(format!("备份恢复操作未完成：{error}")))?
 }
 
 #[tauri::command]

@@ -1,7 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createBackupCoordinator } from '../src/backup-coordinator.ts';
-import type { BackupCatalog, BackupOutcome } from '../src/workspace-api.ts';
+import { createBackupCoordinator, type RunRestoreWithSavedEditor } from '../src/backup-coordinator.ts';
+import type {
+  BackupCatalog,
+  BackupNoteList,
+  BackupNoteRestoreSelection,
+  BackupOutcome,
+  BackupRestoreReceipt,
+  BackupSummary,
+} from '../src/workspace-api.ts';
 
 class FakeClock {
   private nextId = 1;
@@ -67,6 +74,49 @@ function outcome(libraryPath: string, message: string): BackupOutcome {
   return { catalog: emptyCatalog(libraryPath), created: null, message };
 }
 
+function backupSummary(backupId: string): BackupSummary {
+  return {
+    backupId,
+    kind: 'manual',
+    createdAt: '2026-10-15T00:00:00Z',
+    localDate: '2026-10-15',
+    path: `D:\\CueNote Backups\\${backupId}.cuenote-backup`,
+    noteCount: 1,
+    notebookCount: 1,
+  };
+}
+
+function backupNotes(libraryPath: string, backupId: string, entryId: string, revision = 'source-revision'): BackupNoteList {
+  return {
+    libraryPath,
+    backupId,
+    availableNotebookIds: ['notebook-1'],
+    notes: [{
+      entryId,
+      revision,
+      noteId: 'note-1',
+      title: '备份中的笔记',
+      modifiedAt: '2026-10-14T00:00:00Z',
+      notebookId: 'notebook-1',
+      notebookName: '原笔记本名称',
+      pinned: false,
+      excerpt: '备份正文摘要',
+      trashedAt: null,
+    }],
+  };
+}
+
+function restoreReceipt(libraryPath: string): BackupRestoreReceipt {
+  return {
+    library: { path: libraryPath } as BackupRestoreReceipt['library'],
+    session: { noteId: 'note-1', trashedAt: null } as BackupRestoreReceipt['session'],
+    preRestoreBackup: backupSummary('pre-restore'),
+    reassignedNotebook: false,
+    message: '笔记已从备份恢复。',
+    warnings: [],
+  };
+}
+
 function libraryToken(modifiedAt = '2026-10-15T00:00:00Z') {
   return {
     path: 'library-a',
@@ -121,6 +171,370 @@ for (const oldOperation of ['backup', 'catalog'] as const) {
     coordinator.deactivate();
   });
 }
+
+test('a restore skipped by the editor save gate never reaches the host', async () => {
+  const clock = new FakeClock();
+  let restoreCalls = 0;
+  const coordinator = createBackupCoordinator({
+    api: {
+      runBackup: async (_kind, _requestId, path) => outcome(path, '没有新增内容'),
+      listBackups: async (_requestId, path) => ({
+        ...emptyCatalog(path),
+        backups: [backupSummary('backup-1')],
+      }),
+      listBackupNotes: async (_backupId, _requestId, path) => backupNotes(path, 'backup-1', 'entry-1'),
+      restoreBackupNote: async (_selection, _requestId, path) => {
+        restoreCalls += 1;
+        return restoreReceipt(path);
+      },
+      chooseBackupDirectory: async () => null,
+      cancelBackup: async () => undefined,
+    },
+    clock,
+  });
+  coordinator.activate();
+  coordinator.synchronize({ libraryPath: 'library-a', changeToken: 'a1', automaticAllowed: false });
+  await settlePromises();
+  assert.equal(await coordinator.loadBackupNotes('backup-1'), true);
+
+  const restored = await coordinator.restoreBackupNote({
+    backupId: 'backup-1', entryId: 'entry-1', expectedRevision: 'source-revision', targetNotebookId: 'notebook-1',
+  }, async () => null);
+
+  assert.equal(restored, false);
+  assert.equal(restoreCalls, 0);
+  assert.equal(coordinator.getState().operation, null);
+  assert.match(coordinator.getState().notice ?? '', /未能确认保存/);
+  coordinator.deactivate();
+});
+
+test('a confirmed backup entry restores its frozen backup and revision identity', async () => {
+  const clock = new FakeClock();
+  const returnedList = backupNotes('library-a', 'backup-1', 'entry-1');
+  returnedList.notes.push({
+    ...returnedList.notes[0]!,
+    entryId: 'entry-duplicate-note',
+    revision: 'second-revision',
+  });
+  let capturedSelection: BackupNoteRestoreSelection | null = null;
+  const coordinator = createBackupCoordinator({
+    api: {
+      runBackup: async (_kind, _requestId, path) => outcome(path, '没有新增内容'),
+      listBackups: async (_requestId, path) => ({
+        ...emptyCatalog(path),
+        backups: [backupSummary('backup-1')],
+      }),
+      listBackupNotes: async () => returnedList,
+      restoreBackupNote: async (selection, _requestId, path) => {
+        capturedSelection = selection;
+        return restoreReceipt(path);
+      },
+      chooseBackupDirectory: async () => null,
+      cancelBackup: async () => undefined,
+    },
+    clock,
+  });
+  coordinator.activate();
+  coordinator.synchronize({ libraryPath: 'library-a', changeToken: 'a1', automaticAllowed: false });
+  await settlePromises();
+  assert.equal(await coordinator.loadBackupNotes('backup-1'), true);
+  const selected = coordinator.getState().backupNotes!.notes[1]!;
+  const confirmedSelection: BackupNoteRestoreSelection = {
+    backupId: 'backup-1',
+    entryId: selected.entryId,
+    expectedRevision: selected.revision,
+    targetNotebookId: 'notebook-1',
+  };
+
+  returnedList.notes[1]!.revision = 'changed-after-selection';
+  const restored = await coordinator.restoreBackupNote(confirmedSelection, run => run());
+
+  assert.equal(restored, true);
+  assert.deepEqual(capturedSelection, {
+    backupId: 'backup-1',
+    entryId: 'entry-duplicate-note',
+    expectedRevision: 'second-revision',
+    targetNotebookId: 'notebook-1',
+  });
+  assert.equal(coordinator.getState().restoreReceipt?.session.noteId, 'note-1');
+  coordinator.deactivate();
+});
+
+test('a conflicted source notebook requires an explicitly available restore target', async () => {
+  const clock = new FakeClock();
+  const listed = backupNotes('library-a', 'backup-1', 'entry-1');
+  listed.availableNotebookIds = ['notebook-2'];
+  const selections: BackupNoteRestoreSelection[] = [];
+  let preparations = 0;
+  const coordinator = createBackupCoordinator({
+    api: {
+      runBackup: async (_kind, _requestId, path) => outcome(path, '没有新增内容'),
+      listBackups: async (_requestId, path) => ({ ...emptyCatalog(path), backups: [backupSummary('backup-1')] }),
+      listBackupNotes: async () => listed,
+      restoreBackupNote: async (selection, _requestId, path) => {
+        selections.push(selection);
+        return { ...restoreReceipt(path), reassignedNotebook: true };
+      },
+      chooseBackupDirectory: async () => null,
+      cancelBackup: async () => undefined,
+    },
+    clock,
+  });
+  coordinator.activate();
+  coordinator.synchronize({ libraryPath: 'library-a', changeToken: 'a1', automaticAllowed: false });
+  await settlePromises();
+  assert.equal(await coordinator.loadBackupNotes('backup-1'), true);
+  const selection = {
+    backupId: 'backup-1', entryId: 'entry-1', expectedRevision: 'source-revision', targetNotebookId: 'notebook-1',
+  };
+  const prepare: RunRestoreWithSavedEditor = async run => {
+    preparations += 1;
+    return run();
+  };
+  assert.equal(await coordinator.restoreBackupNote(selection, prepare), false);
+  assert.equal(await coordinator.restoreBackupNote({ ...selection, targetNotebookId: null }, prepare), false);
+  assert.equal(preparations, 0);
+  assert.deepEqual(selections, []);
+  assert.equal(await coordinator.restoreBackupNote({ ...selection, targetNotebookId: 'notebook-2' }, prepare), true);
+  assert.equal(preparations, 1);
+  assert.equal(selections[0]?.targetNotebookId, 'notebook-2');
+  assert.equal(coordinator.getState().restoreReceipt?.reassignedNotebook, true);
+  coordinator.deactivate();
+});
+
+for (const settleRunFirst of [true, false]) {
+  test(`a restore holds the host slot until both restore and cancel settle (${settleRunFirst ? 'restore first' : 'cancel first'})`, async () => {
+    const clock = new FakeClock();
+    const cancelAck = deferred<void>();
+    const pendingRestore = deferred<BackupRestoreReceipt>();
+    let listNotesCalls = 0;
+    const coordinator = createBackupCoordinator({
+      api: {
+        runBackup: async (_kind, _requestId, path) => outcome(path, '没有新增内容'),
+        listBackups: async (_requestId, path) => ({
+          ...emptyCatalog(path),
+          backups: [backupSummary('backup-1')],
+        }),
+        listBackupNotes: async (_backupId, _requestId, path) => {
+          listNotesCalls += 1;
+          return backupNotes(path, 'backup-1', 'entry-1');
+        },
+        restoreBackupNote: () => pendingRestore.promise,
+        chooseBackupDirectory: async () => null,
+        cancelBackup: () => cancelAck.promise,
+      },
+      clock,
+    });
+    coordinator.activate();
+    coordinator.synchronize({ libraryPath: 'library-a', changeToken: 'a1', automaticAllowed: false });
+    await settlePromises();
+    await coordinator.loadBackupNotes('backup-1');
+    const selected = coordinator.getState().backupNotes!.notes[0]!;
+    let restoreSettled = false;
+    const restoring = coordinator.restoreBackupNote({
+      backupId: 'backup-1', entryId: selected.entryId, expectedRevision: selected.revision, targetNotebookId: 'notebook-1',
+    }, run => run()).finally(() => { restoreSettled = true; });
+    await settlePromises();
+    assert.equal(coordinator.getState().operation, 'restoring');
+    assert.equal(coordinator.cancel(), true);
+    assert.equal(coordinator.getState().operation, 'cancelling');
+
+    if (settleRunFirst) {
+      pendingRestore.resolve(restoreReceipt('library-a'));
+      await settlePromises();
+      assert.equal(restoreSettled, false);
+      assert.equal(coordinator.getState().operation, 'cancelling');
+      assert.equal(listNotesCalls, 1);
+      cancelAck.resolve();
+    } else {
+      cancelAck.resolve();
+      await settlePromises();
+      assert.equal(restoreSettled, false);
+      assert.equal(coordinator.getState().operation, 'cancelling');
+      assert.equal(listNotesCalls, 1);
+      pendingRestore.resolve(restoreReceipt('library-a'));
+    }
+
+    assert.equal(await restoring, true);
+    assert.equal(coordinator.getState().operation, null);
+    assert.equal(coordinator.getState().restoreReceipt?.preRestoreBackup.backupId, 'pre-restore');
+    assert.equal(coordinator.getState().notice, '笔记已从备份恢复。');
+    assert.equal(await coordinator.loadBackupNotes('backup-1'), true);
+    assert.equal(listNotesCalls, 2);
+    coordinator.deactivate();
+  });
+}
+
+test('cancelling while the App saves keeps the slot and refuses a late restore closure', async () => {
+  const clock = new FakeClock();
+  const allowSavedEditor = deferred<void>();
+  let restoreCalls = 0;
+  let cancelCalls = 0;
+  const coordinator = createBackupCoordinator({
+    api: {
+      runBackup: async (_kind, _requestId, path) => outcome(path, '没有新增内容'),
+      listBackups: async (_requestId, path) => ({
+        ...emptyCatalog(path),
+        backups: [backupSummary('backup-1')],
+      }),
+      listBackupNotes: async (_backupId, _requestId, path) => backupNotes(path, 'backup-1', 'entry-1'),
+      restoreBackupNote: async (_selection, _requestId, path) => {
+        restoreCalls += 1;
+        return restoreReceipt(path);
+      },
+      chooseBackupDirectory: async () => null,
+      cancelBackup: async () => { cancelCalls += 1; },
+    },
+    clock,
+  });
+  coordinator.activate();
+  coordinator.synchronize({ libraryPath: 'library-a', changeToken: 'a1', automaticAllowed: false });
+  await settlePromises();
+  await coordinator.loadBackupNotes('backup-1');
+  const selected = coordinator.getState().backupNotes!.notes[0]!;
+  const restoring = coordinator.restoreBackupNote({
+    backupId: 'backup-1', entryId: selected.entryId, expectedRevision: selected.revision, targetNotebookId: 'notebook-1',
+  }, async run => {
+    await allowSavedEditor.promise;
+    return run();
+  });
+  await settlePromises();
+  assert.equal(coordinator.getState().operation, 'preparingRestore');
+
+  assert.equal(coordinator.cancel(), true);
+  assert.equal(coordinator.getState().operation, 'cancelling');
+  assert.equal(cancelCalls, 0, 'there is no host restore to cancel before the saved-editor gate invokes it');
+  assert.equal(await coordinator.loadBackupNotes('backup-1'), false, 'the active preparation still owns the host slot');
+  allowSavedEditor.resolve();
+
+  assert.equal(await restoring, false);
+  assert.equal(restoreCalls, 0);
+  assert.equal(coordinator.getState().operation, null);
+  assert.equal(coordinator.getState().notice, '笔记恢复已取消。');
+  coordinator.deactivate();
+});
+
+test('a late restore from a previous library cannot replace the new library state', async () => {
+  const clock = new FakeClock();
+  const pendingRestore = deferred<BackupRestoreReceipt>();
+  const cancelAck = deferred<void>();
+  const listedPaths: string[] = [];
+  const coordinator = createBackupCoordinator({
+    api: {
+      runBackup: async (_kind, _requestId, path) => outcome(path, '没有新增内容'),
+      listBackups: async (_requestId, path) => {
+        listedPaths.push(path);
+        return { ...emptyCatalog(path), backups: [backupSummary('backup-1')] };
+      },
+      listBackupNotes: async (_backupId, _requestId, path) => backupNotes(path, 'backup-1', 'entry-1'),
+      restoreBackupNote: () => pendingRestore.promise,
+      chooseBackupDirectory: async () => null,
+      cancelBackup: () => cancelAck.promise,
+    },
+    clock,
+  });
+  coordinator.activate();
+  coordinator.synchronize({ libraryPath: 'library-a', changeToken: 'a1', automaticAllowed: false });
+  await settlePromises();
+  await coordinator.loadBackupNotes('backup-1');
+  const selected = coordinator.getState().backupNotes!.notes[0]!;
+  const restoring = coordinator.restoreBackupNote({
+    backupId: 'backup-1', entryId: selected.entryId, expectedRevision: selected.revision, targetNotebookId: 'notebook-1',
+  }, run => run());
+  await settlePromises();
+
+  coordinator.synchronize({ libraryPath: 'library-b', changeToken: 'b1', automaticAllowed: false });
+  pendingRestore.resolve(restoreReceipt('library-a'));
+  await settlePromises();
+  assert.deepEqual(listedPaths, ['library-a']);
+  assert.equal(coordinator.getState().libraryPath, 'library-b');
+  assert.equal(coordinator.getState().restoreReceipt, null);
+
+  cancelAck.resolve();
+  assert.equal(await restoring, false);
+  await settlePromises();
+  assert.deepEqual(listedPaths, ['library-a', 'library-b']);
+  assert.equal(coordinator.getState().catalog?.libraryPath, 'library-b');
+  assert.equal(coordinator.getState().restoreReceipt, null);
+  coordinator.deactivate();
+});
+
+test('a backup-list refresh error does not erase the completed restore result', async () => {
+  const clock = new FakeClock();
+  let catalogCalls = 0;
+  const coordinator = createBackupCoordinator({
+    api: {
+      runBackup: async (_kind, _requestId, path) => outcome(path, '没有新增内容'),
+      listBackups: async (_requestId, path) => {
+        catalogCalls += 1;
+        if (catalogCalls > 1) throw new Error('备份目录暂时不可读。');
+        return { ...emptyCatalog(path), backups: [backupSummary('backup-1')] };
+      },
+      listBackupNotes: async (_backupId, _requestId, path) => backupNotes(path, 'backup-1', 'entry-1'),
+      restoreBackupNote: async (_selection, _requestId, path) => restoreReceipt(path),
+      chooseBackupDirectory: async () => null,
+      cancelBackup: async () => undefined,
+    },
+    clock,
+  });
+  coordinator.activate();
+  coordinator.synchronize({ libraryPath: 'library-a', changeToken: 'a1', automaticAllowed: false });
+  await settlePromises();
+  await coordinator.loadBackupNotes('backup-1');
+  const selected = coordinator.getState().backupNotes!.notes[0]!;
+  assert.equal(await coordinator.restoreBackupNote({
+    backupId: 'backup-1', entryId: selected.entryId, expectedRevision: selected.revision, targetNotebookId: 'notebook-1',
+  }, run => run()), true);
+
+  assert.equal(await coordinator.refresh(), false);
+
+  assert.equal(coordinator.getState().error, '备份目录暂时不可读。');
+  assert.equal(coordinator.getState().restoreReceipt?.session.noteId, 'note-1');
+  assert.equal(coordinator.getState().restoreReceipt?.preRestoreBackup.backupId, 'pre-restore');
+  assert.equal(coordinator.getState().notice, '笔记已从备份恢复。');
+  coordinator.deactivate();
+});
+
+test('a restore that has entered its atomic publish phase cannot be cancelled', async () => {
+  const clock = new FakeClock();
+  const pendingRestore = deferred<BackupRestoreReceipt>();
+  let restoreRequestId = '';
+  let cancelCalls = 0;
+  const coordinator = createBackupCoordinator({
+    api: {
+      runBackup: async (_kind, _requestId, path) => outcome(path, '没有新增内容'),
+      listBackups: async (_requestId, path) => ({
+        ...emptyCatalog(path),
+        backups: [backupSummary('backup-1')],
+      }),
+      listBackupNotes: async (_backupId, _requestId, path) => backupNotes(path, 'backup-1', 'entry-1'),
+      restoreBackupNote: (_selection, requestId) => {
+        restoreRequestId = requestId;
+        return pendingRestore.promise;
+      },
+      chooseBackupDirectory: async () => null,
+      cancelBackup: async () => { cancelCalls += 1; },
+    },
+    clock,
+  });
+  coordinator.activate();
+  coordinator.synchronize({ libraryPath: 'library-a', changeToken: 'a1', automaticAllowed: false });
+  await settlePromises();
+  await coordinator.loadBackupNotes('backup-1');
+  const selected = coordinator.getState().backupNotes!.notes[0]!;
+  const restoring = coordinator.restoreBackupNote({
+    backupId: 'backup-1', entryId: selected.entryId, expectedRevision: selected.revision, targetNotebookId: 'notebook-1',
+  }, run => run());
+  await settlePromises();
+  coordinator.handleProgress({ requestId: restoreRequestId, libraryPath: 'library-a', phase: 'restoring', checked: 1, total: 1 });
+
+  assert.equal(coordinator.cancel(), false);
+  assert.equal(cancelCalls, 0);
+  pendingRestore.resolve(restoreReceipt('library-a'));
+  assert.equal(await restoring, true);
+  assert.equal(coordinator.getState().restoreReceipt?.session.noteId, 'note-1');
+  coordinator.deactivate();
+});
 
 test('a backup cancellation result waits for acknowledgement before reporting its final state', async () => {
   const clock = new FakeClock();

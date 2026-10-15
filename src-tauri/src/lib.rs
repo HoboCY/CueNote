@@ -95,6 +95,8 @@ pub fn run() {
             commands::rebuild_search_index,
             commands::run_backup,
             commands::list_backups,
+            commands::list_backup_notes,
+            commands::restore_backup_note,
             commands::choose_backup_directory,
             commands::cancel_backup,
             commands::use_default_library,
