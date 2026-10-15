@@ -22,6 +22,7 @@ use uuid::Uuid;
 mod backup_restore;
 mod backups;
 mod external;
+mod external_notes;
 mod library_restore;
 mod search;
 pub use crate::storage::versions::{PreservedVersionSummary, VersionList};
@@ -34,6 +35,7 @@ pub use backups::{
     VerifiedBackupNote,
 };
 pub use external::{ExternalProbe, ExternalReconciliation};
+pub use external_notes::ExternalSaveReceipt;
 pub use library_restore::{
     LibraryRestoreAction, LibraryRestorePreview, LibraryRestoreReceipt, LibraryRestoreStatus,
 };
@@ -89,6 +91,7 @@ pub struct LibraryView {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct NoteSession {
     pub session_id: String,
+    pub origin: SessionOrigin,
     pub note_id: String,
     pub notebook_id: Option<String>,
     pub pinned: bool,
@@ -98,6 +101,14 @@ pub struct NoteSession {
     pub assets: Vec<AssetManifestEntry>,
     pub revision: Option<String>,
     pub read_only_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "camelCase", deny_unknown_fields)]
+pub enum SessionOrigin {
+    Library,
+    External { path: String },
+    PreservedPreview,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -253,6 +264,7 @@ struct ActiveNoteSession {
     notebook_id: Option<String>,
     baseline_witness: Option<storage::versions::VersionLease>,
     preserved_preview: bool,
+    return_external_path: Option<PathBuf>,
     external_conflict: bool,
     was_writable: bool,
 }
@@ -767,6 +779,7 @@ impl Workspace {
             .join(format!("{note_id}.cuenote"));
         let view = NoteSession {
             session_id: Uuid::new_v4().to_string(),
+            origin: SessionOrigin::Library,
             note_id,
             notebook_id: Some(assigned_notebook_id.clone()),
             pinned: false,
@@ -787,6 +800,7 @@ impl Workspace {
             notebook_id: Some(assigned_notebook_id),
             baseline_witness: None,
             preserved_preview: false,
+            return_external_path: None,
             external_conflict: false,
             was_writable: true,
         });
@@ -854,6 +868,7 @@ impl Workspace {
             notebook_id,
             baseline_witness: Some(baseline_witness),
             preserved_preview: false,
+            return_external_path: None,
             external_conflict: false,
             was_writable,
         })
@@ -872,8 +887,9 @@ impl Workspace {
         session_id: &str,
         bytes: &[u8],
     ) -> Result<AssetManifestEntry, WorkspaceError> {
-        self.ensure_library_available()?;
-        self.refresh_library_metadata()?;
+        if !self.active_session_is_external() {
+            self.refresh_library_metadata()?;
+        }
         let session = self
             .session
             .as_ref()
@@ -884,15 +900,7 @@ impl Workspace {
                 "笔记会话已切换；请重新打开笔记后再插入图片。",
             ));
         }
-        let notebooks = self
-            .library
-            .as_ref()
-            .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?;
-        if let Some(reason) = read_only_reason(
-            &session.package,
-            session.notebook_id.as_deref(),
-            &notebooks.notebooks,
-        ) {
+        if let Some(reason) = self.editor_read_only_reason(session) {
             return Err(StorageError::new("readOnly", reason));
         }
         if bytes.len() as u64 > MAX_EXPANDED_BYTES {
@@ -970,6 +978,7 @@ impl Workspace {
     }
 
     pub fn trash_note(&mut self, session_id: &str) -> Result<SaveReceipt, WorkspaceError> {
+        self.require_library_session(session_id)?;
         self.refresh_library_metadata()?;
         let (library_path, default_notebook_id, notebooks) = self
             .library
@@ -1139,6 +1148,7 @@ impl Workspace {
         session_id: &str,
         target_notebook_id: Option<&str>,
     ) -> Result<SaveReceipt, WorkspaceError> {
+        self.require_library_session(session_id)?;
         self.refresh_library_metadata()?;
         let (library_path, default_notebook_id, notebooks) = self
             .library
@@ -1308,6 +1318,7 @@ impl Workspace {
         session_id: &str,
         text: PlainText,
     ) -> Result<SaveReceipt, WorkspaceError> {
+        self.require_library_session(session_id)?;
         let library_path = self
             .library
             .as_ref()
@@ -1458,13 +1469,9 @@ impl Workspace {
         session_id: &str,
         content: NoteContent,
     ) -> Result<(), WorkspaceError> {
-        self.refresh_library_metadata()?;
-        let notebooks = self
-            .library
-            .as_ref()
-            .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?
-            .notebooks
-            .clone();
+        if !self.active_session_is_external() {
+            self.refresh_library_metadata()?;
+        }
         let session = self
             .session
             .as_ref()
@@ -1475,9 +1482,7 @@ impl Workspace {
                 "笔记会话已切换；请重新打开笔记后再插入图片。",
             ));
         }
-        if let Some(reason) =
-            read_only_reason(&session.package, session.notebook_id.as_deref(), &notebooks)
-        {
+        if let Some(reason) = self.editor_read_only_reason(session) {
             return Err(StorageError::new("readOnly", reason.clone()));
         }
         candidate_for_content(session, &content).map(|_| ())
@@ -1498,15 +1503,7 @@ impl Workspace {
                 "笔记会话已切换；请重新打开笔记后再检查内容。",
             ));
         }
-        let notebooks = self
-            .library
-            .as_ref()
-            .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?;
-        if let Some(reason) = read_only_reason(
-            &session.package,
-            session.notebook_id.as_deref(),
-            &notebooks.notebooks,
-        ) {
+        if let Some(reason) = self.editor_read_only_reason(session) {
             return Err(StorageError::new("readOnly", reason.clone()));
         }
         candidate_for_content(session, &content).map(|_| ())
@@ -1580,6 +1577,7 @@ impl Workspace {
         session_id: &str,
         content: NoteContent,
     ) -> Result<SaveReceipt, WorkspaceError> {
+        self.require_library_session(session_id)?;
         let library_path = self
             .library
             .as_ref()
@@ -1988,6 +1986,7 @@ impl Workspace {
         notebook_id: &str,
         pinned: bool,
     ) -> Result<SaveReceipt, WorkspaceError> {
+        self.require_library_session(session_id)?;
         self.refresh_library_metadata()?;
         let (library_path, default_notebook_id, notebook_exists) = self
             .library
@@ -2163,6 +2162,7 @@ impl Workspace {
         session_id: &str,
         confirmed: bool,
     ) -> Result<WorkspaceView, WorkspaceError> {
+        self.require_library_session(session_id)?;
         self.ensure_library_available()?;
         if !confirmed {
             return Err(StorageError::new(
@@ -2406,6 +2406,7 @@ impl Workspace {
             notebook_id: Some(default_notebook_id.clone()),
             baseline_witness: Some(baseline_witness),
             preserved_preview: false,
+            return_external_path: None,
             external_conflict: false,
             was_writable: session.read_only_reason.is_none(),
         });
@@ -2458,10 +2459,10 @@ impl Workspace {
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
         let (mut package, default_notebook_id) = {
-            let library = self
+            let default_notebook_id = self
                 .library
                 .as_ref()
-                .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+                .and_then(|library| library.default_notebook_id.clone());
             let session = self
                 .session
                 .as_ref()
@@ -2472,7 +2473,7 @@ impl Workspace {
                     "笔记会话已切换；请重新打开笔记后再另存。",
                 ));
             }
-            (session.package.clone(), library.default_notebook_id.clone())
+            (session.package.clone(), default_notebook_id)
         };
         replace_plain_text_for_copy(&mut package, text)?;
         if let Some(default_notebook_id) = default_notebook_id.as_deref() {
@@ -2495,10 +2496,10 @@ impl Workspace {
         path: PathBuf,
     ) -> Result<SavedCopy, WorkspaceError> {
         let (mut package, default_notebook_id) = {
-            let library = self
+            let default_notebook_id = self
                 .library
                 .as_ref()
-                .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+                .and_then(|library| library.default_notebook_id.clone());
             let session = self
                 .session
                 .as_ref()
@@ -2521,7 +2522,7 @@ impl Workspace {
                 }
                 candidate_for_content(session, &content)?
             };
-            (package, library.default_notebook_id.clone())
+            (package, default_notebook_id)
         };
         if let Some(default_notebook_id) = default_notebook_id.as_deref() {
             assign_copy_identity(&mut package, default_notebook_id);
@@ -2590,7 +2591,7 @@ impl Workspace {
     fn view(&self) -> WorkspaceView {
         let session = self.session.as_ref().map(|session| {
             let mut view = session.view.clone();
-            if !session.preserved_preview && !session.external_conflict {
+            if matches!(session.view.origin, SessionOrigin::Library) && !session.external_conflict {
                 if let Some(library) = self.library.as_ref() {
                     view.read_only_reason = read_only_reason(
                         &session.package,
@@ -2832,7 +2833,7 @@ impl Workspace {
         library.metadata_warnings = metadata.warnings;
         apply_notebook_metadata_to_view(library);
         if let Some(session) = self.session.as_mut() {
-            if !session.preserved_preview
+            if matches!(session.view.origin, SessionOrigin::Library)
                 && !session.external_conflict
                 && read_only_reason(
                     &session.package,
@@ -3698,7 +3699,7 @@ fn preserve_draft_after_save_access_failure(
         || session.external_conflict
         || session.package.document.organization.trashed_at.is_some()
         || !supports_editable_content(&session.package.content())
-        || session.notebook_id.is_none()
+        || (matches!(session.view.origin, SessionOrigin::Library) && session.notebook_id.is_none())
     {
         return error;
     }
@@ -3837,6 +3838,7 @@ fn note_session_from_opened(
 ) -> NoteSession {
     NoteSession {
         session_id: Uuid::new_v4().to_string(),
+        origin: SessionOrigin::Library,
         note_id: note_id.to_owned(),
         notebook_id: opened.package.document.organization.notebook_id.clone(),
         pinned: opened.package.document.organization.pinned,

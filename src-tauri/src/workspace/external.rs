@@ -28,7 +28,7 @@ pub struct ExternalProbe {
 pub struct ExternalReconciliation {
     pub status: String,
     pub session: Option<NoteSession>,
-    pub library: LibraryView,
+    pub library: Option<LibraryView>,
     pub message: Option<String>,
 }
 
@@ -90,17 +90,7 @@ impl Workspace {
         let Some(session) = self.session.as_ref() else {
             return Ok(probe);
         };
-        probe.session_read_only_reason = if session.preserved_preview || session.external_conflict {
-            session.view.read_only_reason.clone()
-        } else {
-            self.library.as_ref().and_then(|library| {
-                read_only_reason(
-                    &session.package,
-                    session.notebook_id.as_deref(),
-                    &library.notebooks,
-                )
-            })
-        };
+        probe.session_read_only_reason = self.editor_read_only_reason(session);
         if session.preserved_preview {
             return Ok(probe);
         }
@@ -258,14 +248,22 @@ impl Workspace {
             &origin,
             "外部刷新的新版本",
         )?;
-        let library = self
-            .library
-            .as_ref()
-            .ok_or_else(|| StorageError::new("noLibrary", "当前没有笔记库。"))?;
         let notebook_id = opened.package.document.organization.notebook_id.clone();
-        let reason = read_only_reason(&opened.package, notebook_id.as_deref(), &library.notebooks);
+        let is_external = self.active_session_is_external();
+        let reason = if is_external {
+            external_notes::external_read_only_reason(&opened.package)
+        } else {
+            let library = self
+                .library
+                .as_ref()
+                .ok_or_else(|| StorageError::new("noLibrary", "当前没有笔记库。"))?;
+            read_only_reason(&opened.package, notebook_id.as_deref(), &library.notebooks)
+        };
         let was_writable = reason.is_none();
-        let view = note_session_from_opened(&opened.package.document.note_id, &opened, reason);
+        let mut view = note_session_from_opened(&opened.package.document.note_id, &opened, reason);
+        if is_external {
+            external_notes::set_external_origin(&mut view, &path);
+        }
         self.session = Some(ActiveNoteSession {
             view: view.clone(),
             path,
@@ -275,6 +273,7 @@ impl Workspace {
             notebook_id,
             baseline_witness: Some(baseline_witness),
             preserved_preview: false,
+            return_external_path: None,
             external_conflict: false,
             was_writable,
         });
@@ -293,6 +292,13 @@ impl Workspace {
         &mut self,
         version_id: &str,
     ) -> Result<NoteSession, WorkspaceError> {
+        let return_external_path = self.session.as_ref().and_then(|session| {
+            if matches!(session.view.origin, SessionOrigin::External { .. }) {
+                Some(session.path.clone())
+            } else {
+                session.return_external_path.clone()
+            }
+        });
         let preserved = versions::open_version(&self.recovery_root, version_id)?;
         let opened = preserved.opened;
         let baseline_witness = if preserved.summary.conflict {
@@ -308,11 +314,12 @@ impl Workspace {
                 "正在预览的保留版本",
             )?)
         };
-        let view = note_session_from_opened(
+        let mut view = note_session_from_opened(
             &opened.package.document.note_id,
             &opened,
             Some("这是保留版本的只读预览。可恢复为新笔记或另存完整副本。".into()),
         );
+        view.origin = SessionOrigin::PreservedPreview;
         self.session = Some(ActiveNoteSession {
             view: view.clone(),
             path: preserved.path,
@@ -322,6 +329,7 @@ impl Workspace {
             baseline_revision: Some(opened.revision),
             baseline_witness,
             preserved_preview: true,
+            return_external_path,
             external_conflict: false,
             was_writable: false,
         });
@@ -371,11 +379,11 @@ impl Workspace {
     ) -> Result<SavedCopy, WorkspaceError> {
         let source = versions::open_version(&self.recovery_root, version_id)?;
         let mut package = source.opened.package;
-        let library = self
+        if let Some(default_notebook_id) = self
             .library
             .as_ref()
-            .ok_or_else(|| StorageError::new("noLibrary", "请先选择笔记库。"))?;
-        if let Some(default_notebook_id) = library.default_notebook_id.as_deref() {
+            .and_then(|library| library.default_notebook_id.as_deref())
+        {
             assign_copy_identity(&mut package, default_notebook_id);
         } else {
             assign_copy_identity_preserving_organization(&mut package);
@@ -393,6 +401,22 @@ impl Workspace {
     }
 
     fn refresh_external_library(&mut self) -> Result<Option<LibraryView>, WorkspaceError> {
+        if self.active_session_is_external() {
+            self.ensure_library_transition_allowed()?;
+            return match self.acquire_library_access() {
+                Ok(_access) => self.refresh_selected_library(),
+                Err(error) => {
+                    let mut view = self.library.as_ref().map(|library| library.view.clone());
+                    if let Some(view) = &mut view {
+                        push_warning(
+                            &mut view.warnings,
+                            format!("笔记库暂不能刷新，库外笔记仍保留：{}", error.message),
+                        );
+                    }
+                    Ok(view)
+                }
+            };
+        }
         self.refresh_selected_library()
     }
 
@@ -402,9 +426,7 @@ impl Workspace {
         session: Option<NoteSession>,
         message: Option<String>,
     ) -> Result<ExternalReconciliation, WorkspaceError> {
-        let library = self
-            .refresh_external_library()?
-            .ok_or_else(|| StorageError::new("noLibrary", "当前没有笔记库。"))?;
+        let library = self.refresh_external_library()?;
         Ok(ExternalReconciliation {
             status: status.into(),
             session,

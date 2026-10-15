@@ -965,6 +965,11 @@ button:focus-visible {
 .backup-retention-note { padding-top: 2px; border-top: 1px solid #e6e9e1; }
 .backup-restore-result { display: grid; gap: 3px; }
 .backup-restore-result strong { color: #456b5c; font-weight: 650; }
+.external-note-context { margin: 10px 16px; overflow-wrap: anywhere; }
+.external-note-context p { margin: 6px 0; }
+.external-note-context .note-organization-controls { flex-wrap: wrap; margin-top: 8px; }
+.external-note-context select { max-width: 220px; margin-left: 8px; }
+
 .backup-note-browser, .backup-restore-confirmation { display: grid; min-width: 0; gap: 8px; padding: 9px; border: 1px solid #dce5db; border-radius: 8px; background: #fbfbf5; }
 .backup-note-browser-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #667c70; font-size: 9px; }
 .backup-note-list { display: grid; max-height: 230px; gap: 5px; overflow: auto; margin: 0; padding: 0; list-style: none; }

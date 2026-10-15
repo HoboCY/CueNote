@@ -87,6 +87,8 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 
 ## 规格与计划
 
+可通过“打开库外笔记…”直接编辑独立 `.cuenote` 文件，并另存完整副本到指定笔记本。原文件保持独立，库外内容不进入当前库的搜索和整库备份。详见[库外笔记约定](docs/external-notes-contract.md)。
+
 - [首版最终规格与验收标准](https://github.com/HoboCY/CueNote/issues/8#issuecomment-6165724793)
 - [整体技术方案](https://github.com/HoboCY/CueNote/issues/7#issuecomment-6164489548)
 - [GitHub 开发与验收总任务](https://github.com/HoboCY/CueNote/issues/12)
@@ -107,6 +109,7 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 - [备份验证](docs/backup-validation.md)
 - [单篇恢复验证](docs/backup-restore-validation.md)
 - [整库恢复验证](docs/library-restore-validation.md)
+- [库外笔记验证](docs/external-notes-validation.md)
 
 Mac、真实 OneDrive 双端、完整编辑能力、容量与性能验收仍需后续实现与测试；当前版本不代表已达到日用标准。
 

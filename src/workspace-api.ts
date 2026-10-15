@@ -71,6 +71,7 @@ export interface LibraryView {
 
 export interface NoteSession {
   sessionId: string;
+  origin: { kind: 'library' } | { kind: 'external'; path: string } | { kind: 'preservedPreview' };
   noteId: string;
   text: PlainNoteText;
   content: NoteContent;
@@ -96,6 +97,13 @@ export interface SaveReceipt {
   session: NoteSession;
   library: LibraryView;
 }
+
+export interface ExternalSaveReceipt {
+  session: NoteSession;
+  warning: string | null;
+}
+
+export type EditorSaveReceipt = SaveReceipt | ExternalSaveReceipt;
 
 export interface WorkspaceError {
   kind: string;
@@ -220,7 +228,7 @@ export interface ExternalChangeProbe {
 export interface ExternalChangeReconciliation {
   status: 'unchanged' | 'refreshed' | 'conflict';
   session: NoteSession | null;
-  library: LibraryView;
+  library: LibraryView | null;
   message: string | null;
 }
 
@@ -252,6 +260,13 @@ export const workspaceApi = {
   rebuildSearchIndex: () => invoke<LibraryView>('rebuild_search_index'),
   newNote: (notebookId: string | null = null) => invoke<NoteSession>('new_note', { notebookId }),
   openNote: (noteId: string) => invoke<NoteSession>('open_note', { noteId }),
+  openExternalNote: (expectedSessionId: string | null) =>
+    invoke<NoteSession | null>('open_external_note', { expectedSessionId }),
+  reopenExternalNote: (sessionId: string) => invoke<NoteSession>('reopen_external_note', { sessionId }),
+  saveExternal: (sessionId: string, content: NoteContent) =>
+    invoke<ExternalSaveReceipt>('save_external_note_content', { sessionId, content }),
+  saveExternalIntoLibrary: (sessionId: string, notebookId: string, content: NoteContent) =>
+    invoke<SaveReceipt>('save_external_into_library', { sessionId, notebookId, content }),
   createNotebook: (name: string) => invoke<LibraryView>('create_notebook', { name }),
   renameNotebook: (notebookId: string, name: string) =>
     invoke<LibraryView>('rename_notebook', { notebookId, name }),

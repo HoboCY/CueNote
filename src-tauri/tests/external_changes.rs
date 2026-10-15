@@ -247,6 +247,7 @@ fn missing_corrupt_and_unsupported_sources_keep_the_draft_without_creating_a_bla
         assert_eq!(active.text.content, "已持有的旧版 A", "{failure}");
         assert!(!reconciliation
             .library
+            .unwrap()
             .notes
             .iter()
             .any(|note| note.note_id == session.note_id));

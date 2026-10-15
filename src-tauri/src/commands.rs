@@ -12,9 +12,9 @@ use crate::note_format::{AssetManifestEntry, NoteContent, PlainText};
 use crate::workspace::{
     BackupCatalog, BackupContext, BackupControl, BackupJob, BackupKind, BackupNoteList,
     BackupOutcome, BackupPhase, BackupProgress, BackupRestoreReceipt, ExternalProbe,
-    ExternalReconciliation, LibraryRestoreAction, LibraryRestorePreview, LibraryRestoreReceipt,
-    LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy, SearchResults, VersionList,
-    Workspace, WorkspaceError, WorkspaceView,
+    ExternalReconciliation, ExternalSaveReceipt, LibraryRestoreAction, LibraryRestorePreview,
+    LibraryRestoreReceipt, LibraryView, NoteSession, RecoveryList, SaveReceipt, SavedCopy,
+    SearchResults, VersionList, Workspace, WorkspaceError, WorkspaceView,
 };
 
 #[derive(Clone)]
@@ -130,6 +130,31 @@ async fn save_mutation<T: Send + 'static>(
             command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
         })?;
         state.ensure_not_restoring()?;
+        let _policy = crate::storage::NoCloudDownload::enter()?;
+        action(&mut workspace)
+    })
+    .await
+    .map_err(|error| command_error(format!("笔记操作未完成：{error}")))?
+}
+
+/// Editor-only calls follow the host-owned session, independent of an unrelated library.
+async fn editor_work<T: Send + 'static>(
+    state: WorkspaceState,
+    action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
+) -> Result<T, WorkspaceError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        state.ensure_not_restoring()?;
+        let mut workspace = state
+            .workspace
+            .lock()
+            .map_err(|_| command_error("笔记服务已中断。"))?;
+        state.ensure_not_restoring()?;
+        workspace.ensure_library_transition_allowed()?;
+        let _access = if workspace.active_session_is_external() {
+            None
+        } else {
+            workspace.acquire_library_access()?
+        };
         let _policy = crate::storage::NoCloudDownload::enter()?;
         action(&mut workspace)
     })
@@ -829,6 +854,69 @@ pub async fn open_note(
 }
 
 #[tauri::command]
+pub async fn open_external_note(
+    app: AppHandle,
+    state: State<'_, WorkspaceState>,
+    expected_session_id: Option<String>,
+) -> Result<Option<NoteSession>, WorkspaceError> {
+    let selected = tauri::async_runtime::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .add_filter("CueNote 笔记", &["cuenote"])
+            .blocking_pick_file()
+    })
+    .await
+    .map_err(|error| command_error(format!("无法打开文件选择器：{error}")))?;
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let path = selected
+        .into_path()
+        .map_err(|error| command_error(format!("请选择本机文件：{error}")))?;
+    recovery_session_work(state.inner().clone(), move |workspace| {
+        workspace.require_current_session(expected_session_id.as_deref())?;
+        workspace.open_external_note(path).map(Some)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn save_external_note_content(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    content: NoteContent,
+) -> Result<ExternalSaveReceipt, WorkspaceError> {
+    recovery_session_work(state.inner().clone(), move |workspace| {
+        workspace.save_external_note_content(&session_id, content)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn reopen_external_note(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+) -> Result<NoteSession, WorkspaceError> {
+    recovery_session_work(state.inner().clone(), move |workspace| {
+        workspace.reopen_external_note(&session_id)
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn save_external_into_library(
+    state: State<'_, WorkspaceState>,
+    session_id: String,
+    notebook_id: String,
+    content: NoteContent,
+) -> Result<SaveReceipt, WorkspaceError> {
+    mutate(state.inner().clone(), move |workspace| {
+        workspace.save_external_into_library(&session_id, &notebook_id, content)
+    })
+    .await
+}
+
+#[tauri::command]
 pub async fn save_note_text(
     state: State<'_, WorkspaceState>,
     session_id: String,
@@ -870,7 +958,7 @@ pub async fn stage_image_raw(
             return Err(command_error("图片请求必须使用原始字节数据。"));
         }
     };
-    work(state.inner().clone(), move |workspace| {
+    editor_work(state.inner().clone(), move |workspace| {
         workspace.stage_image_bytes(&session_id, &bytes)
     })
     .await
@@ -882,7 +970,7 @@ pub async fn preflight_image_insert(
     session_id: String,
     content: NoteContent,
 ) -> Result<(), WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    editor_work(state.inner().clone(), move |workspace| {
         workspace.preflight_image_insert(&session_id, content)
     })
     .await
@@ -894,7 +982,7 @@ pub async fn preflight_note_content(
     session_id: String,
     content: NoteContent,
 ) -> Result<(), WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    editor_work(state.inner().clone(), move |workspace| {
         workspace.preflight_note_content(&session_id, content)
     })
     .await
@@ -906,7 +994,7 @@ pub async fn read_image_asset(
     session_id: String,
     asset_id: String,
 ) -> Result<Response, WorkspaceError> {
-    work(state.inner().clone(), move |workspace| {
+    editor_work(state.inner().clone(), move |workspace| {
         workspace
             .read_image_asset(&session_id, &asset_id)
             .map(Response::new)
@@ -994,7 +1082,7 @@ pub async fn probe_external_changes(
     state: State<'_, WorkspaceState>,
     session_id: Option<String>,
 ) -> Result<ExternalProbe, WorkspaceError> {
-    let mut probe = work(state.inner().clone(), move |workspace| {
+    let mut probe = editor_work(state.inner().clone(), move |workspace| {
         workspace.probe_external_changes(session_id.as_deref())
     })
     .await?;
@@ -1008,7 +1096,7 @@ pub async fn reconcile_external_changes(
     session_id: String,
     content: NoteContent,
 ) -> Result<ExternalReconciliation, WorkspaceError> {
-    mutate(state.inner().clone(), move |workspace| {
+    editor_work(state.inner().clone(), move |workspace| {
         workspace.reconcile_external_changes(&session_id, content)
     })
     .await

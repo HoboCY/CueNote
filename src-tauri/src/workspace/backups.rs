@@ -2336,6 +2336,15 @@ pub(super) fn mark_backup_check_due(
     store_backup_preferences(config_root, preferences)
 }
 
+pub(super) fn configured_backup_directory(
+    config_root: &Path,
+) -> Result<Option<PathBuf>, WorkspaceError> {
+    load_backup_preferences(config_root)?
+        .directory
+        .map(|path| resolve_future_path(Path::new(&path)))
+        .transpose()
+}
+
 fn load_backup_preferences(config_root: &Path) -> Result<BackupPreferences, WorkspaceError> {
     let metadata = match fs::symlink_metadata(config_root) {
         Ok(metadata) => metadata,

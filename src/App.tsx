@@ -6,6 +6,7 @@ import { createSaveCoordinator, type SaveCoordinatorState } from './save-coordin
 import { createExternalChangesCoordinator, type ExternalChangeToken } from './external-changes';
 import { createSearchCoordinator, type SearchCoordinatorState } from './search-coordinator';
 import { continueFromVerifiedCopyOrProtect } from './conflict-transition';
+import { copyExternalDraft } from './external-note-copy';
 import { RichTextEditor, type RichTextSection } from './RichTextEditor';
 import { BackupPanel } from './BackupPanel';
 import { LibraryRestorePanel } from './LibraryRestorePanel';
@@ -23,7 +24,7 @@ import {
   type RecoveryList,
   type PreservedVersionList,
   type PreservedVersionSummary,
-  type SaveReceipt,
+  type EditorSaveReceipt,
   type SavedCopy,
   type SearchHit,
   type SearchProgress,
@@ -45,8 +46,9 @@ type CurrentCopy = SavedCopy & { sessionId: string; content: NoteContent };
 type ActivePreservedPreview = PreservedVersionSummary & {
   sessionId: string;
   returnNoteId: string | null;
+  returnExternal: boolean;
 };
-type SaveCoordinator = ReturnType<typeof createSaveCoordinator<NoteContent, SaveReceipt>>;
+type SaveCoordinator = ReturnType<typeof createSaveCoordinator<NoteContent, EditorSaveReceipt>>;
 type ExternalChangesCoordinator = ReturnType<typeof createExternalChangesCoordinator>;
 type EditorIssue = { message: string; initial: boolean } | null;
 type EditorIssues = Record<RichTextSection, EditorIssue>;
@@ -206,6 +208,7 @@ function App() {
   const [previewingVersionId, setPreviewingVersionId] = useState<string | null>(null);
   const [preservedVersionActionBusy, setPreservedVersionActionBusy] = useState(false);
   const [activePreservedPreview, setActivePreservedPreview] = useState<ActivePreservedPreview | null>(null);
+  const [externalCopyNotebookId, setExternalCopyNotebookId] = useState('');
   const [externalConflict, setExternalConflict] = useState(false);
   const [externalConflictKind, setExternalConflictKind] = useState<'conflict' | 'missing' | 'unreadable' | null>(null);
   const [externalMessage, setExternalMessage] = useState<string | null>(null);
@@ -482,8 +485,9 @@ function App() {
   };
 
   if (saveCoordinatorRef.current === null) {
-    saveCoordinatorRef.current = createSaveCoordinator<NoteContent, SaveReceipt>({
-      save: (sessionId, snapshot) => workspaceApi.save(sessionId, snapshot),
+    saveCoordinatorRef.current = createSaveCoordinator<NoteContent, EditorSaveReceipt>({
+      save: (sessionId, snapshot) => sessionRef.current?.origin.kind === 'external'
+        ? workspaceApi.saveExternal(sessionId, snapshot) : workspaceApi.save(sessionId, snapshot),
       onSaved: (snapshot, receipt) => {
         if (sessionRef.current?.sessionId !== snapshot.sessionId) return;
         updateSessionMetadata(receipt.session);
@@ -491,7 +495,10 @@ function App() {
         setSavedContent(saved);
         const currentWorkspace = workspaceRef.current;
         if (currentWorkspace) {
-          updateWorkspace({ ...currentWorkspace, library: receipt.library, session: receipt.session });
+          updateWorkspace({ ...currentWorkspace,
+            library: 'library' in receipt ? receipt.library : currentWorkspace.library,
+            notice: 'warning' in receipt ? receipt.warning : currentWorkspace.notice,
+            session: receipt.session });
         }
       },
       onState: (nextState) => {
@@ -1264,7 +1271,8 @@ function App() {
     if (!currentSession || !externalConflictRef.current || externalReconcilePendingRef.current) return;
     const transition: PendingTransition = {
       label: '打开磁盘上的最新版本',
-      run: async () => applySession(await workspaceApi.openNote(currentSession.noteId)),
+      run: async () => applySession(await (currentSession.origin.kind === 'external'
+        ? workspaceApi.reopenExternalNote(currentSession.sessionId) : workspaceApi.openNote(currentSession.noteId))),
     };
     pendingTransitionRef.current = transition;
     setPendingTransition(transition);
@@ -1279,6 +1287,7 @@ function App() {
       label: `预览“${version.title || '未命名笔记'}”的保留版本`,
       run: async () => {
         const returnNoteId = sessionRef.current?.noteId ?? null;
+        const returnExternal = sessionRef.current?.origin.kind === 'external' || activePreservedPreviewRef.current?.returnExternal === true;
         setPreviewingVersionId(version.versionId);
         try {
           const preview = await workspaceApi.openPreservedVersion(version.versionId);
@@ -1288,6 +1297,7 @@ function App() {
             ...version,
             sessionId: preview.sessionId,
             returnNoteId,
+            returnExternal,
           });
           void refreshPreservedVersions();
         } finally {
@@ -1383,6 +1393,10 @@ function App() {
   const closePreservedPreview = () => {
     const preview = activePreservedPreviewRef.current;
     if (!preview) return;
+    if (preview.returnExternal) {
+      requestTransition({ label: '返回库外原文件', run: async () => applySession(await workspaceApi.reopenExternalNote(preview.sessionId)) });
+      return;
+    }
     const library = workspaceRef.current?.library;
     const returnNote = preview.returnNoteId
       ? library?.notes.find((note) => note.noteId === preview.returnNoteId)
@@ -1905,9 +1919,51 @@ function App() {
     run: async () => applySession(await workspaceApi.openNote(noteId)),
   });
 
+  const openExternalNote = () => requestTransition({
+    label: '打开库外笔记',
+    run: async () => {
+      const opened = await workspaceApi.openExternalNote(sessionRef.current?.sessionId ?? null);
+      if (!opened) return;
+      setTrashView(false);
+      applySession(opened);
+    },
+  });
+
   const applyLibraryView = (nextLibrary: NonNullable<WorkspaceView['library']>) => {
     const currentWorkspace = workspaceRef.current;
     if (currentWorkspace) updateWorkspace({ ...currentWorkspace, library: nextLibrary });
+  };
+
+  const copyExternalIntoLibrary = async (notebookId: string) => {
+    const current = sessionRef.current;
+    if (!current || current.origin.kind !== 'external' || !notebookId
+      || operationInProgressRef.current || externalReconcilePendingRef.current || pendingTransitionRef.current) return;
+    operationInProgressRef.current = true;
+    setIsOperationBusy(true);
+    setError(null);
+    try {
+      const receipt = await copyExternalDraft({
+        pauseSaving: pauseAutomaticSaving,
+        settleEditors,
+        snapshot: () => {
+          if (sessionRef.current?.sessionId !== current.sessionId || !draftRef.current
+            || hasEditorIssue() && !hasInitialEditorIssue()) throw new Error('编辑内容尚未整理完成，草稿仍保留。');
+          return { sessionId: current.sessionId,
+            content: cloneNoteContent(hasInitialEditorIssue() ? current.content : draftRef.current) };
+        },
+        publish: ({ sessionId, content }) => workspaceApi.saveExternalIntoLibrary(sessionId, notebookId, content),
+      });
+      applyLibraryView(receipt.library);
+      setTrashView(false);
+      persistViewPreferences({ ...viewPreferencesRef.current, selectedNotebookId: notebookId });
+      applySession(receipt.session);
+    } catch (cause) {
+      setError(toWorkspaceError(cause));
+    } finally {
+      operationInProgressRef.current = false;
+      setIsOperationBusy(false);
+      resumeAutomaticSavingWhenSafe();
+    }
   };
 
   const rebuildSearchIndex = async () => {
@@ -2203,6 +2259,8 @@ function App() {
   const canCreateNote = Boolean(library && (isTrashView
     ? library.defaultNotebookId !== null
     : selectedNotebook !== null || library.defaultNotebookId !== null));
+  const externalCopyTarget = notebooks.some(notebook => notebook.notebookId === externalCopyNotebookId)
+    ? externalCopyNotebookId : selectedNotebook?.notebookId ?? library?.defaultNotebookId ?? notebooks[0]?.notebookId ?? '';
   const visibleNotes = isTrashView
     ? trashNotes
     : selectedNotebook
@@ -2249,7 +2307,9 @@ function App() {
   const displayedTitle = usesStoredReadOnlyProjection || isActivePreservedPreview || isTrashSession
     ? session?.text.title
     : displayedDraft?.title;
-  const sessionNotebookName = !session
+  const sessionNotebookName = session?.origin.kind === 'external'
+    ? '库外笔记 · 保存到原文件'
+    : !session
     ? null
     : isTrashSession
       ? sessionNotebookId === null
@@ -2378,11 +2438,11 @@ function App() {
                 {results.hits.map((hit) => (
                   <li key={hit.note.noteId}>
                     <button
-                      className={`sidebar-note-item search-note-item${sessionMatchesView && session?.noteId === hit.note.noteId ? ' is-current' : ''}`}
+                      className={`sidebar-note-item search-note-item${sessionMatchesView && session?.origin.kind === 'library' && session.noteId === hit.note.noteId ? ' is-current' : ''}`}
                       type="button"
                       data-testid="search-note-item"
                       data-note-id={hit.note.noteId}
-                      aria-current={sessionMatchesView && session?.noteId === hit.note.noteId ? 'page' : undefined}
+                      aria-current={sessionMatchesView && session?.origin.kind === 'library' && session.noteId === hit.note.noteId ? 'page' : undefined}
                       disabled={navigationLocked}
                       onClick={() => openNote(hit.note.noteId, hit.note.title)}
                       title={`命中${searchSectionLabel(hit.section)}：${hit.snippet.before}${hit.snippet.matched}${hit.snippet.after}`}
@@ -2687,11 +2747,11 @@ function App() {
                   {visibleNotes.map((note) => (
                     <li key={note.noteId} data-testid={isTrashView ? 'trash-note-row' : undefined}>
                       <button
-                        className={`sidebar-note-item${sessionMatchesView && session?.noteId === note.noteId ? ' is-current' : ''}`}
+                        className={`sidebar-note-item${sessionMatchesView && session?.origin.kind === 'library' && session.noteId === note.noteId ? ' is-current' : ''}`}
                         type="button"
                         data-testid={isTrashView ? 'trash-note-item' : 'normal-note-item'}
                         data-note-id={note.noteId}
-                        aria-current={sessionMatchesView && session?.noteId === note.noteId ? 'page' : undefined}
+                        aria-current={sessionMatchesView && session?.origin.kind === 'library' && session.noteId === note.noteId ? 'page' : undefined}
                         disabled={navigationLocked}
                         onClick={() => openNote(note.noteId, note.title)}
                         title={`${noteTitle(note)} · ${formatModifiedAt(isTrashView ? note.trashedAt ?? note.modifiedAt : note.modifiedAt)}`}
@@ -2756,6 +2816,8 @@ function App() {
               {desktopRuntime
                 ? isTrashView
                   ? '回收站中的笔记只读；恢复后可继续编辑。'
+                  : session?.origin.kind === 'external'
+                    ? '正在编辑库外笔记，修改保存到原文件。'
                   : library
                     ? '在自己的笔记库中记录与回顾。'
                     : '先选择笔记库，笔记会保存在你控制的本机目录中。'
@@ -2771,6 +2833,9 @@ function App() {
               )}
               <button className="quiet-button" type="button" disabled={navigationLocked} onClick={chooseLibrary}>
                 {library ? '更换笔记库' : '选择笔记库'}
+              </button>
+              <button className="quiet-button" type="button" disabled={navigationLocked} onClick={openExternalNote}>
+                打开库外笔记…
               </button>
               {library && (
                 <button className="quiet-button" type="button" disabled={isInitializing || isOperationBusy || isReconcilingExternalChange} onClick={openLibraryFolder}>
@@ -2801,6 +2866,8 @@ function App() {
                     ? '正在启用关闭保护，完成前暂不能编辑笔记。'
                   : error && !workspace
                     ? '无法读取工作区。请重试，或重新打开桌面应用。'
+                    : session?.origin.kind === 'external'
+                      ? `库外文件：${session.origin.path}`
                     : library
                       ? `笔记库位置：${library.path}`
                       : workspace?.defaultLibraryPath
@@ -3064,7 +3131,7 @@ function App() {
           <section className="empty-workspace" aria-live="polite"><span className="loading-mark" aria-hidden="true" /><h2>正在读取笔记库</h2><p>请稍候，正在打开上次使用的位置。</p></section>
         ) : error && !workspace ? (
           <section className="empty-workspace"><h2>暂时无法打开工作区</h2><p>请重试，或选择一个笔记库继续。</p><div className="empty-actions"><button className="primary-button" type="button" onClick={() => { setError(null); setIsInitializing(true); void workspaceApi.get().then(applyWorkspace).catch((cause: unknown) => setError(toWorkspaceError(cause))).finally(() => setIsInitializing(false)); }}>重试</button><button className="quiet-button" type="button" onClick={chooseLibrary}>选择笔记库</button></div></section>
-        ) : !library ? (
+        ) : !library && !session ? (
           <section className="empty-workspace">
             <span className="empty-mark" aria-hidden="true">✳</span>
             <h2>选择你的笔记库</h2>
@@ -3106,9 +3173,26 @@ function App() {
               <span>康奈尔笔记</span>
               <span className="paper-topline-right"><span className={`paper-dot${saveFailed || isDirty || hasAnyEditorIssue || session.revision === null ? ' is-unsaved' : ' is-saved'}`} />{saveStatus}</span>
             </div>
+            {session.origin.kind === 'external' && (
+              <div className="workspace-notice external-note-context" data-testid="external-note-context">
+                <strong>库外笔记</strong>
+                <p>保存到原文件：<code>{session.origin.path}</code></p>
+                <p>此文件不在当前笔记库的搜索和备份范围内。另存入库会创建独立副本，原文件保留。</p>
+                {notebooks.length > 0 ? <div className="note-organization-controls">
+                  <label>副本存入
+                    <select aria-label="库外笔记副本的目标笔记本" value={externalCopyTarget} disabled={navigationLocked}
+                      onChange={event => setExternalCopyNotebookId(event.currentTarget.value)}>
+                      {notebooks.map(notebook => <option key={notebook.notebookId} value={notebook.notebookId}>{notebookDisplayLabel(notebooks, notebook)}</option>)}
+                    </select>
+                  </label>
+                  <button className="quiet-button" type="button" disabled={navigationLocked || !externalCopyTarget || hasBlockingIssue}
+                    onClick={() => void copyExternalIntoLibrary(externalCopyTarget)}>另存独立副本到笔记库</button>
+                </div> : <p>如需另存入库，请先选择笔记库，再打开此文件。</p>}
+              </div>
+            )}
             <div className="note-organization" aria-label="当前笔记整理方式">
-              <span className="note-notebook-context">当前笔记本：<strong title={sessionNotebookDisplay?.shortId ? sessionNotebookDisplay.tooltip : undefined}>{sessionNotebookName}</strong></span>
-              {desktopRuntime && library && !isTrashSession && (
+              <span className="note-notebook-context">{session.origin.kind === 'external' ? '当前笔记：' : '当前笔记本：'}<strong title={sessionNotebookDisplay?.shortId ? sessionNotebookDisplay.tooltip : undefined}>{sessionNotebookName}</strong></span>
+              {desktopRuntime && library && session.origin.kind === 'library' && !isTrashSession && (
                 <div className="note-organization-controls">
                   <label className="note-move-control">
                     <span>移动到</span>
@@ -3190,7 +3274,7 @@ function App() {
                 {isActivePreservedPreview && (
                   <div className="preserved-preview-actions">
                     <button className="quiet-button" type="button" disabled={navigationLocked} onClick={closePreservedPreview}>关闭预览</button>
-                    {(library?.notes.some((note) => note.noteId === activePreservedPreview?.noteId)
+                    {!activePreservedPreview?.returnExternal && (library?.notes.some((note) => note.noteId === activePreservedPreview?.noteId)
                       || library?.trashNotes.some((note) => note.noteId === activePreservedPreview?.noteId)) && (
                       <button className="quiet-button" type="button" disabled={navigationLocked} onClick={() => openPreviewDestination(activePreservedPreview?.noteId ?? null)}>打开笔记库中的原笔记</button>
                     )}
