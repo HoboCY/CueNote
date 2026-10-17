@@ -151,13 +151,72 @@ pub fn build_note(
 
     let mut bytes = Cursor::new(Vec::new());
     cuenote_lib::note_format::write_package(&mut bytes, &package)?;
-    let bytes = bytes.into_inner();
+    let mut bytes = bytes.into_inner();
+    canonicalize_fixture_creator_os(&mut bytes)?;
     Ok(BuiltNote {
         bytes,
         text_chars,
         images,
         map_nodes: map_node_count,
     })
+}
+
+/// zip 9 chooses DOS on Windows and Unix elsewhere by default. The frozen Q51
+/// corpus was created on Windows: normalize this metadata byte only so its
+/// existing hashes remain exact on Mac. Product serialization stays untouched.
+fn canonicalize_fixture_creator_os(bytes: &mut [u8]) -> Result<(), Box<dyn Error>> {
+    let offsets = {
+        let mut archive = zip::ZipArchive::new(Cursor::new(&*bytes))?;
+        let mut offsets = Vec::with_capacity(archive.len());
+        for index in 0..archive.len() {
+            let file = archive.by_index(index)?;
+            let offset = usize::try_from(file.central_header_start())?;
+            if bytes.get(offset..offset + 4) != Some(&[0x50, 0x4b, 0x01, 0x02])
+                || !matches!(bytes.get(offset + 5), Some(0 | 3))
+            {
+                return Err("Unexpected ZIP creator metadata in generated fixture".into());
+            }
+            offsets.push(offset + 5);
+        }
+        offsets
+    };
+    for offset in offsets {
+        bytes[offset] = 0; // ZIP creator OS: DOS, as in the frozen Windows corpus.
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod creator_metadata_tests {
+    use super::*;
+
+    #[test]
+    fn unix_creator_metadata_normalizes_to_the_frozen_dos_bytes_without_content_changes() {
+        let reference = &model::library_notes(&model::SMALL)[0];
+        let original = build_note(
+            reference,
+            &model::notebooks(&model::SMALL)[0].notebook_id,
+            0,
+        )
+        .unwrap()
+        .bytes;
+        let mut unix = original.clone();
+        let mut archive = zip::ZipArchive::new(Cursor::new(&original)).unwrap();
+        for index in 0..archive.len() {
+            let offset = archive.by_index(index).unwrap().central_header_start() as usize;
+            assert_eq!(original[offset + 5], 0);
+            unix[offset + 5] = 3;
+        }
+        assert_ne!(unix, original);
+        assert_eq!(
+            cuenote_lib::note_format::read_package(Cursor::new(&unix)).unwrap(),
+            cuenote_lib::note_format::read_package(Cursor::new(&original)).unwrap()
+        );
+        canonicalize_fixture_creator_os(&mut unix).unwrap();
+        assert_eq!(unix, original);
+        canonicalize_fixture_creator_os(&mut unix).unwrap();
+        assert_eq!(unix, original);
+    }
 }
 
 fn label(note: &NoteRef) -> String {
