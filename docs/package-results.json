@@ -1,0 +1,819 @@
+{
+  "format": 1,
+  "issue": 32,
+  "date": "2026-10-17",
+  "candidate": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+  "ci": {
+    "conclusion": "success",
+    "headSha": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+    "jobs": [
+      {
+        "completedAt": "2026-10-17T15:31:38Z",
+        "conclusion": "success",
+        "databaseId": 117428519341,
+        "name": "package (windows-2022, x86_64-pc-windows-msvc)",
+        "startedAt": "2026-10-17T15:09:57Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-17T15:09:58Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-17T15:09:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:10:05Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "startedAt": "2026-10-17T15:09:58Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:10:11Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 3,
+            "startedAt": "2026-10-17T15:10:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:10:31Z",
+            "conclusion": "success",
+            "name": "Locked toolchain and host architecture",
+            "number": 4,
+            "startedAt": "2026-10-17T15:10:11Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:19:06Z",
+            "conclusion": "success",
+            "name": "Frontend and native checks",
+            "number": 5,
+            "startedAt": "2026-10-17T15:10:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:19:08Z",
+            "conclusion": "success",
+            "name": "Complete license inventory",
+            "number": 6,
+            "startedAt": "2026-10-17T15:19:06Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:30:21Z",
+            "conclusion": "success",
+            "name": "Build personal package and synthetic older version",
+            "number": 7,
+            "startedAt": "2026-10-17T15:19:08Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:31:31Z",
+            "conclusion": "success",
+            "name": "Install, start, upgrade, uninstall and reinstall on disposable runner",
+            "number": 8,
+            "startedAt": "2026-10-17T15:30:21Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:31:33Z",
+            "conclusion": "success",
+            "name": "Encrypt tested personal delivery",
+            "number": 9,
+            "startedAt": "2026-10-17T15:31:31Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:31:34Z",
+            "conclusion": "success",
+            "name": "Upload encrypted artifact only",
+            "number": 10,
+            "startedAt": "2026-10-17T15:31:33Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:31:34Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 19,
+            "startedAt": "2026-10-17T15:31:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:31:36Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 20,
+            "startedAt": "2026-10-17T15:31:34Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:31:36Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 21,
+            "startedAt": "2026-10-17T15:31:36Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/HoboCY/CueNote/actions/runs/39043840730/job/117428519341"
+      },
+      {
+        "completedAt": "2026-10-17T15:27:01Z",
+        "conclusion": "success",
+        "databaseId": 117428519546,
+        "name": "package (macos-15, aarch64-apple-darwin)",
+        "startedAt": "2026-10-17T15:10:02Z",
+        "status": "completed",
+        "steps": [
+          {
+            "completedAt": "2026-10-17T15:10:03Z",
+            "conclusion": "success",
+            "name": "Set up job",
+            "number": 1,
+            "startedAt": "2026-10-17T15:10:02Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:10:05Z",
+            "conclusion": "success",
+            "name": "Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 2,
+            "startedAt": "2026-10-17T15:10:03Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:10:10Z",
+            "conclusion": "success",
+            "name": "Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 3,
+            "startedAt": "2026-10-17T15:10:05Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:10:22Z",
+            "conclusion": "success",
+            "name": "Locked toolchain and host architecture",
+            "number": 4,
+            "startedAt": "2026-10-17T15:10:10Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:17:33Z",
+            "conclusion": "success",
+            "name": "Frontend and native checks",
+            "number": 5,
+            "startedAt": "2026-10-17T15:10:22Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:17:36Z",
+            "conclusion": "success",
+            "name": "Complete license inventory",
+            "number": 6,
+            "startedAt": "2026-10-17T15:17:33Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:25:35Z",
+            "conclusion": "success",
+            "name": "Build personal package and synthetic older version",
+            "number": 7,
+            "startedAt": "2026-10-17T15:17:36Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:26:49Z",
+            "conclusion": "success",
+            "name": "Install, start, upgrade, uninstall and reinstall on disposable runner",
+            "number": 8,
+            "startedAt": "2026-10-17T15:25:35Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:26:52Z",
+            "conclusion": "success",
+            "name": "Encrypt tested personal delivery",
+            "number": 9,
+            "startedAt": "2026-10-17T15:26:49Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:26:54Z",
+            "conclusion": "success",
+            "name": "Upload encrypted artifact only",
+            "number": 10,
+            "startedAt": "2026-10-17T15:26:52Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:26:55Z",
+            "conclusion": "success",
+            "name": "Post Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+            "number": 19,
+            "startedAt": "2026-10-17T15:26:54Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:26:55Z",
+            "conclusion": "success",
+            "name": "Post Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
+            "number": 20,
+            "startedAt": "2026-10-17T15:26:55Z",
+            "status": "completed"
+          },
+          {
+            "completedAt": "2026-10-17T15:26:58Z",
+            "conclusion": "success",
+            "name": "Complete job",
+            "number": 21,
+            "startedAt": "2026-10-17T15:26:55Z",
+            "status": "completed"
+          }
+        ],
+        "url": "https://github.com/HoboCY/CueNote/actions/runs/39043840730/job/117428519546"
+      }
+    ],
+    "status": "completed",
+    "url": "https://github.com/HoboCY/CueNote/actions/runs/39043840730"
+  },
+  "scope": "Disposable CI installation lifecycle and local artifact verification. Not personal-device or OneDrive acceptance.",
+  "platforms": [
+    {
+      "target": "x86_64-pc-windows-msvc",
+      "receipt": {
+        "format": 1,
+        "version": "0.1.0",
+        "target": "x86_64-pc-windows-msvc",
+        "rust": "1.99.0",
+        "node": "24.21.0",
+        "architecture": "x86_64",
+        "sourceCommit": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+        "sourceDirty": false,
+        "identifier": "com.hobocy.cuenote",
+        "features": [
+          "tauri/custom-protocol"
+        ],
+        "installer": {
+          "name": "CueNote_0.1.0_x64-setup.exe",
+          "sha256": "ae6f1c006519dc76b7b8f5492bb0e60283f8f830b173d1075d92fb94d2e42393"
+        },
+        "binarySha256": "b1e20fd72b3d2f3543d7f8eb7b7ee4651a961d2bf1013afa148b55662bd7aae8",
+        "fixtureInstaller": "upgrade-fixture/CueNote_0.0.0_x64-setup.exe",
+        "fixturePurpose": "Synthetic 0.0.0 -> current metadata upgrade of same source; not historical data migration",
+        "lockfiles": {
+          "package-lock.json": "988348acc5b4219bd11848917101832b20639eec8548ffab638809d87b608be6",
+          "src-tauri/Cargo.lock": "edce47aaab0c028c5f143555b01a9b339105236ae7c0fc6e915d83d016392187",
+          "rust-toolchain.toml": "cf1009b3023f17923a614410938e3df626e41a0a8c079fae34f2405733273da6",
+          ".node-version": "04d43a993a37e6543c8b1cc37d498fa4a10250034ab922207b1a6a1e41e216da"
+        },
+        "tools": {
+          "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: x86_64-pc-windows-msvc\nrelease: 1.99.0\nLLVM version: 23.1.1",
+          "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
+          "node": "v24.21.0",
+          "tauri": "2.12.1"
+        },
+        "runner": {
+          "os": "win32",
+          "image": "win22",
+          "imageVersion": "20261012.333.1",
+          "runId": "39043840730",
+          "attempt": "1"
+        },
+        "signing": "unsigned personal test"
+      },
+      "lifecycle": {
+        "format": 1,
+        "target": "x86_64-pc-windows-msvc",
+        "checkpoints": [
+          {
+            "stage": "first-install-0.0.0",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "start-0.0.0",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "upgrade-0.0.0-to-0.1.0",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "start-upgraded-version",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "uninstall",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "reinstall-current-version",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "start-reinstalled-version",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "final-uninstall",
+            "preservedFiles": 19,
+            "passed": true
+          }
+        ],
+        "note": "Disposable runner only. Native notes, history and manual backup hashes preserved. Does not replace user-device/OneDrive acceptance.",
+        "protectedFiles": [
+          {
+            "path": "<runner-home>\\AppData\\Roaming\\com.hobocy.cuenote\\installer-retention-sentinel.txt",
+            "sha256": "a62e0f3cea61df220ca38353143906201cff5c254160aac7945b38c9d49e76fc"
+          },
+          {
+            "path": "<runner-home>\\Documents\\CueNote\\notebooks\\11fc66de-95d1-4bf6-95bf-b4c2c0f0285d.json",
+            "sha256": "5b7750a645e43b403cd45ae7365b74220c8961c802bb92294b3ec2dcf92065eb"
+          },
+          {
+            "path": "<runner-home>\\Documents\\CueNote\\notes\\6115d884-8d55-4152-ba9b-90dc3106b70b.cuenote",
+            "sha256": "364957361ade02f91d377892ceb7c909200f06a8bfcc9db042854f7a0af8c182"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\.locks\\c055ec2355d72fbbfd78c21d3040c4d3f141ac1e5a8e59ac1f0a7ae4773f644e.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\.locks\\cb07f74b9419927536da174f2ae4ceca9f17b3dbed366b8221338ebcb60f3eb4.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\.locks\\d6fc3431944489a02acdae1f209841f286779c6a9bea1effdd18144ff6303a35.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\.locks\\f885a71addd89a82c5b2799eaf571c94d46f4b06dfbe7777c893c6acff087325.library.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\.locks\\versions.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\history\\b8e6eadd0fe70119c3696763b31b78d7f9ff7f2ba408c48969acb499dd4b3376\\5916fbc806f9ac4e3f2287237142f45ad29e34d8c68c77f4a5ef491a6e64f40f.cuenote",
+            "sha256": "5916fbc806f9ac4e3f2287237142f45ad29e34d8c68c77f4a5ef491a6e64f40f"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\versions\\c055ec2355d72fbbfd78c21d3040c4d3f141ac1e5a8e59ac1f0a7ae4773f644e\\metadata.json",
+            "sha256": "8fab806f06e9a9e9531a7d6ddd24e83160aefab623ac5b4de3a605f30e579bee"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\versions\\c055ec2355d72fbbfd78c21d3040c4d3f141ac1e5a8e59ac1f0a7ae4773f644e\\note.cuenote",
+            "sha256": "5916fbc806f9ac4e3f2287237142f45ad29e34d8c68c77f4a5ef491a6e64f40f"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\versions\\cb07f74b9419927536da174f2ae4ceca9f17b3dbed366b8221338ebcb60f3eb4\\metadata.json",
+            "sha256": "1433d1271e0cdce2a591995ffcd7c679d6e1736cfefb09b3cf5c69612ca31a52"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\versions\\cb07f74b9419927536da174f2ae4ceca9f17b3dbed366b8221338ebcb60f3eb4\\note.cuenote",
+            "sha256": "364957361ade02f91d377892ceb7c909200f06a8bfcc9db042854f7a0af8c182"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\versions\\groups\\1a21d3d54ec1553f7ca5be29349dfeeba241bcdeb0b8b6c9b9c5ca691c3538b4\\c055ec2355d72fbbfd78c21d3040c4d3f141ac1e5a8e59ac1f0a7ae4773f644e",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\recovery\\versions\\groups\\1a21d3d54ec1553f7ca5be29349dfeeba241bcdeb0b8b6c9b9c5ca691c3538b4\\cb07f74b9419927536da174f2ae4ceca9f17b3dbed366b8221338ebcb60f3eb4",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\backups\\449aa1e167481d28556e9dd297b00bf5af3234b18ff7b7e3b03d67a4517418a6\\.cuenote-backup.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\backups\\449aa1e167481d28556e9dd297b00bf5af3234b18ff7b7e3b03d67a4517418a6\\8855061f-3760-4cf8-91bf-1e1571bbb67c\\manifest.json",
+            "sha256": "2e8846d59dc022ccc65f987b1835e78d9dccf12b328f418d67fce585ab6509db"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\backups\\449aa1e167481d28556e9dd297b00bf5af3234b18ff7b7e3b03d67a4517418a6\\8855061f-3760-4cf8-91bf-1e1571bbb67c\\notebooks\\11fc66de-95d1-4bf6-95bf-b4c2c0f0285d.json",
+            "sha256": "5b7750a645e43b403cd45ae7365b74220c8961c802bb92294b3ec2dcf92065eb"
+          },
+          {
+            "path": "<runner-home>\\AppData\\Local\\com.hobocy.cuenote\\backups\\449aa1e167481d28556e9dd297b00bf5af3234b18ff7b7e3b03d67a4517418a6\\8855061f-3760-4cf8-91bf-1e1571bbb67c\\notes\\6115d884-8d55-4152-ba9b-90dc3106b70b.cuenote",
+            "sha256": "364957361ade02f91d377892ceb7c909200f06a8bfcc9db042854f7a0af8c182"
+          }
+        ]
+      },
+      "localVerification": {
+        "source": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+        "target": "x86_64-pc-windows-msvc",
+        "version": "0.1.0",
+        "installer": {
+          "name": "CueNote_0.1.0_x64-setup.exe",
+          "sha256": "ae6f1c006519dc76b7b8f5492bb0e60283f8f830b173d1075d92fb94d2e42393"
+        },
+        "components": 409,
+        "licenseTexts": 634,
+        "lifecycleStages": 8,
+        "verified": true
+      },
+      "checks": {
+        "frontend": 136,
+        "frontendFailed": 0,
+        "frontendSkipped": 0,
+        "nativePrograms": 35,
+        "nativePassed": 211,
+        "nativeFailed": 0,
+        "nativeIgnored": 0
+      },
+      "artifact": {
+        "id": 12105686968,
+        "zipSha256": "5d3a531961d8a8ef59590ea682ca2b9570ebb8cf738a969b647443e1a9d73e1a",
+        "encryptedFile": "CueNote_0.1.0_x86_64-pc-windows-msvc.tar.gz.age",
+        "encryptedSha256": "4b541958c847bba29a6232beb79efc5f82d69faf83369a7bd130e99ef45c615a"
+      },
+      "evidenceHashes": {
+        "receipt": "d8854c9103e9ea93113ed92245f1f5de78591086689f005301571689b10a441b",
+        "lifecycle": "76fc38a167972d2949dd830c3fa3c5fab4d85307c8baea8d6a77e5300d15b8d3",
+        "components": "4ec2bb605d51c17287addf0009c6f4b59389ff94942dc6f135258ab69c39e8a0",
+        "ciJobLog": "54e4d12a24cb470262894bad815a6578c96f3db5c6574bdac07aa52cbe04a7a8"
+      }
+    },
+    {
+      "target": "aarch64-apple-darwin",
+      "receipt": {
+        "format": 1,
+        "version": "0.1.0",
+        "target": "aarch64-apple-darwin",
+        "rust": "1.99.0",
+        "node": "24.21.0",
+        "architecture": "arm64",
+        "sourceCommit": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+        "sourceDirty": false,
+        "identifier": "com.hobocy.cuenote",
+        "features": [
+          "tauri/custom-protocol"
+        ],
+        "installer": {
+          "name": "CueNote_0.1.0_aarch64.dmg",
+          "sha256": "ecf01824b5a91e881dfffb9e1d56118e651ee24bd735b8471c5bcfd3e6825428"
+        },
+        "binarySha256": "6d75643740adc34f3922e82aaa123b9dec1e23e207a3112b2215863d41b761a4",
+        "fixtureInstaller": "upgrade-fixture/CueNote_0.0.0_aarch64.dmg",
+        "fixturePurpose": "Synthetic 0.0.0 -> current metadata upgrade of same source; not historical data migration",
+        "lockfiles": {
+          "package-lock.json": "c478c31a6d09d7c76e87eea92b47fa5a84dc9c12a3eb8811e6b90270ddc84c7d",
+          "src-tauri/Cargo.lock": "804f4deba43415c6675d204c2090e5e0be9f120c78f3db68ad64c28a6c1008f0",
+          "rust-toolchain.toml": "da74f15d4ea22066934e0bfe22c80c56f370325f9cbec579de66f080046cca1c",
+          ".node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f"
+        },
+        "tools": {
+          "rustc": "rustc 1.99.0 (b940084d7 2026-09-28)\nbinary: rustc\ncommit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4\ncommit-date: 2026-09-28\nhost: aarch64-apple-darwin\nrelease: 1.99.0\nLLVM version: 23.1.1",
+          "cargo": "cargo 1.99.0 (5f94df478 2026-08-27)",
+          "node": "v24.21.0",
+          "tauri": "2.12.1",
+          "xcode": "Xcode 16.4\nBuild version 16F6"
+        },
+        "runner": {
+          "os": "darwin",
+          "image": "macos15",
+          "imageVersion": "20260907.0337.1",
+          "runId": "39043840730",
+          "attempt": "1"
+        },
+        "signing": "ad-hoc; not notarized"
+      },
+      "lifecycle": {
+        "format": 1,
+        "target": "aarch64-apple-darwin",
+        "checkpoints": [
+          {
+            "stage": "first-install-0.0.0",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "start-0.0.0",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "upgrade-0.0.0-to-0.1.0",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "start-upgraded-version",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "uninstall",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "reinstall-current-version",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "start-reinstalled-version",
+            "preservedFiles": 19,
+            "passed": true
+          },
+          {
+            "stage": "final-uninstall",
+            "preservedFiles": 19,
+            "passed": true
+          }
+        ],
+        "note": "Disposable runner only. Native notes, history and manual backup hashes preserved. Does not replace user-device/OneDrive acceptance.",
+        "protectedFiles": [
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/installer-retention-sentinel.txt",
+            "sha256": "a62e0f3cea61df220ca38353143906201cff5c254160aac7945b38c9d49e76fc"
+          },
+          {
+            "path": "<runner-home>/Documents/CueNote/notebooks/24f1a865-a2c6-4313-98c3-4d149752ae71.json",
+            "sha256": "c136281329e2b450c5cd89695ce48526e4cea394443223c8a8e9779ac2f2a2eb"
+          },
+          {
+            "path": "<runner-home>/Documents/CueNote/notes/87cc111a-ef3b-4dd3-8e36-d85a3df20f90.cuenote",
+            "sha256": "2b9a4efe8c3226ae78a61621567413dd185d54288aabd1ff30f225936c65716e"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/.locks/323da0ac1d52bc121d0114c67c7e62f0237f853d13103cf7012b11fb4808a956.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/.locks/891b5c990c9bee9a39176033fc20b8f3bcff4e9bf5f00026851b5483431702ca.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/.locks/92be617f9ef0fd291dcc864f2a254645aa82e478ae6ed53db204d3d40901525c.library.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/.locks/9382f043cac3099106fcd9c6e55ca0b26ce7eb181e6ee482c723beebfe6640c4.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/.locks/versions.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/history/4b9bae5c5c866051c6ccb608acc43cb313e0d0ba68906dd82dc52a376e448dfe/c6f0c90906464e2455031209e162447cf573934b66741ca565fdf36615614c22.cuenote",
+            "sha256": "c6f0c90906464e2455031209e162447cf573934b66741ca565fdf36615614c22"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/versions/323da0ac1d52bc121d0114c67c7e62f0237f853d13103cf7012b11fb4808a956/metadata.json",
+            "sha256": "b1ac9a1ca9bea8bf25a3463ae063bca6b58c7e783dede063be45ca95895c3ac5"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/versions/323da0ac1d52bc121d0114c67c7e62f0237f853d13103cf7012b11fb4808a956/note.cuenote",
+            "sha256": "c6f0c90906464e2455031209e162447cf573934b66741ca565fdf36615614c22"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/versions/891b5c990c9bee9a39176033fc20b8f3bcff4e9bf5f00026851b5483431702ca/metadata.json",
+            "sha256": "34e361d3fe9ac55c889c148f2d5e5092b916a8c7f12c5e324707999ee5f2a550"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/versions/891b5c990c9bee9a39176033fc20b8f3bcff4e9bf5f00026851b5483431702ca/note.cuenote",
+            "sha256": "2b9a4efe8c3226ae78a61621567413dd185d54288aabd1ff30f225936c65716e"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/versions/groups/38c37e88e1715dc6125486d697a600a40e943e04d5bbfa92d25df40dae868159/323da0ac1d52bc121d0114c67c7e62f0237f853d13103cf7012b11fb4808a956",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/recovery/versions/groups/38c37e88e1715dc6125486d697a600a40e943e04d5bbfa92d25df40dae868159/891b5c990c9bee9a39176033fc20b8f3bcff4e9bf5f00026851b5483431702ca",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/backups/92be617f9ef0fd291dcc864f2a254645aa82e478ae6ed53db204d3d40901525c/.cuenote-backup.lock",
+            "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/backups/92be617f9ef0fd291dcc864f2a254645aa82e478ae6ed53db204d3d40901525c/790b5ab3-1bb1-4a87-a0ae-8fd12c1c00c1/manifest.json",
+            "sha256": "11706bdf106611e96d16b0fa29c43e47cd95e3b171454aaea3f1fb4c4f67ed81"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/backups/92be617f9ef0fd291dcc864f2a254645aa82e478ae6ed53db204d3d40901525c/790b5ab3-1bb1-4a87-a0ae-8fd12c1c00c1/notebooks/24f1a865-a2c6-4313-98c3-4d149752ae71.json",
+            "sha256": "c136281329e2b450c5cd89695ce48526e4cea394443223c8a8e9779ac2f2a2eb"
+          },
+          {
+            "path": "<runner-home>/Library/Application Support/com.hobocy.cuenote/backups/92be617f9ef0fd291dcc864f2a254645aa82e478ae6ed53db204d3d40901525c/790b5ab3-1bb1-4a87-a0ae-8fd12c1c00c1/notes/87cc111a-ef3b-4dd3-8e36-d85a3df20f90.cuenote",
+            "sha256": "2b9a4efe8c3226ae78a61621567413dd185d54288aabd1ff30f225936c65716e"
+          }
+        ]
+      },
+      "localVerification": {
+        "source": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+        "target": "aarch64-apple-darwin",
+        "version": "0.1.0",
+        "installer": {
+          "name": "CueNote_0.1.0_aarch64.dmg",
+          "sha256": "ecf01824b5a91e881dfffb9e1d56118e651ee24bd735b8471c5bcfd3e6825428"
+        },
+        "components": 405,
+        "licenseTexts": 633,
+        "lifecycleStages": 8,
+        "verified": true
+      },
+      "checks": {
+        "frontend": 136,
+        "frontendFailed": 0,
+        "frontendSkipped": 0,
+        "nativePrograms": 35,
+        "nativePassed": 203,
+        "nativeFailed": 0,
+        "nativeIgnored": 0
+      },
+      "artifact": {
+        "id": 12105487155,
+        "zipSha256": "8737c6dd6bec58bc4e8a533cbb3bd564d87df8347a58815442ab88776a3304e8",
+        "encryptedFile": "CueNote_0.1.0_aarch64-apple-darwin.tar.gz.age",
+        "encryptedSha256": "c62d1e491d4a179a2f2324135a3c84bb835bb7a11a6681538716b600ff4fc4d3"
+      },
+      "evidenceHashes": {
+        "receipt": "e70ad7b1babbe4c2a894edc6106b2ce0dc135d147802f4c0c8fae706c7e95f76",
+        "lifecycle": "6c0475e5a95be9883b8f4204b0625aa34557065c54fd36c890cf1ef9b8b9e8b8",
+        "components": "bb31c2a700422273ef9e34509d62473a3ce8d963b48fe652b8d420d07eac787b",
+        "ciJobLog": "600727791c10db624eb734623110593fd87baf2aec00b09f7c8851bfd2b00cd5"
+      }
+    }
+  ],
+  "npmAudit": {
+    "development": {
+      "auditReportVersion": 2,
+      "vulnerabilities": {
+        "vite": {
+          "name": "vite",
+          "severity": "high",
+          "isDirect": true,
+          "via": [
+            {
+              "source": 1109137,
+              "name": "vite",
+              "dependency": "vite",
+              "title": "vite allows server.fs.deny bypass via backslash on Windows",
+              "url": "https://github.com/advisories/GHSA-93m4-6634-74q7",
+              "severity": "moderate",
+              "cwe": [
+                "CWE-22"
+              ],
+              "cvss": {
+                "score": 0,
+                "vectorString": null
+              },
+              "range": ">=7.1.0 <=7.1.10"
+            },
+            {
+              "source": 1116230,
+              "name": "vite",
+              "dependency": "vite",
+              "title": "Vite Vulnerable to Path Traversal in Optimized Deps `.map` Handling",
+              "url": "https://github.com/advisories/GHSA-4w7w-66w2-5vf9",
+              "severity": "moderate",
+              "cwe": [
+                "CWE-22",
+                "CWE-200"
+              ],
+              "cvss": {
+                "score": 0,
+                "vectorString": null
+              },
+              "range": ">=7.0.0 <=7.3.1"
+            },
+            {
+              "source": 1116232,
+              "name": "vite",
+              "dependency": "vite",
+              "title": "Vite: `server.fs.deny` bypassed with queries",
+              "url": "https://github.com/advisories/GHSA-v2wj-q39q-566r",
+              "severity": "high",
+              "cwe": [
+                "CWE-180",
+                "CWE-284"
+              ],
+              "cvss": {
+                "score": 0,
+                "vectorString": null
+              },
+              "range": ">=7.1.0 <=7.3.1"
+            },
+            {
+              "source": 1116235,
+              "name": "vite",
+              "dependency": "vite",
+              "title": "Vite Vulnerable to Arbitrary File Read via Vite Dev Server WebSocket",
+              "url": "https://github.com/advisories/GHSA-p9ff-h696-f583",
+              "severity": "high",
+              "cwe": [
+                "CWE-200",
+                "CWE-306"
+              ],
+              "cvss": {
+                "score": 0,
+                "vectorString": null
+              },
+              "range": ">=7.0.0 <=7.3.1"
+            },
+            {
+              "source": 1120785,
+              "name": "vite",
+              "dependency": "vite",
+              "title": "launch-editor: NTLMv2 hash disclosure via UNC path handling on Windows",
+              "url": "https://github.com/advisories/GHSA-v6wh-96g9-6wx3",
+              "severity": "moderate",
+              "cwe": [
+                "CWE-73",
+                "CWE-522"
+              ],
+              "cvss": {
+                "score": 0,
+                "vectorString": null
+              },
+              "range": ">=7.0.0 <=7.3.4"
+            },
+            {
+              "source": 1123526,
+              "name": "vite",
+              "dependency": "vite",
+              "title": "vite: `server.fs.deny` bypass on Windows alternate paths",
+              "url": "https://github.com/advisories/GHSA-fx2h-pf6j-xcff",
+              "severity": "high",
+              "cwe": [
+                "CWE-22",
+                "CWE-200"
+              ],
+              "cvss": {
+                "score": 7.5,
+                "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+              },
+              "range": ">=7.0.0 <=7.3.4"
+            }
+          ],
+          "effects": [],
+          "range": "7.0.0 - 7.3.3",
+          "nodes": [
+            "node_modules/vite"
+          ],
+          "fixAvailable": {
+            "name": "vite",
+            "version": "7.3.7",
+            "isSemVerMajor": false
+          }
+        }
+      },
+      "metadata": {
+        "vulnerabilities": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 1,
+          "critical": 0,
+          "total": 1
+        },
+        "dependencies": {
+          "prod": 66,
+          "dev": 125,
+          "optional": 69,
+          "peer": 0,
+          "peerOptional": 0,
+          "total": 195
+        }
+      }
+    },
+    "production": {
+      "auditReportVersion": 2,
+      "vulnerabilities": {},
+      "metadata": {
+        "vulnerabilities": {
+          "info": 0,
+          "low": 0,
+          "moderate": 0,
+          "high": 0,
+          "critical": 0,
+          "total": 0
+        },
+        "dependencies": {
+          "prod": 66,
+          "dev": 125,
+          "optional": 69,
+          "peer": 0,
+          "peerOptional": 0,
+          "total": 195
+        }
+      }
+    }
+  }
+}
