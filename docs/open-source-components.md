@@ -11,7 +11,7 @@
 | Tiptap extension-table / extension-list | 3.31.4 | MIT | 基础表格与任务列表 |
 | Tiptap extension-code-block-lowlight | 3.31.4 | MIT | 保留源码的代码块与高亮装饰 |
 | Tiptap extension-mathematics | 3.31.4 | MIT | 行内和块级公式节点；应用替换输入规则与异步显示 |
-| KaTeX | 0.18.10 | MIT | 本地线程中的公式排版及离线字体 |
+| KaTeX | 0.18.10 | MIT | 本地线程中的公式排版 |
 | KaTeX 字体 | 随 0.18.10 分发 | OFL-1.1 | 字体文件内嵌许可与保留名称；单独收集原始声明 |
 | lowlight | 3.3.0 | MIT | 语法高亮树生成 |
 | highlight.js | 11.11.1 | BSD-3-Clause | 七种代码语言的离线语法定义 |

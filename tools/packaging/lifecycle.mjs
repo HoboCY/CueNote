@@ -34,6 +34,7 @@ function check(stage) {
     if (!existsSync(file) || sha256(file) !== hash) throw new Error(`User data changed at ${stage}: ${file}`);
   }
   checkpoints.push({ stage, preservedFiles: before.size, passed: true });
+  console.log(`Lifecycle ${stage}: ${before.size} protected file hashes unchanged`);
 }
 const installed = win ? path.join(process.env.LOCALAPPDATA, 'Programs/CueNote') : path.join(os.homedir(), 'Applications/CueNote.app');
 if (existsSync(installed)) throw new Error('Refuse pre-existing application installation');

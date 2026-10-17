@@ -13,7 +13,9 @@ const originals = new Map(files.map(f => [f, readFileSync(path.join(root, f))]))
 const bundles = process.platform === 'win32' ? 'nsis' : 'app,dmg';
 if (!existsSync(path.join(root, 'package-resources/components.json'))) throw new Error('Run npm run package:licenses first');
 function build(version, destination) {
-  tauri('build', '--target', input.target, '--bundles', bundles, '--config', 'src-tauri/tauri.package.conf.json', '--', '--locked');
+  // CueNote has no updater. Keep the packaged executable byte-identical to the
+  // receipt's binary instead of Tauri's temporary per-installer updater marker.
+  tauri('build', '--no-binary-patching', '--target', input.target, '--bundles', bundles, '--config', 'src-tauri/tauri.package.conf.json', '--', '--locked');
   const bundleRoot = path.join(targetDir, input.target, 'release/bundle');
   const dir = process.platform === 'win32' ? 'nsis' : 'dmg';
   const extension = process.platform === 'win32' ? '.exe' : '.dmg';

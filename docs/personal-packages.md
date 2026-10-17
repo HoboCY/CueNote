@@ -46,6 +46,8 @@ npm run package:personal
 
 普通本机构建在 `package-output/<target>/` 生成明文个人包，不自动安装、不上传。
 输出与独立 Cargo `target/packages` 均不提交 Git。安装包不启用故障注入或性能验收功能。
+应用没有自动更新器，构建使用 Tauri `--no-binary-patching`，使安装包内程序与
+构建回执记录的程序字节一致。
 版本发布前同步 `package.json`、npm 锁文件、Cargo manifest/lock、Tauri 配置中的版本。
 
 CI 在标准 `windows-2022`、`macos-15` runner 上检查与构建。
@@ -75,5 +77,5 @@ tar -xzf CueNote.tar.gz
 
 ## 验证状态
 
-#32 正在验证。最终双平台 CI 运行链接、包哈希与本机解密检查将记录在
-`docs/package-validation.md`；未取得这些证据之前不能宣称安装包任务完成。
+双平台 CI 运行链接、包哈希与本机解密检查记录在仓库的
+`docs/package-validation.md`。个人设备日用及真实 OneDrive 的验收状态以 #33 为准。

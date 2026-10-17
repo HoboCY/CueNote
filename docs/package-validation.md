@@ -28,6 +28,18 @@
 逐字节检查拒绝了 Windows 新检出时的 CRLF 换行。为生成的两个 JSON Schema 和
 TypeScript 契约设置 `eol=lf`，保持生成器与两平台 Git 检出的字节一致；未改变 schema。
 
+第二轮有效 CI：[`39042235350`](https://github.com/HoboCY/CueNote/actions/runs/39042235350)，
+提交 `e9ef0e6183c9a63d9b7a7a0dd63dcf32bc0ea9e3`。两端测试、schema、许可与包构建通过。
+Mac 全部八阶段通过，19 个受保护文件未变；405 个组件、633 份许可文本的产物已在
+本机完成解密与哈希校验。DMG SHA-256 为
+`bc4e4175b66f8e52c6568d51bd6b70d146806c8e82f5f0987a8ebbab7561a1ad`。
+
+Windows 升级后严格程序哈希检查失败。对本机安装包解包与构建目录程序逐字节比较，
+仅发现 Tauri 临时将 `__TAURI_BUNDLE_TYPE_VAR_UNK` 改为 `..._NSS` 的 3 字节差异；
+[锁定版本 bundler 源码](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.12.1/crates/tauri-bundler/src/bundle.rs)
+证实其打包后会恢复原文件。应用没有自动更新器，改用官方 `--no-binary-patching`
+选项，继续要求安装后的程序与回执哈希完全一致，不放宽验收条件。
+
 ## 代码审查
 
 基线：`68583a1e06a0e089b1b025fd6cdfb8aeccd129c2`（#31 已交付）。
