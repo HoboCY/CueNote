@@ -118,9 +118,10 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 - [Markdown 导出验证](docs/markdown-export-validation.md)
 - [本机容量与性能验证方法](docs/performance-method.md)
 - [Windows 本机容量与性能结果](docs/performance-validation.md)
+- [两台实机与真实 OneDrive 验收](docs/device-acceptance.md)
 
-Windows 千篇库与压力笔记的本机测量及主代理审查已完成。Mac、真实 OneDrive 双端、安装升级及完整日用验收仍需后续测试；当前版本不代表已达到日用标准。
+Windows 千篇库与压力笔记的本机测量、双平台个人包的 CI 安装生命周期验证已完成。目标设备的完整核心流程、Mac 性能及真实 OneDrive 双端验收仍在进行；当前版本不代表已达到日用标准。
 
 ## 许可
 
-项目采用 [Apache License 2.0](LICENSE)。第三方依赖遵守各自许可；直接依赖见[开源组件](docs/open-source-components.md)，正式分发前补齐随包许可清单。
+项目采用 [Apache License 2.0](LICENSE)。第三方依赖遵守各自许可；直接依赖见[开源组件](docs/open-source-components.md)，个人包已附依赖清单、来源及许可原文，见[安装包验证](docs/package-validation.md)。

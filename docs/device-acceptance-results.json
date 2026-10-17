@@ -1,0 +1,240 @@
+{
+  "format": 1,
+  "issue": 33,
+  "candidate": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+  "version": "0.1.0",
+  "overall": "未测",
+  "dailyUseApproved": false,
+  "windows": {
+    "collectedUtc": "2026-10-17T15:45:25.0454881Z",
+    "os": {
+      "Caption": "Microsoft Windows 11 专业版",
+      "Version": "10.0.26200",
+      "BuildNumber": "26200",
+      "OSArchitecture": "64 位",
+      "TotalVisibleMemorySize": 33315680
+    },
+    "cpu": {
+      "Name": "13th Gen Intel(R) Core(TM) i7-13700KF",
+      "NumberOfCores": 16,
+      "NumberOfLogicalProcessors": 24
+    },
+    "webView2Versions": [
+      "155.0.4283.60"
+    ],
+    "installedBinarySha256": "b1e20fd72b3d2f3543d7f8eb7b7ee4651a961d2bf1013afa148b55662bd7aae8",
+    "installerSha256": "ae6f1c006519dc76b7b8f5492bb0e60283f8f830b173d1075d92fb94d2e42393",
+    "checks": [
+      {
+        "step": "Actual-device silent installation",
+        "status": "通过",
+        "detail": "Version, executable hash and 275 preexisting cache file hashes checked; no existing default note library."
+      },
+      {
+        "step": "Actual-device startup",
+        "status": "通过",
+        "detail": "Installed executable opened a complete welcome window; screenshot inspected."
+      },
+      {
+        "step": "Interactive installer experience, editing, upgrade, uninstall and OneDrive",
+        "status": "未测"
+      }
+    ],
+    "evidenceHashes": [
+      {
+        "file": "windows-device.json",
+        "sha256": "7a206215418485ac2d70fc40fc327575d0cddc545eefeb4a3c96f8dad9bd9c1d"
+      },
+      {
+        "file": "windows-install.json",
+        "sha256": "1891f61c789a44fc4300f9fdd16f8222c0cf19468aeb978a590aed16c8d26c21"
+      },
+      {
+        "file": "windows-startup.json",
+        "sha256": "1a59b5619fe0814a09c8d6e3204a21ecf505679856f1710ae4b7ae134c17193f"
+      },
+      {
+        "file": "windows-first-launch-physical.png",
+        "sha256": "674478c73b69530c08d04748bc798b1123412308c42b6a91429ebf3975c58ce1"
+      },
+      {
+        "file": "windows-before-inventory.json",
+        "sha256": "e0ff546652638e778f1154d67a809dbd1d701f0c8a00cce73f553d3a2d19f43a"
+      },
+      {
+        "file": "before-install-hashes.json",
+        "sha256": "3ad017777013a5e78c5e65b64bf9dfda708ab0963f7c9603a5c836464cfe7701"
+      }
+    ]
+  },
+  "mac": {
+    "reportedChip": "Apple M1 Pro",
+    "status": "未测",
+    "actualEnvironmentCollected": false
+  },
+  "cases": [
+    {
+      "id": "A01",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A02",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A03",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A04",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A05",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A06",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A07",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A08",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A09",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A10",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A11",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A12",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A13",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A14",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A15",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A16",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A17",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A18",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A19",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A20",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A21",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A22",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A23",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": "Issue31 Windows baseline retained at original binary/runtime; no new-candidate or Mac score inferred."
+    },
+    {
+      "id": "A24",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": "Windows install/start substeps passed; entire A24 remains untested."
+    },
+    {
+      "id": "A25",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    },
+    {
+      "id": "A26",
+      "windows": "未测",
+      "mac": "未测",
+      "notes": ""
+    }
+  ],
+  "pending": [
+    "Mac access, actual OS and startup result",
+    "Real IME and cross-application clipboard on both target devices",
+    "Same-account real OneDrive round trips and conflict scenarios",
+    "Full A01-A26, Q51/Q52 target-device evidence",
+    "Precompiled Mac performance driver implementation and device calibration"
+  ]
+}
