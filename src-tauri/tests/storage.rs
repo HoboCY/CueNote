@@ -6,6 +6,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 use uuid::Uuid;
+mod support;
 
 fn package(note_id: &str, title: &str, content: &str) -> NotePackage {
     let mut package = NotePackage::new_plain(
@@ -26,14 +27,7 @@ fn note_id() -> String {
 }
 
 fn tempdir() -> TempDir {
-    let testdata = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("target")
-        .join("testdata");
-    fs::create_dir_all(&testdata).unwrap();
-    tempfile::Builder::new()
-        .prefix("storage-")
-        .tempdir_in(testdata)
-        .unwrap()
+    support::tempdir("storage-")
 }
 
 fn paths(temp: &TempDir) -> (PathBuf, PathBuf) {

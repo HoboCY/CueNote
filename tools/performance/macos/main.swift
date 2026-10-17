@@ -16,6 +16,9 @@ do {
     case "prepare":
         guard args.count==3 else {throw Failure("prepare <verified corpus> <new absolute root>")}
         try prepare(corpus:args[1],destination:args[2])
+    case "resources":
+        guard args.count==3 else {throw Failure("resources <kit directory> <new absolute output directory>")}
+        try resources(kit:args[1],base:args[2])
     case "inspect","actions","close","capture","protocol-check":
         guard args.count>=2 else {throw Failure("Missing run directory")}
         let driver=try Driver(run:args[1])

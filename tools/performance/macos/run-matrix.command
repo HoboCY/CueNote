@@ -7,4 +7,5 @@ printf '%s\n' 'CueNote：先读取 README.md。测量期间请勿操作键盘鼠
 printf '%s\n' "结果目录：$result"
 "$kit/cuenote-performance-driver" doctor
 "$kit/cuenote-performance-driver" matrix "$kit" "$result"
+"$kit/cuenote-performance-driver" resources "$kit" "$result/resource-tests"
 printf '%s\n' '已完成。请保留结果目录；summary.json 只是计时结果，不代表全部双端验收通过。'

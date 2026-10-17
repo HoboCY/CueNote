@@ -10,13 +10,30 @@ on:
       - 'src-tauri/src/performance.rs'
       - 'src-tauri/examples/performance_fixture.rs'
       - 'src-tauri/examples/performance_fixture/**'
+      - 'src-tauri/tests/format_v1.rs'
+      - 'src-tauri/tests/image_content.rs'
+      - 'src-tauri/tests/rich_content.rs'
+      - 'src-tauri/tests/storage.rs'
+      - 'src-tauri/tests/support/**'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  native-driver:
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Compile native driver
+        run: |
+          swiftc -O -whole-module-optimization -target arm64-apple-macosx14.0 tools/performance/macos/Driver.swift tools/performance/macos/Matrix.swift tools/performance/macos/main.swift -o "$RUNNER_TEMP/cuenote-performance-driver-check"
+          "$RUNNER_TEMP/cuenote-performance-driver-check" doctor
   build:
+    needs: native-driver
     runs-on: macos-15
     timeout-minutes: 90
     concurrency:
@@ -33,9 +50,6 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version-file: .node-version
-      - name: Compile native driver first
-        run: |
-          swiftc -O -whole-module-optimization -target arm64-apple-macosx14.0 tools/performance/macos/Driver.swift tools/performance/macos/Matrix.swift tools/performance/macos/main.swift -o "$RUNNER_TEMP/cuenote-performance-driver-check"
       - name: Install locked build inputs
         run: |
           rustup toolchain install 1.99.0 --profile minimal --component rustfmt

@@ -66,15 +66,44 @@ func prepare(corpus: String, destination: String) throws {
     try createExclusive(destination+"/.cuenote-performance",Data(marker.utf8))
     try write(destination+"/corpus-copy.json",["manifestSha256":manifestHash,"files":records.count,"hardLinks":false])
 }
-func subprocess(_ executable: String, _ args: [String], log: String) throws {
+func subprocess(_ executable: String, _ args: [String], log: String, environment: [String:String]? = nil) throws {
     guard !files.fileExists(atPath:log) else {throw Failure("Existing process log")}
     try createExclusive(log,Data())
     let output=try FileHandle(forWritingTo:URL(fileURLWithPath:log)); defer {try? output.close()}
     let process=Process(); process.executableURL=URL(fileURLWithPath:executable); process.arguments=args
+    if let environment {process.environment=environment}
     process.standardOutput=output; process.standardError=output
     try process.run(); process.waitUntilExit()
     guard process.terminationReason == .exit && process.terminationStatus==0 else {
         throw Failure("Native tool failed; preserve "+log)
+    }
+}
+
+func resources(kit: String, base: String) throws {
+    try localPath(kit); try localPath(base); try directory(base)
+    try createExclusive(base+"/.cuenote-resource-tests",Data("CueNote isolated resource tests v1\n".utf8))
+    let receipt=try read(kit+"/receipt.json"), binaries=try object(receipt["binaries"])
+    let suites=["format_v1","image_content","rich_content","storage"]
+    guard (receipt["resourceSuites"] as? [String])==suites else {throw Failure("Missing frozen resource suites")}
+    var env=ProcessInfo.processInfo.environment
+    env["CUENOTE_ACCEPTANCE_TEST_ROOT"]=base
+    for key in Array(env.keys) where key.hasPrefix("CUENOTE_FAULT_") || key=="CUENOTE_TEST_ROOT" {env.removeValue(forKey:key)}
+    var results=[Object]()
+    do {
+        for suite in suites {
+            let file="resource-tests/"+suite, actual=try hash(kit+"/"+file)
+            guard actual==text(binaries[file]) else {throw Failure("Resource suite hash mismatch")}
+            try subprocess(kit+"/"+file,["--test-threads=1"],log:base+"/"+suite+".log",environment:env)
+            let log=try String(contentsOfFile:base+"/"+suite+".log",encoding:.utf8)
+            guard log.contains("test result: ok."), log.contains("; 0 failed; 0 ignored;") else {throw Failure("Tests did not all pass")}
+            results.append(["suite":suite,"sha256":actual,"logSha256":try hash(base+"/"+suite+".log"),"passed":true])
+        }
+        try write(base+"/results.json",["sourceCommit":receipt["sourceCommit"] ?? "", "os":ProcessInfo.processInfo.operatingSystemVersionString,
+            "suites":results,"passed":true,"hostedCI":env["RUNNER_ENVIRONMENT"]=="github-hosted",
+            "scope":"Native Q52 format/image/storage regressions on this host; no UI, OneDrive or power-loss claim"])
+    } catch {
+        try? write(base+"/results.json",["suites":results,"passed":false,"error":String(describing:error)])
+        throw error
     }
 }
 func captureCommand(_ executable: String, _ args: [String]) throws -> String {

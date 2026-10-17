@@ -16,6 +16,11 @@ try {
      !check.snapshot.text.includes('选择你的笔记库')) throw new Error('Observer check failed');
 } finally { run(driver,['close',launch.run]); }
 const permissions=JSON.parse(capture(driver,['doctor']));
+const resourceRoot=path.join(process.env.HOME,'CueNote-resource-ci');
+run(driver,['resources',kit,resourceRoot]);
+const resources=readJson(path.join(resourceRoot,'results.json'));
+if(!resources.passed || !resources.hostedCI) throw new Error('Precompiled native resource suites failed');
+writeJson(path.join(kit,'ci-resource-check.json'),resources);
 writeJson(path.join(kit,'ci-observer-check.json'),{sourceCommit:readJson(path.join(kit,'receipt.json')).sourceCommit,
   observer:check,permissions,nativeInput:'not measured; calibration on the actual M1 is still required',
   note:'CI checks fixed reads, malformed/unauthorized rejection and normal close. Not performance scores.'});

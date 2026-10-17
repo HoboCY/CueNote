@@ -6,14 +6,10 @@ use cuenote_lib::storage;
 use cuenote_lib::workspace::Workspace;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
+mod support;
 
 fn workspace_temp() -> tempfile::TempDir {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    std::fs::create_dir_all(&base).unwrap();
-    tempfile::Builder::new()
-        .prefix("rich-content-")
-        .tempdir_in(base)
-        .unwrap()
+    support::tempdir("rich-content-")
 }
 
 fn content() -> NoteContent {

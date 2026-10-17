@@ -24,6 +24,18 @@ cpSync(path.join(release, 'bundle/macos/CueNote Performance.app'), app, { recurs
 run('cargo', ['build','--locked','--release','--manifest-path','src-tauri/Cargo.toml','--target',input.target,'--example','performance_fixture']);
 copyFileSync(path.join(release,'examples/performance_fixture'), path.join(delivery,'performance_fixture'));
 run('codesign', ['--force','--sign','-',path.join(delivery,'performance_fixture')]);
+const suites=['format_v1','image_content','rich_content','storage'];
+const compiled=capture('cargo',['test','--locked','--release','--no-run','--manifest-path','src-tauri/Cargo.toml',
+  '--target',input.target,...suites.flatMap(name=>['--test',name]),'--message-format=json'],{maxBuffer:20*1024*1024});
+const testArtifacts=compiled.split(/\r?\n/u).filter(Boolean).map(line=>JSON.parse(line))
+  .filter(row=>row.reason==='compiler-artifact' && row.profile.test && row.executable && suites.includes(row.target.name));
+mkdirSync(path.join(delivery,'resource-tests'));
+if(testArtifacts.length!==suites.length || new Set(testArtifacts.map(row=>row.target.name)).size!==suites.length)
+  throw new Error('Expected all four resource test binaries');
+for(const artifact of testArtifacts) {
+  const dest=path.join(delivery,'resource-tests',artifact.target.name);
+  copyFileSync(artifact.executable,dest); run('codesign',['--force','--sign','-',dest]);
+}
 const corpus = path.join(out,'fixed-corpus');
 run(path.join(delivery,'performance_fixture'), ['generate',corpus]);
 const manifest = path.join(corpus,'manifest.json');
@@ -33,7 +45,8 @@ copyFileSync(manifest,path.join(delivery,'manifest.json'));
 for(const name of ['run-matrix.command','README.md']) copyFileSync(path.join(root,'tools/performance/macos',name),path.join(delivery,name));
 cpSync(path.join(root,'package-resources'),path.join(delivery,'licenses'),{recursive:true});
 const hashes = {};
-for (const relative of ['cuenote-performance-driver','performance_fixture','CueNote Performance.app/Contents/MacOS/cuenote']) {
+for (const relative of ['cuenote-performance-driver','performance_fixture','CueNote Performance.app/Contents/MacOS/cuenote',
+  ...suites.map(name=>'resource-tests/'+name)]) {
   const file = path.join(delivery,relative);
   if(capture('lipo',['-archs',file]) !== 'arm64') throw new Error(`Wrong architecture: ${relative}`);
   hashes[relative]=sha256(file);
@@ -46,6 +59,7 @@ writeJson(path.join(delivery,'receipt.json'),{format:1,...input,sourceCommit,sou
   applicationIdentifier:'com.hobocy.cuenote.performance',features:['perf-acceptance','tauri/custom-protocol'],
   binaries:hashes,manifestSha256:sha256(manifest),swift:capture('swiftc',['--version']),
   plans:Object.fromEntries(readdirSync(path.join(delivery,'plans')).sort().map(name=>[name,sha256(path.join(delivery,'plans',name))])),
+  resourceSuites:suites,
   xcode:capture('xcodebuild',['-version']),runner:{image:process.env.ImageOS,imageVersion:process.env.ImageVersion,runId:process.env.GITHUB_RUN_ID},
   scope:'Isolated performance tools only; neither CI timings nor this kit establish M1 acceptance.'});
 console.log(JSON.stringify({delivery,sourceCommit,hashes}));

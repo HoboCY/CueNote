@@ -4,14 +4,10 @@ use cuenote_lib::note_format::{Block, NotePackage};
 use cuenote_lib::storage;
 use cuenote_lib::workspace::Workspace;
 use image::ImageEncoder;
+mod support;
 
 fn workspace_temp() -> tempfile::TempDir {
-    let base = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    std::fs::create_dir_all(&base).unwrap();
-    tempfile::Builder::new()
-        .prefix("image-content-")
-        .tempdir_in(base)
-        .unwrap()
+    support::tempdir("image-content-")
 }
 
 fn grayscale_png(width: u32, height: u32) -> Vec<u8> {
