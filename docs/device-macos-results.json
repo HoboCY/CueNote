@@ -119,6 +119,34 @@
     "os": "Version 26.6.2 (Build 25G83)",
     "screenshots": false
   },
+  "permissionDiagnosis": {
+    "checkedUtc": "2026-10-17T23:46:37Z",
+    "userConfirmedDriverEnabled": true,
+    "sshResponsibleApplication": "com.apple.sshd-keygen-wrapper",
+    "guiResponsibleApplication": "com.apple.Terminal",
+    "guiChecks": [
+      {
+        "evidence": "gui-permissions-20261018-1/doctor.json",
+        "accessibility": false,
+        "nativeInput": false
+      },
+      {
+        "evidence": "gui-permissions-20261018-2/doctor.json",
+        "accessibility": false,
+        "nativeInput": false,
+        "assertionExitCode": 1
+      }
+    ],
+    "nextStep": "User enables Accessibility for Terminal; recheck both booleans through the same GUI Terminal launch chain before starting matrix.",
+    "matrixStarted": false,
+    "screenshotsOptional": true,
+    "guiMatrixWrapper": {
+      "sha256": "f9a2f09d116dc390e1237d1a9d9cc94d9de5cd495d979216c42d0aeb98f50ef5",
+      "macBashSyntaxCheck": "passed",
+      "remoteHashVerified": true,
+      "executed": false
+    }
+  },
   "syncReadiness": {
     "userConfirmedBothDevicesReady": true,
     "windowsToMac": {
@@ -133,6 +161,22 @@
     "scope": "Transport readiness only, not native-note round trip, concurrent editing, offline reconnect or full A10/A11 acceptance."
   },
   "evidenceHashes": [
+    {
+      "file": "gui-permissions-20261018-1/doctor.json",
+      "sha256": "5aee0dda18c4b94152e602124e869fd499b4912a5dcba660fc21859c00f7af22"
+    },
+    {
+      "file": "gui-permissions-20261018-2/doctor.json",
+      "sha256": "5aee0dda18c4b94152e602124e869fd499b4912a5dcba660fc21859c00f7af22"
+    },
+    {
+      "file": "gui-permissions-20261018-2/exit.json",
+      "sha256": "ca4b50a6aabd8c09a9998c501233e663a1a779dee115f77beed1cc4e481ab5c3"
+    },
+    {
+      "file": "permission-attribution-20261018.txt",
+      "sha256": "e58cd2d362c6c93461a907df21bd2338fd7d856e279aab57feef2c774815d7e3"
+    },
     {
       "file": "environment.txt",
       "sha256": "677bbdb92db5ea4cf2620d12d237a549417909a9e45870606d526a51e449dff1"

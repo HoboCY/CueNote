@@ -109,7 +109,7 @@
       {
         "step": "Q51 native input permissions",
         "status": "阻塞",
-        "detail": "Accessibility and nativeInput false on the SSH launch chain; user has been asked to grant the system permission."
+        "detail": "Driver enabled per user confirmation. Both GUI Terminal checks still report accessibility/nativeInput false; TCC attributes this launch chain to com.apple.Terminal. Awaiting Terminal Accessibility authorization; matrix has not started."
       }
     ]
   },
@@ -272,11 +272,11 @@
     }
   ],
   "pending": [
-    "Mac access, actual OS and startup result",
+    "Mac Terminal Accessibility authorization, then native input calibration and complete Q51 matrix",
     "Real IME and cross-application clipboard on both target devices",
     "Same-account real OneDrive round trips and conflict scenarios",
     "Full A01-A26, Q51/Q52 target-device evidence",
-    "Precompiled Mac performance driver implementation and device calibration"
+    "Interactive installation, actual upgrade/uninstall data retention and remaining formal-candidate UI cases on both devices"
   ],
   "syncReadiness": {
     "userConfirmedBothDevicesReady": true,
