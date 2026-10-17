@@ -1,0 +1,101 @@
+name: Personal packages
+
+on:
+  push:
+    branches: [main, codex/project-foundation]
+    paths:
+      - '.github/workflows/personal-packages.yml'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'tools/packaging/**'
+      - 'tests/**'
+      - 'package*.json'
+      - 'rust-toolchain.toml'
+      - '.node-version'
+      - 'vite.config.*'
+      - 'tsconfig*.json'
+      - 'index.html'
+      - 'docs/licenses/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: personal-packages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            target: x86_64-pc-windows-msvc
+          - runner: macos-15
+            target: aarch64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 120
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      CARGO_BUILD_JOBS: '2'
+      RUST_TEST_THREADS: '2'
+      CARGO_TARGET_DIR: ${{ github.workspace }}/src-tauri/target/packages
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .node-version
+      - name: Locked toolchain and host architecture
+        run: |
+          $ErrorActionPreference='Stop'
+          $PSNativeCommandUseErrorActionPreference=$true
+          rustup toolchain install 1.99.0 --profile minimal --component rustfmt
+          rustup target add ${{ matrix.target }} --toolchain 1.99.0
+          node --input-type=module -e "import {target,verifyInputs} from './tools/packaging/common.mjs'; if(target() !== '${{ matrix.target }}') throw new Error('Wrong runner architecture'); verifyInputs();"
+          npm ci
+      - name: Frontend and native checks
+        run: |
+          $ErrorActionPreference='Stop'
+          $PSNativeCommandUseErrorActionPreference=$true
+          npm test
+          npm run build
+          cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+          cargo test --locked --manifest-path src-tauri/Cargo.toml --all-targets
+          cargo run --locked --manifest-path src-tauri/Cargo.toml --bin export_note_schema -- --check
+          git diff --exit-code
+      - name: Complete license inventory
+        run: |
+          $ErrorActionPreference='Stop'
+          $PSNativeCommandUseErrorActionPreference=$true
+          npm run package:licenses
+      - name: Build personal package and synthetic older version
+        if: github.event_name != 'pull_request'
+        run: |
+          $ErrorActionPreference='Stop'
+          $PSNativeCommandUseErrorActionPreference=$true
+          npm run package:personal -- --upgrade-fixture
+          git diff --exit-code
+      - name: Install, start, upgrade, uninstall and reinstall on disposable runner
+        if: github.event_name != 'pull_request'
+        run: node tools/packaging/lifecycle.mjs
+      - name: Encrypt tested personal delivery
+        if: github.event_name != 'pull_request'
+        run: node tools/packaging/seal.mjs
+      - name: Upload encrypted artifact only
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: CueNote-personal-${{ matrix.target }}
+          path: |
+            package-output/encrypted/*.age
+            package-output/encrypted/*.age.sha256
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

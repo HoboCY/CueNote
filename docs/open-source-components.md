@@ -12,6 +12,7 @@
 | Tiptap extension-code-block-lowlight | 3.31.4 | MIT | 保留源码的代码块与高亮装饰 |
 | Tiptap extension-mathematics | 3.31.4 | MIT | 行内和块级公式节点；应用替换输入规则与异步显示 |
 | KaTeX | 0.18.10 | MIT | 本地线程中的公式排版及离线字体 |
+| KaTeX 字体 | 随 0.18.10 分发 | OFL-1.1 | 字体文件内嵌许可与保留名称；单独收集原始声明 |
 | lowlight | 3.3.0 | MIT | 语法高亮树生成 |
 | highlight.js | 11.11.1 | BSD-3-Clause | 七种代码语言的离线语法定义 |
 | Mind Elixir | 5.15.1 | MIT | 展开编辑思维导图的节点和层级；[许可原文](licenses/mind-elixir-LICENSE.txt) |
@@ -40,4 +41,8 @@
 | notify | 8.2.0 | CC0-1.0 | 本机文件变化通知，触发内容指纹核对 |
 | tempfile | 3.27.0 | MIT OR Apache-2.0 | 隔离文件系统测试 |
 
-许可信息从当前安装包的 `package.json`、npm 锁文件与 `cargo metadata --offline` 获取。完整间接依赖以锁文件为准；安装包任务会生成随包许可清单及所需声明。后续新增组件在实际接入时更新此表，未接入的选型不计为已交付功能。
+许可信息从当前安装包的 `package.json`、npm 锁文件、Cargo metadata 和字体内嵌声明获取。
+`npm run package:licenses` 为当前目标平台生成完整清单、版本化源码链接、锁文件及许可原文，
+保守地包含构建/测试依赖。安装包及个人交付包均附带这些文件。少数上游 crate 不附带
+许可文件，使用 `tools/packaging/license-overrides.json` 记录的版本、来源和 SHA-256 补齐；
+未找到许可原文时停止构建。后续新增组件在实际接入时更新此表。

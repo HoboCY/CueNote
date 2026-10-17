@@ -1,0 +1,110 @@
+{
+  "cargo:alloc-stdlib@0.3.0": {
+    "files": [
+      {
+        "name": "alloc-stdlib-LICENSE",
+        "sha256": "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae",
+        "source": "https://raw.githubusercontent.com/dropbox/rust-alloc-no-stdlib/0a81fd6928ea3b33c8cd484aa4575d50ffb98012/LICENSE"
+      }
+    ]
+  },
+  "cargo:defmt-parser@1.0.0": {
+    "files": [
+      {
+        "name": "defmt-LICENSE-MIT",
+        "sha256": "2710a622a896bba67356913d4d0492cab5465f61b2ecce6d880aeb483834fb50",
+        "source": "https://raw.githubusercontent.com/knurling-rs/defmt/4a8cdb44891ed57b8ff5a023b6bec7137c48708f/LICENSE-MIT"
+      }
+    ]
+  },
+  "cargo:selectors@0.38.0": {
+    "files": [
+      {
+        "name": "MPL-2.0.txt",
+        "sha256": "3f3d9e0024b1921b067d6f7f88deb4a60cbe7a78e76c64e3f1d7fc3b779b9d04",
+        "source": "https://www.mozilla.org/MPL/2.0/index.txt"
+      }
+    ]
+  },
+  "cargo:tauri-plugin@2.7.1": {
+    "files": [
+      {
+        "name": "tauri-LICENSE-MIT",
+        "sha256": "9dd42ea92cff2ede5cd477cbfcce051b2d0115c0ac7f368ee88cb545055dff1d",
+        "source": "https://raw.githubusercontent.com/tauri-apps/tauri/30da1fd6e17de6107ecc850c95dfb16b5729f2dd/LICENSE-MIT"
+      }
+    ]
+  },
+  "cargo:ts-rs@12.0.1": {
+    "files": [
+      {
+        "name": "ts-rs-LICENSE",
+        "sha256": "db7f7f8e7236a2d0b41b855b2501b7b913caebbcda6ce498637a304ad1706ce1",
+        "source": "https://raw.githubusercontent.com/Aleph-Alpha/ts-rs/7182ad8289596097235406b715fa04506443b4ad/LICENSE"
+      }
+    ]
+  },
+  "cargo:ts-rs-macros@12.0.1": {
+    "files": [
+      {
+        "name": "ts-rs-LICENSE",
+        "sha256": "db7f7f8e7236a2d0b41b855b2501b7b913caebbcda6ce498637a304ad1706ce1",
+        "source": "https://raw.githubusercontent.com/Aleph-Alpha/ts-rs/7182ad8289596097235406b715fa04506443b4ad/LICENSE"
+      }
+    ]
+  },
+  "cargo:webview2-com@0.39.1": {
+    "files": [
+      {
+        "name": "webview2-LICENSE",
+        "sha256": "0dcf41516e608bbcb6cdc5229feb7b86fe4a643b85e7df251133c93408fdac73",
+        "source": "https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE"
+      }
+    ]
+  },
+  "cargo:webview2-com-sys@0.39.1": {
+    "files": [
+      {
+        "name": "webview2-LICENSE",
+        "sha256": "0dcf41516e608bbcb6cdc5229feb7b86fe4a643b85e7df251133c93408fdac73",
+        "source": "https://raw.githubusercontent.com/wravery/webview2-rs/edc2caf886175ccaebe86078c9cfe1ae2a187328/LICENSE"
+      }
+    ]
+  },
+  "cargo:webview2-com-macros@0.8.1": {
+    "files": [
+      {
+        "name": "webview2-macros-LICENSE",
+        "sha256": "0dcf41516e608bbcb6cdc5229feb7b86fe4a643b85e7df251133c93408fdac73",
+        "source": "https://raw.githubusercontent.com/wravery/webview2-rs/dffa41a8a46d3f5565eefbff2de57d38d399f158/LICENSE"
+      }
+    ]
+  },
+  "fonts:KaTeX-fonts@0.18.10": {
+    "files": [
+      {
+        "source": "https://openfontlicense.org/documents/OFL.txt",
+        "sha256": "1d361a8f8e8ce6e68457dcd93fb56e162e6baa3bbb7e7573a290d44399f6b57e",
+        "name": "OFL-1.1.txt"
+      }
+    ]
+  },
+  "installer:NSIS@3.11": {
+    "files": [
+      {
+        "name": "NSIS-3.11-COPYING",
+        "source": "https://github.com/tauri-apps/binary-releases/releases/download/nsis-3.11/nsis-3.11.zip",
+        "sha256": "e7dd514003ab96cb3ddccbc028fe5c795fccf57dc41f21cfb9d4dd16ead23bf5"
+      }
+    ]
+  },
+  "installer:nsis-tauri-utils@0.5.3": {
+    "files": [
+      {
+        "name": "nsis-tauri-utils-LICENSE-MIT",
+        "source": "https://raw.githubusercontent.com/tauri-apps/nsis-tauri-utils/nsis_tauri_utils-v0.5.3/LICENSE_MIT",
+        "sha256": "1c1020fa10a6bf318717e82c911bcc54ebdfb9bb280460ae332bcb2f82f57fbe"
+      }
+    ]
+  }
+}

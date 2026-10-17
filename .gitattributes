@@ -1,0 +1,2 @@
+# Preserve downloaded license bytes: their upstream SHA-256 is verified at build time.
+docs/licenses/package-overrides/* -text -whitespace

@@ -28,6 +28,20 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all"
+    "targets": ["nsis", "dmg"],
+    "icon": ["icons/128x128.png", "icons/icon.icns", "icons/icon.ico"],
+    "windows": {
+      "allowDowngrades": false,
+      "nsis": {
+        "template": "installer/installer.nsi",
+        "installMode": "currentUser",
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": false
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "14.0",
+      "signingIdentity": "-"
+    }
   }
 }

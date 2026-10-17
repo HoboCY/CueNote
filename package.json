@@ -9,7 +9,10 @@
     "test": "node --test tests/*.test.ts",
     "build": "npm run typecheck && vite build",
     "desktop": "tauri dev",
-    "build:desktop": "tauri build --no-bundle"
+    "build:desktop": "tauri build --no-bundle",
+    "package:licenses": "node tools/packaging/licenses.mjs",
+    "package:personal": "node tools/packaging/build.mjs",
+    "package:encrypt": "node tools/packaging/encrypt.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.3",

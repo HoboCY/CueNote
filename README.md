@@ -33,6 +33,9 @@ npm run dev
 
 ## 检查与构建
 
+双平台个人安装包使用独立的[构建与交付流程](docs/personal-packages.md)，
+包含锁定工具链、完整许可材料及安装/升级/卸载数据保留检查。
+
 ```sh
 npm run typecheck
 npm test

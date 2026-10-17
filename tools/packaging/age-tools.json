@@ -1,0 +1,11 @@
+{
+  "version": "1.3.2",
+  "win32": {
+    "archive": "age-v1.3.2-windows-amd64.zip",
+    "sha256": "f48d8f8f9ebe903ab5027ed067652f2cc1db94bc206976430133b905dcd8e8c7"
+  },
+  "darwin": {
+    "archive": "age-v1.3.2-darwin-arm64.tar.gz",
+    "sha256": "e2020b073c44f692685a24d6abc378817eb81ffaaf49fd0531ef8565f767f2f5"
+  }
+}
