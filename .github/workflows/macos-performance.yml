@@ -8,6 +8,8 @@ on:
       - 'tools/performance/macos/**'
       - 'src-tauri/src/performance/**'
       - 'src-tauri/src/performance.rs'
+      - 'src-tauri/examples/performance_fixture.rs'
+      - 'src-tauri/examples/performance_fixture/**'
   workflow_dispatch:
 
 permissions:
@@ -33,7 +35,7 @@ jobs:
           node-version-file: .node-version
       - name: Compile native driver first
         run: |
-          swiftc -O -whole-module-optimization -target arm64-apple-macosx14.0 tools/performance/macos/Driver.swift -o "$RUNNER_TEMP/cuenote-performance-driver-check"
+          swiftc -O -whole-module-optimization -target arm64-apple-macosx14.0 tools/performance/macos/Driver.swift tools/performance/macos/Matrix.swift tools/performance/macos/main.swift -o "$RUNNER_TEMP/cuenote-performance-driver-check"
       - name: Install locked build inputs
         run: |
           rustup toolchain install 1.99.0 --profile minimal --component rustfmt

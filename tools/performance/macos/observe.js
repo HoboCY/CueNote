@@ -1,6 +1,10 @@
 // Fixed read-only DOM observations, matching desktop-windows.mjs.
 // Compiled into the isolated Mac performance build only; no external scripts.
-if (request.paint) await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+let observedFrames = 0;
+if (request.paint) await new Promise(resolve => requestAnimationFrame(() => {
+  observedFrames++;
+  requestAnimationFrame(() => { observedFrames++; resolve(); });
+}));
 if (visualViewport && (visualViewport.scale !== 1 || visualViewport.offsetLeft !== 0 || visualViewport.offsetTop !== 0)) {
   throw new Error('Pinch zoom and visual viewport offsets are unsupported');
 }
@@ -14,7 +18,7 @@ const snapshot = () => {
     return {visible:r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight,
       ready:img.complete && img.naturalWidth > 0, width:img.naturalWidth, top:r.top};
   });
-  return {visibility:document.visibilityState,focused:document.hasFocus(),viewport:{width:innerWidth,height:innerHeight,devicePixelRatio},title:title?.value, editable:Boolean(title && !title.disabled && !title.readOnly &&
+  return {observedFrames,visibility:document.visibilityState,focused:document.hasFocus(),viewport:{width:innerWidth,height:innerHeight,devicePixelRatio},title:title?.value, editable:Boolean(title && !title.disabled && !title.readOnly &&
       document.querySelector('[data-testid="rich-editor-input-content"][contenteditable="true"]')),
     noteId:current?.getAttribute('data-note-id'), images,
     titleSelection:title ? {start:title.selectionStart,end:title.selectionEnd,focused:document.activeElement===title} : null,

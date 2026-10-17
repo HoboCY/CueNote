@@ -13,6 +13,9 @@ typealias Object = [String: Any]
 struct Failure: Error, CustomStringConvertible { let description: String; init(_ text: String) { description = text } }
 let files = FileManager.default
 let marker = "CueNote isolated performance root v1\n"
+// Matrix launches retain Process objects so every restart can verify an exit
+// code. A separate CLI invocation must explicitly report status as unavailable.
+var launchedProcesses: [pid_t:Process] = [:]
 func fail(_ message: String) throws -> Never { throw Failure(message) }
 func object(_ value: Any?) throws -> Object { guard let value = value as? Object else { throw Failure("Expected JSON object") }; return value }
 func text(_ value: Any?) -> String { value as? String ?? "" }
@@ -29,20 +32,31 @@ func hash(_ path: String) throws -> String {
     return hasher.finalize().map { String(format: "%02x", $0) }.joined()
 }
 func write(_ path: String, _ value: Any) throws {
-    guard !files.fileExists(atPath: path) else { throw Failure("Refuse to overwrite evidence: \(path)") }
-    guard files.createFile(atPath: path, contents: try json(value), attributes: [.posixPermissions: 0o600]) else { throw Failure("Cannot create evidence") }
+    try createExclusive(path,try json(value))
+}
+func createExclusive(_ path: String, _ data: Data) throws {
+    try localPath(URL(fileURLWithPath:path).deletingLastPathComponent().path)
+    let fd=Darwin.open(path,O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW,mode_t(0o600))
+    guard fd>=0 else {throw Failure("Cannot exclusively create evidence: "+path)}
+    let output=FileHandle(fileDescriptor:fd,closeOnDealloc:true); defer {try? output.close()}
+    try output.write(contentsOf:data)
 }
 func append(_ path: String, _ value: Any) throws {
-    if !files.fileExists(atPath: path) { guard files.createFile(atPath: path, contents: nil, attributes: [.posixPermissions: 0o600]) else { throw Failure("Cannot create log") } }
-    let output = try FileHandle(forWritingTo: URL(fileURLWithPath: path)); defer { try? output.close() }
-    try output.seekToEnd(); try output.write(contentsOf: json(value)); try output.write(contentsOf: Data([10]))
+    try localPath(path)
+    let fd=Darwin.open(path,O_WRONLY|O_CREAT|O_APPEND|O_NOFOLLOW,mode_t(0o600))
+    guard fd>=0 else {throw Failure("Cannot append evidence")}
+    let output=FileHandle(fileDescriptor:fd,closeOnDealloc:true); defer {try? output.close()}
+    guard (try files.attributesOfItem(atPath:path)[.type] as? FileAttributeType) == .typeRegular else {throw Failure("Evidence must be a regular file")}
+    try output.write(contentsOf: json(value)); try output.write(contentsOf: Data([10]))
 }
 func directory(_ path: String) throws {
     guard path.hasPrefix("/"), !files.fileExists(atPath: path) else { throw Failure("A new absolute directory is required: \(path)") }
     try files.createDirectory(atPath: path, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
 }
 func ownedRoot(_ root: String) throws {
+    try localPath(root); try localPath(root+"/.cuenote-performance")
     guard root.hasPrefix("/"), URL(fileURLWithPath: root).resolvingSymlinksInPath().path == root,
+          (try files.attributesOfItem(atPath:root+"/.cuenote-performance")[.type] as? FileAttributeType) == .typeRegular,
           try String(contentsOfFile: root + "/.cuenote-performance", encoding: .utf8) == marker else { throw Failure("Unowned or symbolic performance root") }
 }
 func printJSON(_ value: Any) throws { print(String(decoding: try json(value), as: UTF8.self)) }
@@ -50,10 +64,14 @@ func printJSON(_ value: Any) throws { print(String(decoding: try json(value), as
 final class Driver {
     let run: String, record: Object, pid: pid_t, token: String, port: UInt16
     init(run: String) throws {
+        try localPath(run); try localPath(run+"/launcher.json"); try localPath(run+"/.observer-token")
         self.run = run; record = try read(run + "/launcher.json")
+        guard URL(fileURLWithPath:run).deletingLastPathComponent().path == text(record["root"])+"/measurements",
+              text(record["run"])==run else {throw Failure("Run is outside its owned measurement directory")}
         pid = pid_t(number(record["pid"]))
         token = try String(contentsOfFile: run + "/.observer-token", encoding: .utf8)
-        let endpoint = try read(text(record["root"]) + "/observer-\(pid).json")
+        let endpointPath=text(record["root"]) + "/observer-\(pid).json"; try localPath(endpointPath)
+        let endpoint = try read(endpointPath)
         guard number(endpoint["pid"]) == Double(pid), let value = endpoint["port"] as? UInt16 else { throw Failure("Observer ownership mismatch") }
         port = value; try assertOwner()
     }
@@ -115,7 +133,7 @@ final class Driver {
         return CGPoint(x: number(screen["x"]) + x * number(screen["width"]) / number(viewport["width"]),
                        y: number(screen["y"]) + y * number(screen["height"]) / number(viewport["height"]))
     }
-    func post(_ event: CGEvent?) throws { guard let event else { throw Failure("Cannot create native event") }; event.postToPid(pid) }
+    func post(_ event: CGEvent?) throws { try foreground(); guard let event else { throw Failure("Cannot create native event") }; event.postToPid(pid) }
     func wheel(_ response: Object, x: Double, y: Double, delta: Double) throws {
         let event = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 1, wheel1: Int32(-delta.rounded()), wheel2: 0, wheel3: 0)
         event?.location = try point(response, x: x, y: y); try post(event)
@@ -185,6 +203,9 @@ final class Driver {
         case "map-collapsed": return number(state["expandedNodes"]) == 0 && !yes(state["mapCanEdit"])
         case "title": return text(state["title"]) == text(expected["text"])
         case "dirty-title": return text(state["title"]) == text(expected["text"]) && text(state["save"]) == "立即保存"
+        case "title-selection":
+            guard let selection=state["titleSelection"] as? Object else {return false}
+            return yes(selection["focused"]) && number(selection["start"])==0 && number(selection["end"])==Double(text(state["title"]).utf16.count)
         case "content-heading": return text(state["contentHeading"]) == text(expected["text"])
         case "content-heading-selection": return !text(state["contentHeading"]).isEmpty && text(state["selectedText"]) == text(state["contentHeading"])
         case "welcome": return text(state["text"]).contains("选择你的笔记库")
@@ -208,6 +229,8 @@ final class Driver {
             }
             if ready(state,expected) {
                 state=try snapshot(true)
+                try foreground()
+                guard text(state["visibility"])=="visible", yes(state["focused"]), number(state["observedFrames"])==2 else {throw Failure("Paint completed without a focused visible document")}
                 if ready(state,expected) {timings["readyMs"]=monotonicMs()-start; return state}
             }
             pause(5)
@@ -231,7 +254,7 @@ final class Driver {
             var ignored: Object=[:]
             if let expected=step["beforeExpected"] as? Object {_ = try until(expected,timings:&ignored)}
             for setup in step["setup"] as? [Object] ?? [] {try action(setup)}
-            if let expected=step["setupExpected"] as? Object {guard ready(try snapshot(),expected) else {throw Failure("Setup did not produce intended selection/dirty input")}}
+            if let expected=step["setupExpected"] as? Object {_ = try until(expected,timeout:5000,timings:&ignored)}
             try foreground(); let start=monotonicMs()
             for input in step["actions"] as? [Object] ?? [] {try action(input)}
             let inputMs=monotonicMs()-start; var timings: Object=[:]
@@ -247,79 +270,77 @@ final class Driver {
         try assertOwner()
         guard NSRunningApplication(processIdentifier:pid)?.terminate() == true else {throw Failure("Normal quit was refused")}
         let end=monotonicMs()+60000
-        while kill(pid,0)==0 && monotonicMs()<end {pause(50)}
-        guard kill(pid,0) != 0 else {throw Failure("Application did not exit normally; not force-killed")}
-        try write(run+"/closed.json",["pid":pid,"normalExit":true])
+        if let process=launchedProcesses[pid] {
+            while process.isRunning && monotonicMs()<end {pause(50)}
+            guard !process.isRunning else {throw Failure("Application did not exit; not force-killed")}
+            process.waitUntilExit()
+            let normal=process.terminationReason == .exit && process.terminationStatus==0
+            try write(run+"/closed.json",["pid":pid,"quitRequested":true,"exitStatusAvailable":true,
+                "normalExit":normal,"terminationReason":process.terminationReason.rawValue,"status":process.terminationStatus])
+            launchedProcesses.removeValue(forKey:pid)
+            guard normal else {throw Failure("Application crashed or exited with nonzero status")}
+        } else {
+            while kill(pid,0)==0 && monotonicMs()<end {pause(50)}
+            guard kill(pid,0) == -1, errno==ESRCH else {throw Failure("Process disappearance could not be verified")}
+            try write(run+"/closed.json",["pid":pid,"quitRequested":true,"processDisappeared":true,
+                "exitStatusAvailable":false,"note":"Separate CLI cannot observe the parent's exit status; normal exit is not asserted."])
+        }
     }
 }
 
-func launch(_ args: [String]) throws {
+func launch(_ args: [String]) throws -> String {
     guard args.count >= 3 else {throw Failure("launch <owned root> <absolute executable> <sha256> [welcome|editor|editor-first-image] [note ID]")}
     let root=args[0], exe=args[1], expectedHash=args[2], mode=args.count>3 ? args[3]:"welcome"
-    guard ["welcome","editor","editor-first-image"].contains(mode), exe.hasPrefix("/"), try hash(exe)==expectedHash else {throw Failure("Invalid launch mode/binary hash")}
+    guard ["welcome","index","editor","editor-first-image"].contains(mode), exe.hasPrefix("/"), try hash(exe)==expectedHash else {throw Failure("Invalid launch mode/binary hash")}
     try ownedRoot(root)
-    let parent=root+"/measurements"; if !files.fileExists(atPath:parent) {try directory(parent)}
+    let parent=root+"/measurements"; try localPath(parent)
+    if !files.fileExists(atPath:parent) {try directory(parent)}
     let run=parent+"/"+UUID().uuidString; try directory(run)
     var secret=[UInt8](repeating:0,count:32)
     guard SecRandomCopyBytes(kSecRandomDefault,secret.count,&secret)==errSecSuccess else {throw Failure("Cannot generate observer credential")}
     let token=secret.map{String(format:"%02x",$0)}.joined()
-    guard files.createFile(atPath:run+"/.observer-token",contents:Data(token.utf8),attributes:[.posixPermissions:0o600]) else {throw Failure("Cannot protect observer credential")}
+    try createExclusive(run+"/.observer-token",Data(token.utf8))
     let process=Process(); process.executableURL=URL(fileURLWithPath:exe)
     var env=ProcessInfo.processInfo.environment
     for key in Array(env.keys) where key.hasPrefix("CUENOTE_FAULT_") || ["CUENOTE_TEST_ROOT","CUENOTE_PERF_TRACE","WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"].contains(key) {env.removeValue(forKey:key)}
     env["CUENOTE_PERF_ROOT"]=root; env["CUENOTE_PERF_OBSERVER_TOKEN"]=token; process.environment=env
-    for name in ["stdout","stderr"] {guard files.createFile(atPath:run+"/"+name+".txt",contents:nil,attributes:[.posixPermissions:0o600]) else {throw Failure("Cannot create launch log")}}
+    for name in ["stdout","stderr"] {try createExclusive(run+"/"+name+".txt",Data())}
     let out=try FileHandle(forWritingTo:URL(fileURLWithPath:run+"/stdout.txt")), err=try FileHandle(forWritingTo:URL(fileURLWithPath:run+"/stderr.txt"))
     process.standardOutput=out; process.standardError=err
     let start=monotonicMs(); try process.run(); try out.close(); try err.close()
     let pid=process.processIdentifier
+    launchedProcesses[pid]=process
     try write(run+"/launcher.json",["root":root,"exe":exe,"sha256":expectedHash,"pid":pid,"run":run,"variant":"perf-acceptance","traceEnabled":false,"platform":"macos","startedUtc":ISO8601DateFormatter().string(from:Date())])
     do {
         let endpoint=root+"/observer-\(pid).json", deadline=monotonicMs()+30000
-        while !files.fileExists(atPath:endpoint) && monotonicMs()<deadline {guard process.isRunning else {throw Failure("Application exited before observer startup")}; pause(10)}
-        guard files.fileExists(atPath:endpoint) else {throw Failure("Observer startup timeout")}
+        while (try? read(endpoint)) == nil && monotonicMs()<deadline {guard process.isRunning else {throw Failure("Application exited before observer startup")}; pause(10)}
+        guard let metadata=try? read(endpoint) else {throw Failure("Observer startup timeout")}
+        try write(run+"/observer.json",metadata)
         guard let app=NSRunningApplication(processIdentifier:pid), app.activate(options:[]) else {throw Failure("Could not activate native app")}
         while NSWorkspace.shared.frontmostApplication?.processIdentifier != pid && monotonicMs()<deadline {pause(10)}
         let driver=try Driver(run:run); var timings: Object=[:]
-        let expected: Object = mode == "welcome" ? ["kind":"welcome"] : ["kind":"editor","noteId":args.count>4 ? args[4]:"","revealFirstImage":mode=="editor-first-image"]
+        // Activation and DOM focus are asynchronous. Startup time includes this
+        // wait, but an already-running action never tolerates focus loss.
+        while monotonicMs()<deadline {
+            let state=try driver.snapshot()
+            if text(state["visibility"])=="visible" && yes(state["focused"]) {break}
+            pause(10)
+        }
+        let expected: Object = mode == "welcome" ? ["kind":"welcome"] : mode == "index" ? ["kind":"index","count":1000] : ["kind":"editor","noteId":args.count>4 ? args[4]:"","revealFirstImage":mode=="editor-first-image"]
         let state=try driver.until(expected,timings:&timings)
-        try write(run+"/startup.json",["operation":mode=="welcome" ? "empty-startup":"startup","readiness":mode,"elapsedMs":monotonicMs()-start,"readinessTimings":timings,"state":state])
-        try driver.capture("startup"); try printJSON(["run":run,"pid":pid])
+        try write(run+"/startup.json",["operation":mode.hasPrefix("editor") ? "startup":"empty-startup","readiness":mode,"elapsedMs":monotonicMs()-start,"readinessTimings":timings,"state":state])
+        try driver.capture("startup")
+        return run
     } catch {
         try? append(run+"/failures.jsonl",["command":"launch","error":String(describing:error)])
-        _ = NSRunningApplication(processIdentifier:pid)?.terminate(); throw error
+        if let driver=try? Driver(run:run) {try? driver.close()}
+        else {
+            _ = NSRunningApplication(processIdentifier:pid)?.terminate()
+            let deadline=monotonicMs()+60000
+            while process.isRunning && monotonicMs()<deadline {pause(50)}
+            try? write(run+"/launch-failure-exit.json",["stillRunning":process.isRunning,
+                "note":"Quit requested after startup failure; no successful startup claimed"])
+        }
+        throw error
     }
 }
-
-let args=Array(CommandLine.arguments.dropFirst())
-do {
-    guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion>=14 else {throw Failure("macOS 14 or newer is required")}
-    switch args.first ?? "" {
-    case "doctor": try printJSON(["os":ProcessInfo.processInfo.operatingSystemVersionString,"accessibility":AXIsProcessTrusted(),"nativeInput":CGPreflightPostEventAccess(),"screenshots":CGPreflightScreenCaptureAccess()])
-    case "launch": try launch(Array(args.dropFirst()))
-    case "inspect","actions","close","capture","protocol-check":
-        guard args.count>=2 else {throw Failure("Missing run directory")}
-        let driver=try Driver(run:args[1])
-        do {
-            switch args[0] {
-            case "inspect": try printJSON(driver.snapshot())
-            case "actions": guard args.count==3 else {throw Failure("Missing action plan")}; try driver.actions(args[2])
-            case "close": try driver.close()
-            case "capture": guard args.count==3 else {throw Failure("Missing capture name")}; try driver.capture(args[2])
-            default:
-                let refused: [(Object,String)] = [
-                    (["token":"wrong","operation":"snapshot"],"Unauthorized observation"),
-                    (["token":driver.token,"operation":"eval","script":"document.body.textContent='invalid'"],"Invalid observation request"),
-                    (["token":driver.token,"operation":"snapshot","script":"invalid"],"Invalid observation request")
-                ]
-                for (payload, expectedError) in refused {
-                    do {_ = try driver.request("snapshot",override:payload); throw Failure("Invalid request was accepted")}
-                    catch let failure as Failure {if failure.description != expectedError {throw failure}}
-                }
-                let before=monotonicMs(); _ = try driver.snapshot(true)
-                try printJSON(["invalidRequestsRejected":true,"asyncPaintReadMs":monotonicMs()-before,"snapshot":driver.snapshot()])
-            }
-        } catch {try? append(args[1]+"/failures.jsonl",["command":args[0],"error":String(describing:error)]); throw error}
-    default: throw Failure("Use doctor, launch, inspect, actions, close, capture or protocol-check")
-    }
-} catch {fputs("\(error)\n",stderr); exit(1)}

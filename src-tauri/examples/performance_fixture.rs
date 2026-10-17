@@ -39,6 +39,8 @@ mod model;
 mod png;
 #[path = "performance_fixture/verify.rs"]
 mod verify;
+#[path = "performance_fixture/verify_edited.rs"]
+mod verify_edited;
 
 use std::error::Error;
 use std::path::Path;
@@ -100,6 +102,9 @@ fn run(arguments: &[String]) -> Result<Value, Box<dyn Error>> {
                 .get(3)
                 .ok_or("usage: performance_fixture determinism <root-a> <root-b>")?;
             determinism(Path::new(first), Path::new(second))
+        }
+        Some("verify-edited") if arguments.len() == 4 => {
+            verify_edited::run(Path::new(&arguments[2]), Path::new(&arguments[3]))
         }
         _ => Err(
             "usage: performance_fixture <generate <absolute NEW root> [--small] | verify <root> | determinism <root-a> <root-b>>"

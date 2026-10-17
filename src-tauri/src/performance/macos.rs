@@ -16,6 +16,7 @@ use objc2_foundation::{NSError, NSProcessInfo, NSString};
 use objc2_web_kit::{WKContentWorld, WKWebView};
 use serde::Deserialize;
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 use tauri::Manager;
 
 #[derive(Deserialize)]
@@ -164,7 +165,12 @@ pub(crate) fn attach(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::E
     }
     let root = super::root()?;
     let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))?;
-    let endpoint = json!({"pid":std::process::id(),"port":listener.local_addr()?.port()});
+    let digest = Sha256::digest(root.to_string_lossy().as_bytes());
+    let mut store = [0_u8; 16];
+    store.copy_from_slice(&digest[..16]);
+    let endpoint = json!({"pid":std::process::id(),"port":listener.local_addr()?.port(),
+        "webKitDataStoreIdentifier":uuid::Uuid::from_bytes(store).to_string(),
+        "webKitStorage":"OS-managed isolated WKWebsiteDataStore; not the root/webview directory"});
     let file = OpenOptions::new()
         .write(true)
         .create_new(true)

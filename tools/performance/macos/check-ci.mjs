@@ -1,5 +1,5 @@
 // Runtime contract checks; explicitly not M1 timings or native input acceptance.
-import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { root, run, capture, readJson, sha256, writeJson } from '../../packaging/common.mjs';
 if(process.platform!=='darwin' || process.env.RUNNER_ENVIRONMENT!=='github-hosted') throw new Error('CI runner required');
@@ -12,7 +12,8 @@ const launch=JSON.parse(capture(driver,['launch',owned,app,sha256(app)]));
 let check;
 try {
   check=JSON.parse(capture(driver,['protocol-check',launch.run]));
-  if(!check.invalidRequestsRejected || !check.snapshot.text.includes('选择你的笔记库')) throw new Error('Observer check failed');
+  if(!check.invalidRequestsRejected || check.paintedSnapshot.observedFrames!==2 ||
+     !check.snapshot.text.includes('选择你的笔记库')) throw new Error('Observer check failed');
 } finally { run(driver,['close',launch.run]); }
 const permissions=JSON.parse(capture(driver,['doctor']));
 writeJson(path.join(kit,'ci-observer-check.json'),{sourceCommit:readJson(path.join(kit,'receipt.json')).sourceCommit,

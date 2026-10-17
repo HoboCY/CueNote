@@ -1,4 +1,4 @@
-import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { root, verifyInputs, run, capture, tauri, sha256, writeJson } from '../../packaging/common.mjs';
 
@@ -14,7 +14,8 @@ config.bundle = { active: true, targets: ['app'], resources: {'../package-resour
 const configFile = path.join(out, 'tauri-performance.json');
 writeJson(configFile, config);
 run('swiftc', ['-O', '-whole-module-optimization', '-target', 'arm64-apple-macosx14.0',
-  'tools/performance/macos/Driver.swift', '-o', path.join(delivery, 'cuenote-performance-driver')]);
+  'tools/performance/macos/Driver.swift', 'tools/performance/macos/Matrix.swift',
+  'tools/performance/macos/main.swift', '-o', path.join(delivery, 'cuenote-performance-driver')]);
 run('codesign', ['--force', '--sign', '-', path.join(delivery, 'cuenote-performance-driver')]);
 tauri('build', '--no-binary-patching', '--target', input.target, '--features', 'perf-acceptance', '--bundles', 'app', '--config', configFile, '--', '--locked');
 const release = path.join(process.env.CARGO_TARGET_DIR, input.target, 'release');
@@ -29,6 +30,7 @@ const manifest = path.join(corpus,'manifest.json');
 if (sha256(manifest) !== '0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292') throw new Error('Mac fixture differs from frozen Q51 corpus');
 run(process.execPath, ['tools/performance/make-plans.mjs',manifest,path.join(delivery,'plans')]);
 copyFileSync(manifest,path.join(delivery,'manifest.json'));
+for(const name of ['run-matrix.command','README.md']) copyFileSync(path.join(root,'tools/performance/macos',name),path.join(delivery,name));
 cpSync(path.join(root,'package-resources'),path.join(delivery,'licenses'),{recursive:true});
 const hashes = {};
 for (const relative of ['cuenote-performance-driver','performance_fixture','CueNote Performance.app/Contents/MacOS/cuenote']) {
@@ -43,6 +45,7 @@ if(sourceDirty) throw new Error('Do not deliver a kit from dirty source');
 writeJson(path.join(delivery,'receipt.json'),{format:1,...input,sourceCommit,sourceDirty,
   applicationIdentifier:'com.hobocy.cuenote.performance',features:['perf-acceptance','tauri/custom-protocol'],
   binaries:hashes,manifestSha256:sha256(manifest),swift:capture('swiftc',['--version']),
+  plans:Object.fromEntries(readdirSync(path.join(delivery,'plans')).sort().map(name=>[name,sha256(path.join(delivery,'plans',name))])),
   xcode:capture('xcodebuild',['-version']),runner:{image:process.env.ImageOS,imageVersion:process.env.ImageVersion,runId:process.env.GITHUB_RUN_ID},
   scope:'Isolated performance tools only; neither CI timings nor this kit establish M1 acceptance.'});
 console.log(JSON.stringify({delivery,sourceCommit,hashes}));
