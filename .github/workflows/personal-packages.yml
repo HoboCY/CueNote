@@ -4,6 +4,7 @@ on:
   push:
     branches: [main, codex/project-foundation]
     paths:
+      - '.gitattributes'
       - '.github/workflows/personal-packages.yml'
       - 'src/**'
       - 'src-tauri/**'

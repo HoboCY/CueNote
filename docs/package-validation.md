@@ -24,6 +24,10 @@
 指定提交补齐上游许可说明及其引用的 MIT 原文，并保留 Cargo 作者声明。新一轮
 仍须完成安装包和生命周期检查。
 
+同轮 Windows 前端与 211 项原生测试（35 个测试程序，0 ignored）通过，但 schema
+逐字节检查拒绝了 Windows 新检出时的 CRLF 换行。为生成的两个 JSON Schema 和
+TypeScript 契约设置 `eol=lf`，保持生成器与两平台 Git 检出的字节一致；未改变 schema。
+
 ## 代码审查
 
 基线：`68583a1e06a0e089b1b025fd6cdfb8aeccd129c2`（#31 已交付）。

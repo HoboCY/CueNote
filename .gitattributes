@@ -1,2 +1,5 @@
 # Preserve downloaded license bytes: their upstream SHA-256 is verified at build time.
 docs/licenses/package-overrides/* -text -whitespace
+# The Rust schema exporter writes and compares LF bytes on both platforms.
+schemas/*.schema.json text eol=lf
+src/generated/note-format.ts text eol=lf
