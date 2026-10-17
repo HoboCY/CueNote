@@ -18,7 +18,7 @@ func object(_ value: Any?) throws -> Object { guard let value = value as? Object
 func text(_ value: Any?) -> String { value as? String ?? "" }
 func number(_ value: Any?) -> Double { (value as? NSNumber)?.doubleValue ?? 0 }
 func yes(_ value: Any?) -> Bool { (value as? NSNumber)?.boolValue ?? false }
-func clock() -> Double { Double(DispatchTime.now().uptimeNanoseconds) / 1_000_000 }
+func monotonicMs() -> Double { Double(DispatchTime.now().uptimeNanoseconds) / 1_000_000 }
 func pause(_ ms: Double) { Thread.sleep(forTimeInterval: ms / 1000) }
 func json(_ value: Any) throws -> Data { try JSONSerialization.data(withJSONObject: value, options: [.sortedKeys]) }
 func read(_ path: String) throws -> Object { try object(JSONSerialization.jsonObject(with: Data(contentsOf: URL(fileURLWithPath: path)))) }
@@ -59,7 +59,9 @@ final class Driver {
     }
     func assertOwner() throws {
         try ownedRoot(text(record["root"]))
-        var path = [CChar](repeating: 0, count: Int(PROC_PIDPATHINFO_MAXSIZE))
+        // libproc's PROC_PIDPATHINFO_MAXSIZE is an expression macro, which the
+        // Swift importer does not expose. Its SDK definition is 4 * MAXPATHLEN.
+        var path = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
         guard pid > 0, proc_pidpath(pid, &path, UInt32(path.count)) > 0,
               String(cString: path) == text(record["exe"]), try hash(text(record["exe"])) == text(record["sha256"]) else { throw Failure("Application process or binary ownership changed") }
     }
@@ -193,20 +195,20 @@ final class Driver {
         }
     }
     func until(_ expected: Object, timeout: Double = 240000, timings: inout Object) throws -> Object {
-        let start=clock(); var revealed=false, state: Object=[:]
-        while clock()-start < timeout {
+        let start=monotonicMs(); var revealed=false, state: Object=[:]
+        while monotonicMs()-start < timeout {
             try foreground(); state=try snapshot()
             guard text(state["visibility"]) == "visible", yes(state["focused"]) else { throw Failure("Application document lost focus/visibility") }
-            let elapsed=clock()-start
+            let elapsed=monotonicMs()-start
             for threshold in [1000,2000] where elapsed >= Double(threshold) && timings["feedback\(threshold)"] == nil {
                 timings["feedback\(threshold)"]=["elapsedMs":elapsed,"save":state["save"] ?? NSNull(),"savingFeedback":state["savingFeedback"] ?? NSNull(),"progress":state["progress"] ?? NSNull()]
             }
             if yes(expected["revealFirstImage"]), !revealed, yes(state["editable"]), text(state["noteId"]) == text(expected["noteId"]) {
-                try scroll(".rich-image-preview"); revealed=true; timings["firstImageScrolledMs"]=clock()-start; continue
+                try scroll(".rich-image-preview"); revealed=true; timings["firstImageScrolledMs"]=monotonicMs()-start; continue
             }
             if ready(state,expected) {
                 state=try snapshot(true)
-                if ready(state,expected) {timings["readyMs"]=clock()-start; return state}
+                if ready(state,expected) {timings["readyMs"]=monotonicMs()-start; return state}
             }
             pause(5)
         }
@@ -230,12 +232,12 @@ final class Driver {
             if let expected=step["beforeExpected"] as? Object {_ = try until(expected,timings:&ignored)}
             for setup in step["setup"] as? [Object] ?? [] {try action(setup)}
             if let expected=step["setupExpected"] as? Object {guard ready(try snapshot(),expected) else {throw Failure("Setup did not produce intended selection/dirty input")}}
-            try foreground(); let start=clock()
+            try foreground(); let start=monotonicMs()
             for input in step["actions"] as? [Object] ?? [] {try action(input)}
-            let inputMs=clock()-start; var timings: Object=[:]
+            let inputMs=monotonicMs()-start; var timings: Object=[:]
             let state: Object
             if let expected=step["expected"] as? Object {state=try until(expected,timeout:step["timeoutMs"] == nil ? 240000 : number(step["timeoutMs"]),timings:&timings)}else{state=try snapshot()}
-            var result: Object=["operation":text(step["name"]),"elapsedMs":clock()-start,"inputMs":inputMs,"readinessTimings":timings,"state":state]
+            var result: Object=["operation":text(step["name"]),"elapsedMs":monotonicMs()-start,"inputMs":inputMs,"readinessTimings":timings,"state":state]
             for key in ["metric","cacheState","expected"] {if let value=step[key] {result[key]=value}}
             try append(run+"/measurements.jsonl",result); try printJSON(["operation":result["operation"]!,"elapsedMs":result["elapsedMs"]!])
             if let capture=step["capture"] as? String {try self.capture(capture)}
@@ -244,8 +246,8 @@ final class Driver {
     func close() throws {
         try assertOwner()
         guard NSRunningApplication(processIdentifier:pid)?.terminate() == true else {throw Failure("Normal quit was refused")}
-        let end=clock()+60000
-        while kill(pid,0)==0 && clock()<end {pause(50)}
+        let end=monotonicMs()+60000
+        while kill(pid,0)==0 && monotonicMs()<end {pause(50)}
         guard kill(pid,0) != 0 else {throw Failure("Application did not exit normally; not force-killed")}
         try write(run+"/closed.json",["pid":pid,"normalExit":true])
     }
@@ -269,19 +271,19 @@ func launch(_ args: [String]) throws {
     for name in ["stdout","stderr"] {guard files.createFile(atPath:run+"/"+name+".txt",contents:nil,attributes:[.posixPermissions:0o600]) else {throw Failure("Cannot create launch log")}}
     let out=try FileHandle(forWritingTo:URL(fileURLWithPath:run+"/stdout.txt")), err=try FileHandle(forWritingTo:URL(fileURLWithPath:run+"/stderr.txt"))
     process.standardOutput=out; process.standardError=err
-    let start=clock(); try process.run(); try out.close(); try err.close()
+    let start=monotonicMs(); try process.run(); try out.close(); try err.close()
     let pid=process.processIdentifier
     try write(run+"/launcher.json",["root":root,"exe":exe,"sha256":expectedHash,"pid":pid,"run":run,"variant":"perf-acceptance","traceEnabled":false,"platform":"macos","startedUtc":ISO8601DateFormatter().string(from:Date())])
     do {
-        let endpoint=root+"/observer-\(pid).json", deadline=clock()+30000
-        while !files.fileExists(atPath:endpoint) && clock()<deadline {guard process.isRunning else {throw Failure("Application exited before observer startup")}; pause(10)}
+        let endpoint=root+"/observer-\(pid).json", deadline=monotonicMs()+30000
+        while !files.fileExists(atPath:endpoint) && monotonicMs()<deadline {guard process.isRunning else {throw Failure("Application exited before observer startup")}; pause(10)}
         guard files.fileExists(atPath:endpoint) else {throw Failure("Observer startup timeout")}
-        guard let app=NSRunningApplication(processIdentifier:pid), app.activate(options:[.activateIgnoringOtherApps]) else {throw Failure("Could not activate native app")}
-        while NSWorkspace.shared.frontmostApplication?.processIdentifier != pid && clock()<deadline {pause(10)}
+        guard let app=NSRunningApplication(processIdentifier:pid), app.activate(options:[]) else {throw Failure("Could not activate native app")}
+        while NSWorkspace.shared.frontmostApplication?.processIdentifier != pid && monotonicMs()<deadline {pause(10)}
         let driver=try Driver(run:run); var timings: Object=[:]
         let expected: Object = mode == "welcome" ? ["kind":"welcome"] : ["kind":"editor","noteId":args.count>4 ? args[4]:"","revealFirstImage":mode=="editor-first-image"]
         let state=try driver.until(expected,timings:&timings)
-        try write(run+"/startup.json",["operation":mode=="welcome" ? "empty-startup":"startup","readiness":mode,"elapsedMs":clock()-start,"readinessTimings":timings,"state":state])
+        try write(run+"/startup.json",["operation":mode=="welcome" ? "empty-startup":"startup","readiness":mode,"elapsedMs":monotonicMs()-start,"readinessTimings":timings,"state":state])
         try driver.capture("startup"); try printJSON(["run":run,"pid":pid])
     } catch {
         try? append(run+"/failures.jsonl",["command":"launch","error":String(describing:error)])
@@ -314,8 +316,8 @@ do {
                     do {_ = try driver.request("snapshot",override:payload); throw Failure("Invalid request was accepted")}
                     catch let failure as Failure {if failure.description != expectedError {throw failure}}
                 }
-                let before=clock(); _ = try driver.snapshot(true)
-                try printJSON(["invalidRequestsRejected":true,"asyncPaintReadMs":clock()-before,"snapshot":driver.snapshot()])
+                let before=monotonicMs(); _ = try driver.snapshot(true)
+                try printJSON(["invalidRequestsRejected":true,"asyncPaintReadMs":monotonicMs()-before,"snapshot":driver.snapshot()])
             }
         } catch {try? append(args[1]+"/failures.jsonl",["command":args[0],"error":String(describing:error)]); throw error}
     default: throw Failure("Use doctor, launch, inspect, actions, close, capture or protocol-check")
