@@ -1,7 +1,8 @@
 # Mac 实机验证工具记录
 
 2026-10-18，服务 #33 的 Q51/Q52。工具包已通过 Apple Silicon CI 构建、协议和资源检查，
-已回收、解密并核验交付文件；目标 M1 Pro 尚未运行，#33 和 #12 保持开放。日用候选仍为 f1308f4，
+已回收、解密并核验交付文件；M1 Pro 原生资源测试已通过，UI 矩阵尚未运行，
+#33 和 #12 保持开放。日用候选仍为 f1308f4，
 性能工具采用独立应用 ID 和目录，普通安装包不启用观察器。
 
 ## 观察和输入
@@ -14,7 +15,8 @@ callAsyncJavaScript 完成回调等待双 requestAnimationFrame 后再返回；�
 Swift 驱动用原生 CGEvent 派发鼠标、按键和 Unicode 文本，外部单调时钟计时。
 辅助功能权限不足即停止，无 DOM 输入替代。CSS 坐标按 NSView 的实际屏幕范围
 换算，不额外乘 Retina 缩放。当前显示器/窗口位置的真实输入、选区和滚动必须
-先通过独立副本校准，再进入完整矩阵。实际 M1 的权限、焦点和命中尚待验证。
+先通过独立副本校准，再进入完整矩阵。实际 M1 的 SSH 启动链权限检查显示
+accessibility/nativeInput 为 false，已请求用户在系统设置授权；输入校准尚未开始。
 
 矩阵保留 Process，正常退出码为 0 才计为正常重启。独立 CLI 无法读取父进程
 退出状态时，只记录退出请求和进程消失，不声称正常退出。失焦、超时、输入异常
@@ -61,12 +63,16 @@ Mac 构建也已重验得到同一冻结哈希。
 - 此包的 CI 资源报告包含四份测试日志哈希，但未携带原始日志；本机核验的是 CI
   成功报告，不声称已复核这四份日志。M1 实测会保留自己的日志与结果。
 - 此前 Swift 编译和样本哈希失败记录保留，未删除或改称通过。
+- 目标 M1 Pro（macOS 26.6.2，16 GiB）上，四组预编译资源测试已完成 46/46，
+  0 失败、0 忽略；原始日志已取回并逐份核对报告哈希。该结果来自真实设备，
+  与前述 CI 成功声明分别保留，见[Mac 实机记录](device-macos-results.json)。
 
 私人交付位于 `package-output/personal-f1308f4/Mac/performance-8825f5f`。
 将原始 `CueNote-Performance-8825f5f.tar.gz` 传给 Mac 后解压，按附带说明执行
 `/bin/bash ./run-matrix.command`；不要将 Windows 解包检查副本作为可运行交付。
 tar.gz SHA-256：`ea80ee994e909355fefe55483a0da9022e6a19d8b688db0b67780cfabfb4dfea`。
-无需 Rust、Node 或 Xcode；实机权限、输入校准、完整矩阵与真实 OneDrive 仍待用户设备操作。
+无需 Rust、Node 或 Xcode。工具已传到目标 Mac；实机输入授权、校准和完整 UI 矩阵
+仍未完成。真实 OneDrive 已通过双向合成标记验证传输可达，笔记与冲突流程另行验收。
 
 主代理按 code-review 的 Spec 和 Standards 两个维度分别复核，遵循用户当前路由，
 没有调用默认/explorer/reviewer 后端，也不将主代理复核说成独立审查。

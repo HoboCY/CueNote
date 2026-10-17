@@ -1,0 +1,194 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "formalCandidate": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+  "environment": {
+    "collectedUtc": "2026-10-17T23:18:00Z",
+    "os": "macOS 26.6.2",
+    "build": "25G83",
+    "architecture": "arm64",
+    "chip": "Apple M1 Pro",
+    "memoryBytes": 17179869184,
+    "logicalCPUs": 8,
+    "systemWebKit": "21624.5.1.11.3",
+    "oneDriveVersion": "26.173.0906"
+  },
+  "installation": {
+    "application": "/Applications/CueNote.app",
+    "version": "0.1.0",
+    "identifier": "com.hobocy.cuenote",
+    "previousApplicationPresent": false,
+    "dmgSha256": "ecf01824b5a91e881dfffb9e1d56118e651ee24bd735b8471c5bcfd3e6825428",
+    "binarySha256": "6d75643740adc34f3922e82aaa123b9dec1e23e207a3112b2215863d41b761a4",
+    "signatureIntegrity": "passed",
+    "gatekeeperAssessment": "rejected",
+    "method": "Read-only DMG mount, hash/signature verification, ditto to absent target, Launch Services open. No quarantine or TCC edits.",
+    "startup": "Process running and foreground on-screen window metadata verified. Rendered page and manual editing not yet verified.",
+    "window": {
+      "apps": [
+        {
+          "pid": 91643,
+          "active": true,
+          "hidden": false,
+          "terminated": false
+        }
+      ],
+      "windows": [
+        {
+          "id": 20270,
+          "pid": 91643,
+          "bounds": {
+            "X": 116,
+            "Height": 860,
+            "Y": 41,
+            "Width": 1280
+          },
+          "layer": 0,
+          "onscreen": true
+        }
+      ]
+    }
+  },
+  "resources": {
+    "hostedCI": false,
+    "os": "Version 26.6.2 (Build 25G83)",
+    "passed": true,
+    "scope": "Native Q52 format/image/storage regressions on this host; no UI, OneDrive or power-loss claim",
+    "sourceCommit": "8825f5f0aa0ca4368b9a0d6b1111995a293d4fff",
+    "suites": [
+      {
+        "logSha256": "dfa037ce745014e39e299f0d0e56243efeb5b2b621bd0538f513ae40a3d9fa78",
+        "passed": true,
+        "sha256": "591d08deb1bba0274a715d63c5797ef42fa04490bfd6bdf2f5399e57718436d3",
+        "suite": "format_v1"
+      },
+      {
+        "logSha256": "f73fdc3b557941feadb48d9c2b8d419f67173991cdd256d3c004a17ba1f09b1e",
+        "passed": true,
+        "sha256": "65c351818a4b9fff498225d85a70d09b7e35edc5bf2b098d50669f54dd1d7034",
+        "suite": "image_content"
+      },
+      {
+        "logSha256": "590652cd27aca7f154891b939088c84ce66f9b5049ac8ef5ab54e20434bfb398",
+        "passed": true,
+        "sha256": "777589e4c10d77bacf8829837210c87ff9f4c8fbf4ea5f3df1abf4c53bab5430",
+        "suite": "rich_content"
+      },
+      {
+        "logSha256": "8a53300494a820c0e146d4730678df8be73a5d87cbed563718e6dc82f62124a0",
+        "passed": true,
+        "sha256": "8e4f31ab5c768d795b63e684192c882c691ea74360d41236f18287369155219b",
+        "suite": "storage"
+      }
+    ],
+    "counts": [
+      {
+        "suite": "format_v1",
+        "passed": 13,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "suite": "image_content",
+        "passed": 17,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "suite": "rich_content",
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "suite": "storage",
+        "passed": 10,
+        "failed": 0,
+        "ignored": 0
+      }
+    ],
+    "totalPassed": 46,
+    "failed": 0,
+    "ignored": 0,
+    "rawLogHashesVerified": true
+  },
+  "permissions": {
+    "accessibility": false,
+    "nativeInput": false,
+    "os": "Version 26.6.2 (Build 25G83)",
+    "screenshots": false
+  },
+  "syncReadiness": {
+    "userConfirmedBothDevicesReady": true,
+    "windowsToMac": {
+      "sha256": "9cece6a0ce824bbe7826b66701e45d90cf5613297909e5aa6ad451fec88bd40e",
+      "verifiedOnMac": true
+    },
+    "macToWindows": {
+      "sha256": "479cbf02124dc97b734bc2ee3c8eff622637a07e6e29c0a3d5e8c25229474f4f",
+      "verifiedOnWindows": true
+    },
+    "method": "New synthetic marker files written at each endpoint and observed through OneDrive. No scp or direct copy into the other endpoint sync root.",
+    "scope": "Transport readiness only, not native-note round trip, concurrent editing, offline reconnect or full A10/A11 acceptance."
+  },
+  "evidenceHashes": [
+    {
+      "file": "environment.txt",
+      "sha256": "677bbdb92db5ea4cf2620d12d237a549417909a9e45870606d526a51e449dff1"
+    },
+    {
+      "file": "install.log",
+      "sha256": "623ec4468bc79d1c01f5b7eccd5493b8ddd949199b1721f3fb90e4fe6bc04944"
+    },
+    {
+      "file": "gatekeeper-assessment.txt",
+      "sha256": "75735ce623f66bcb47154f04679b27d1e4917915a8d2d581805afca39d618d84"
+    },
+    {
+      "file": "window-state-v2.json",
+      "sha256": "d8d12d48ce3379584442d3d0731f227aa89f5c5c9effeacee86309ea4500cb58"
+    },
+    {
+      "file": "performance-doctor.json",
+      "sha256": "5aee0dda18c4b94152e602124e869fd499b4912a5dcba660fc21859c00f7af22"
+    },
+    {
+      "file": "attach.plist",
+      "sha256": "61dadc8aafc3bd47de7dc9d3b13da7fccefe773ffde0d96129f835eec1ce802b"
+    },
+    {
+      "file": "detach.log",
+      "sha256": "7a042615bf3722a3771413c5ae0834a1153311a88abad4deef4d8ad80a5c7273"
+    },
+    {
+      "file": "resources/results.json",
+      "sha256": "337f4388f5e13386993e6c89921b8e42497c0a7ffe63aea5764259a4246e3168"
+    },
+    {
+      "file": "resources/format_v1.log",
+      "sha256": "dfa037ce745014e39e299f0d0e56243efeb5b2b621bd0538f513ae40a3d9fa78"
+    },
+    {
+      "file": "resources/image_content.log",
+      "sha256": "f73fdc3b557941feadb48d9c2b8d419f67173991cdd256d3c004a17ba1f09b1e"
+    },
+    {
+      "file": "resources/rich_content.log",
+      "sha256": "590652cd27aca7f154891b939088c84ce66f9b5049ac8ef5ab54e20434bfb398"
+    },
+    {
+      "file": "resources/storage.log",
+      "sha256": "8a53300494a820c0e146d4730678df8be73a5d87cbed563718e6dc82f62124a0"
+    },
+    {
+      "file": "sync-readiness/windows-to-mac-probe.json",
+      "sha256": "9cece6a0ce824bbe7826b66701e45d90cf5613297909e5aa6ad451fec88bd40e"
+    },
+    {
+      "file": "sync-readiness/mac-to-windows-probe.json",
+      "sha256": "479cbf02124dc97b734bc2ee3c8eff622637a07e6e29c0a3d5e8c25229474f4f"
+    }
+  ],
+  "dailyUseApproved": false
+}

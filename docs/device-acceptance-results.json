@@ -76,13 +76,42 @@
   "mac": {
     "reportedChip": "Apple M1 Pro",
     "status": "未测",
-    "actualEnvironmentCollected": false,
+    "actualEnvironmentCollected": true,
     "performanceKit": {
       "sourceCommit": "8825f5f0aa0ca4368b9a0d6b1111995a293d4fff",
-      "status": "工具已构建并校验，目标设备未测",
+      "status": "M1 native resource checks passed (46/46); Q51 UI matrix awaits accessibility permission",
       "report": "performance-macos-kit-results.json",
       "archiveSha256": "ea80ee994e909355fefe55483a0da9022e6a19d8b688db0b67780cfabfb4dfea"
-    }
+    },
+    "environment": {
+      "collectedUtc": "2026-10-17T23:18:00Z",
+      "os": "macOS 26.6.2",
+      "build": "25G83",
+      "architecture": "arm64",
+      "chip": "Apple M1 Pro",
+      "memoryBytes": 17179869184,
+      "logicalCPUs": 8,
+      "systemWebKit": "21624.5.1.11.3",
+      "oneDriveVersion": "26.173.0906"
+    },
+    "report": "device-macos-results.json",
+    "checks": [
+      {
+        "step": "Actual-device installation, binary/signature verification and process/window startup",
+        "status": "通过",
+        "detail": "Foreground window metadata verified; rendered page, interactive install and editing still untested."
+      },
+      {
+        "step": "Precompiled native resource suites on actual M1",
+        "status": "通过",
+        "detail": "46/46, zero failed/ignored; raw logs retrieved and hashes verified."
+      },
+      {
+        "step": "Q51 native input permissions",
+        "status": "阻塞",
+        "detail": "Accessibility and nativeInput false on the SSH launch chain; user has been asked to grant the system permission."
+      }
+    ]
   },
   "cases": [
     {
@@ -149,7 +178,7 @@
       "id": "A11",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "OneDrive synthetic marker round trip verified with matching hashes in both directions; actual-note workflows remain untested."
     },
     {
       "id": "A12",
@@ -221,13 +250,13 @@
       "id": "A23",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Windows current-runtime Q51 and native content checks passed in an isolated performance variant; relocated resource regression 47/47 reused. Full case remains unaccepted. Mac kit ready, target device not run."
+      "notes": "Windows Q51 and native content checks passed; Windows resource regression 47/47. Actual M1 native resource checks 46/46 with verified raw logs; M1 Q51 waits for native input permission. Full case remains unaccepted."
     },
     {
       "id": "A24",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Windows install/start substeps passed; entire A24 remains untested."
+      "notes": "Windows installation/start and Mac installation/signature/process/window substeps passed. Interactive prompts, editing, actual upgrade and uninstall remain untested."
     },
     {
       "id": "A25",
@@ -248,5 +277,19 @@
     "Same-account real OneDrive round trips and conflict scenarios",
     "Full A01-A26, Q51/Q52 target-device evidence",
     "Precompiled Mac performance driver implementation and device calibration"
-  ]
+  ],
+  "syncReadiness": {
+    "userConfirmedBothDevicesReady": true,
+    "windowsToMac": {
+      "sha256": "9cece6a0ce824bbe7826b66701e45d90cf5613297909e5aa6ad451fec88bd40e",
+      "verifiedOnMac": true
+    },
+    "macToWindows": {
+      "sha256": "479cbf02124dc97b734bc2ee3c8eff622637a07e6e29c0a3d5e8c25229474f4f",
+      "verifiedOnWindows": true
+    },
+    "method": "New synthetic marker files written at each endpoint and observed through OneDrive. No scp or direct copy into the other endpoint sync root.",
+    "scope": "Transport readiness only, not native-note round trip, concurrent editing, offline reconnect or full A10/A11 acceptance.",
+    "report": "device-macos-results.json"
+  }
 }
