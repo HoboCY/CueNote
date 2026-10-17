@@ -51,18 +51,30 @@ function removeMacApp() {
   rmSync(installed, { recursive: true });
 }
 function install(dmg, version) {
-  if (win) return windows('install', dmg, version);
-  const mount = path.join(process.env.RUNNER_TEMP, `cuenote-dmg-${version}`);
-  mkdirSync(mount, { recursive: true });
-  run('hdiutil', ['verify', dmg]);
-  run('hdiutil', ['attach', '-readonly', '-nobrowse', '-mountpoint', mount, dmg]);
-  try {
-    if (existsSync(installed)) removeMacApp();
-    mkdirSync(path.dirname(installed), { recursive: true });
-    run('ditto', [path.join(mount, 'CueNote.app'), installed]);
-  } finally { run('hdiutil', ['detach', mount]); }
-  run('codesign', ['--verify', '--deep', '--strict', installed]);
-  if (capture('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleShortVersionString', path.join(installed, 'Contents/Info.plist')]) !== version) throw new Error('Installed macOS version differs');
+  if (win) windows('install', dmg, version);
+  else {
+    const mount = path.join(process.env.RUNNER_TEMP, `cuenote-dmg-${version}`);
+    mkdirSync(mount, { recursive: true });
+    run('hdiutil', ['verify', dmg]);
+    run('hdiutil', ['attach', '-readonly', '-nobrowse', '-mountpoint', mount, dmg]);
+    try {
+      if (existsSync(installed)) removeMacApp();
+      mkdirSync(path.dirname(installed), { recursive: true });
+      run('ditto', [path.join(mount, 'CueNote.app'), installed]);
+    } finally { run('hdiutil', ['detach', mount]); }
+    run('codesign', ['--verify', '--deep', '--strict', installed]);
+    if (capture('/usr/libexec/PlistBuddy', ['-c', 'Print :CFBundleShortVersionString', path.join(installed, 'Contents/Info.plist')]) !== version) throw new Error('Installed macOS version differs');
+  }
+  if (version === receipt.version) {
+    const exe = path.join(installed, win ? 'cuenote.exe' : 'Contents/MacOS/cuenote');
+    if (sha256(exe) !== receipt.binarySha256) throw new Error('Installed binary differs from release receipt');
+    const licenses = path.join(installed, win ? 'licenses' : 'Contents/Resources/licenses');
+    const inventory = readJson(path.join(licenses, 'components.json'));
+    if (inventory.target !== target()) throw new Error('Installed license inventory has wrong target');
+    for (const component of inventory.components) for (const text of component.texts) {
+      if (sha256(path.join(licenses, text.file)) !== text.sha256) throw new Error(`Installed license text differs: ${text.file}`);
+    }
+  }
 }
 async function start() {
   if (win) return windows('start', path.join(installed, 'cuenote.exe'));

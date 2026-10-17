@@ -29,6 +29,7 @@ function collect(component, directory, extraFiles = []) {
       files.push(source);
     }
     component.licenseSources = override.files;
+    if (override.note) component.licenseNote = override.note;
   }
   if (!component.license || !files.length) missing.push(`${component.name}@${component.version}: license=${component.license}, texts=${files.length}`);
   const texts = [];
@@ -67,7 +68,7 @@ for (const pkg of metadata.packages) {
   if (pkg.name === 'cuenote') continue;
   const directory = path.dirname(pkg.manifest_path);
   collect({ ecosystem: 'cargo', name: pkg.name, version: pkg.version,
-    license: pkg.license, source: `https://crates.io/api/v1/crates/${pkg.name}/${pkg.version}/download`,
+    license: pkg.license, authors: pkg.authors, source: `https://crates.io/api/v1/crates/${pkg.name}/${pkg.version}/download`,
     repository: pkg.repository, scope: 'resolved target graph (includes build/test tools)' }, directory,
   pkg.license_file ? [path.resolve(directory, pkg.license_file)] : []);
 }

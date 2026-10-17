@@ -22,10 +22,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: personal-packages-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
   package:
     strategy:
@@ -36,6 +32,9 @@ jobs:
             target: x86_64-pc-windows-msvc
           - runner: macos-15
             target: aarch64-apple-darwin
+    concurrency:
+      group: personal-packages-${{ github.ref }}-${{ matrix.target }}
+      cancel-in-progress: false
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 120
     defaults:
