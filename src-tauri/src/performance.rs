@@ -1,6 +1,10 @@
-//! Launch isolation only. All editor, storage, history and indexing code is shared
-//! with the normal optimized build. This feature is never used for installers.
+//! Launch isolation and, on macOS, a read-only native WebView observer.
+//! Editor/storage code is shared with the normal optimized build. This feature
+//! is never used for personal application installers.
 use std::{error::Error, fs, path::PathBuf};
+
+#[cfg(target_os = "macos")]
+pub(crate) mod macos;
 
 use sha2::{Digest, Sha256};
 
@@ -105,6 +109,14 @@ pub(crate) fn isolate(
 ) -> Result<tauri::Context<tauri::Wry>, Box<dyn Error>> {
     if context.config().identifier != IDENTIFIER {
         return Err("Use tauri.performance.conf.json for performance builds".into());
+    }
+    #[cfg(target_os = "macos")]
+    if objc2_foundation::NSProcessInfo::processInfo()
+        .operatingSystemVersion()
+        .majorVersion
+        < 14
+    {
+        return Err("Performance profile isolation requires macOS 14 or newer".into());
     }
     let root = root()?;
     let profile = root.join("webview");

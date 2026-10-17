@@ -90,6 +90,8 @@ pub fn run() {
             ));
             let workspace = commands::WorkspaceState::new(workspace);
             app.manage(workspace);
+            #[cfg(all(feature = "perf-acceptance", target_os = "macos"))]
+            performance::macos::attach(app.handle())?;
             Ok(())
         })
         .on_window_event(|window, event| {

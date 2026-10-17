@@ -1,0 +1,65 @@
+name: Mac performance kit
+
+on:
+  push:
+    branches: [codex/project-foundation]
+    paths:
+      - '.github/workflows/macos-performance.yml'
+      - 'tools/performance/macos/**'
+      - 'src-tauri/src/performance/**'
+      - 'src-tauri/src/performance.rs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 90
+    concurrency:
+      group: mac-performance-${{ github.ref }}
+      cancel-in-progress: false
+    env:
+      CARGO_BUILD_JOBS: '2'
+      RUST_TEST_THREADS: '2'
+      CARGO_TARGET_DIR: ${{ github.workspace }}/src-tauri/target/performance-macos
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version-file: .node-version
+      - name: Compile native driver first
+        run: |
+          swiftc -O -whole-module-optimization -target arm64-apple-macosx14.0 tools/performance/macos/Driver.swift -o "$RUNNER_TEMP/cuenote-performance-driver-check"
+      - name: Install locked build inputs
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --component rustfmt
+          rustup target add aarch64-apple-darwin --toolchain 1.99.0
+          npm ci
+      - name: Check shared code and Mac observer
+        run: |
+          npm test
+          npm run build
+          cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+          cargo test --locked --manifest-path src-tauri/Cargo.toml --features perf-acceptance --all-targets
+          cargo run --locked --manifest-path src-tauri/Cargo.toml --bin export_note_schema -- --check
+          git diff --exit-code
+      - name: Build isolated kit and frozen fixture
+        run: |
+          npm run package:licenses
+          node tools/performance/macos/build.mjs
+      - name: Check async read-only observer and seal kit
+        run: node tools/performance/macos/check-ci.mjs
+      - name: Upload encrypted kit only
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: CueNote-macos-performance-kit
+          path: |
+            package-output/performance-encrypted/*.age
+            package-output/performance-encrypted/*.age.sha256
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

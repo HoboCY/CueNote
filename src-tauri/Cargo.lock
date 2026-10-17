@@ -631,9 +631,14 @@ checksum = "914a755b7c2d4af2bdcff7ce1739e2db9a1b81a9b07123d8015786ae03c0980d"
 name = "cuenote"
 version = "0.1.0"
 dependencies = [
+ "block2",
  "chrono",
  "image",
  "notify",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-web-kit",
  "schemars 1.2.3",
  "serde",
  "serde_json",
