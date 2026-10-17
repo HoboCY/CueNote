@@ -1,0 +1,156 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "targetDeviceTested": false,
+  "workflow": "https://github.com/HoboCY/CueNote/actions/runs/39049647964",
+  "artifactZipSha256": "94a9d271c2aac793c4ecae2126d73893cb269195458e36354cd04601874ea4ec",
+  "encryptedPayloadSha256": "38c9b72ed660471a850f200b0fea2300d22561c0dd0460dfe16d5b245194de74",
+  "receipt": {
+    "format": 1,
+    "version": "0.1.0",
+    "target": "aarch64-apple-darwin",
+    "rust": "1.99.0",
+    "node": "24.21.0",
+    "sourceCommit": "8825f5f0aa0ca4368b9a0d6b1111995a293d4fff",
+    "sourceDirty": false,
+    "applicationIdentifier": "com.hobocy.cuenote.performance",
+    "features": [
+      "perf-acceptance",
+      "tauri/custom-protocol"
+    ],
+    "binaries": {
+      "cuenote-performance-driver": "a42d3a00166f0c86d36942fbdcd68450758c7af2d968aa25a5e3f9b02dc166f8",
+      "performance_fixture": "6e7653d7d7e03f930cf0128a8a705e9f19c8bc6e8c7785041b6c637ba3a498a9",
+      "CueNote Performance.app/Contents/MacOS/cuenote": "400bd49035e22bc5cdd867985b1b6d66c4f0460c5aa11dad08d3c3c90aa0c773",
+      "resource-tests/format_v1": "591d08deb1bba0274a715d63c5797ef42fa04490bfd6bdf2f5399e57718436d3",
+      "resource-tests/image_content": "65c351818a4b9fff498225d85a70d09b7e35edc5bf2b098d50669f54dd1d7034",
+      "resource-tests/rich_content": "777589e4c10d77bacf8829837210c87ff9f4c8fbf4ea5f3df1abf4c53bab5430",
+      "resource-tests/storage": "8e4f31ab5c768d795b63e684192c882c691ea74360d41236f18287369155219b"
+    },
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "swift": "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)\nTarget: arm64-apple-macosx15.0",
+    "plans": {
+      "cancel-save-wait.json": "80da63728a05532617e77d122ed60e51f7e1caf48cf900f5bad90526c6e783d3",
+      "clear-search.json": "03f92d6d58b8812a46fb03ac0a75da94296921d0868b6b27c6cbf00dceacb159",
+      "index.json": "6067da55a11c2fa9889a3d350103daef7ab1decc1734303b120b06b499537847",
+      "ordinary-inputs.json": "bd6339602657e8269ec28fccfcba1350c4a07cdba63d6a3767a451537d6b4a6a",
+      "ordinary-maps.json": "9b48dbb78ae2663a14a7c042b9e3095cd4e68e38727c97cada068559a9a2d1cb",
+      "ordinary-opens.json": "8a5996e2368ffd975b28489c1f232aa846b2162583b4592ec06aa4e714aaa994",
+      "ordinary-saves.json": "4465c8484fad383447b054cee2c52a802299c1b839c871394f429ef335c0d896",
+      "ordinary-select.json": "2fc6f09162ed60c6afad429acc586326ed1da66ce5f07160f84f2d65987bf257",
+      "search.json": "caa4f7b5833129a3be9785993db9b385429a11f9d393bec68650f60f883073b7",
+      "stress-inputs.json": "8d248d39dc15e33f20ab77117c6a3eb7a33307e6c9867ba852d652e4881b4b7e",
+      "stress-maps.json": "ce8b64ad4c28e7bf42d8a25cb304165173b69e4e506d87f39c77e60f1c0e6bc7",
+      "stress-opens.json": "eb3083cf73180dd6c74d67f4dfd5889d2b362448ee78c95efc2e52c671c5ee7f",
+      "stress-saves.json": "b5808fdac407833df659af79db84d56c6f59ff3cfe5bc28b44eb51caa7e8ddd6",
+      "stress-select.json": "c8a0cef8e5c629b44d6b22f73fdea0ba97d98fa62c2c1d1a678ab33f83504e6a"
+    },
+    "resourceSuites": [
+      "format_v1",
+      "image_content",
+      "rich_content",
+      "storage"
+    ],
+    "xcode": "Xcode 16.4\nBuild version 16F6",
+    "runner": {
+      "image": "macos15",
+      "imageVersion": "20260907.0337.1",
+      "runId": "39049647964"
+    },
+    "scope": "Isolated performance tools only; neither CI timings nor this kit establish M1 acceptance."
+  },
+  "localVerification": {
+    "verified": true,
+    "sourceCommit": "8825f5f0aa0ca4368b9a0d6b1111995a293d4fff",
+    "runId": "39049647964",
+    "archiveSha256": "ea80ee994e909355fefe55483a0da9022e6a19d8b688db0b67780cfabfb4dfea",
+    "archiveEntries": 2131,
+    "receiptSha256": "33f073913db62ee2a357b669f1baa816342402f71c32c660d3e34992cb5b73e9",
+    "binaries": [
+      {
+        "file": "cuenote-performance-driver",
+        "sha256": "a42d3a00166f0c86d36942fbdcd68450758c7af2d968aa25a5e3f9b02dc166f8",
+        "archiveMode": "-rwxr-xr-x",
+        "architecture": "arm64"
+      },
+      {
+        "file": "performance_fixture",
+        "sha256": "6e7653d7d7e03f930cf0128a8a705e9f19c8bc6e8c7785041b6c637ba3a498a9",
+        "archiveMode": "-rwxr-xr-x",
+        "architecture": "arm64"
+      },
+      {
+        "file": "CueNote Performance.app/Contents/MacOS/cuenote",
+        "sha256": "400bd49035e22bc5cdd867985b1b6d66c4f0460c5aa11dad08d3c3c90aa0c773",
+        "archiveMode": "-rwxr-xr-x",
+        "architecture": "arm64"
+      },
+      {
+        "file": "resource-tests/format_v1",
+        "sha256": "591d08deb1bba0274a715d63c5797ef42fa04490bfd6bdf2f5399e57718436d3",
+        "archiveMode": "-rwxr-xr-x",
+        "architecture": "arm64"
+      },
+      {
+        "file": "resource-tests/image_content",
+        "sha256": "65c351818a4b9fff498225d85a70d09b7e35edc5bf2b098d50669f54dd1d7034",
+        "archiveMode": "-rwxr-xr-x",
+        "architecture": "arm64"
+      },
+      {
+        "file": "resource-tests/rich_content",
+        "sha256": "777589e4c10d77bacf8829837210c87ff9f4c8fbf4ea5f3df1abf4c53bab5430",
+        "archiveMode": "-rwxr-xr-x",
+        "architecture": "arm64"
+      },
+      {
+        "file": "resource-tests/storage",
+        "sha256": "8e4f31ab5c768d795b63e684192c882c691ea74360d41236f18287369155219b",
+        "archiveMode": "-rwxr-xr-x",
+        "architecture": "arm64"
+      }
+    ],
+    "plans": 14,
+    "licenseComponents": 405,
+    "licenseTexts": 633,
+    "observerProtocolPassed": true,
+    "ciResourceSuccessReportVerified": true,
+    "ciResourceRawLogsIncluded": false,
+    "scope": "Local archive/hash/permission verification plus hosted-CI evidence. Not M1/OneDrive acceptance. Transfer the original tar.gz and extract on Mac."
+  },
+  "ciResourceReport": {
+    "hostedCI": true,
+    "os": "Version 15.7.9 (Build 24G830)",
+    "passed": true,
+    "scope": "Native Q52 format/image/storage regressions on this host; no UI, OneDrive or power-loss claim",
+    "sourceCommit": "8825f5f0aa0ca4368b9a0d6b1111995a293d4fff",
+    "suites": [
+      {
+        "logSha256": "3d6a6f91f02bf564d9f517f101dc090f291557d9b093d913a8c6a0ef61c4e5a2",
+        "passed": true,
+        "sha256": "591d08deb1bba0274a715d63c5797ef42fa04490bfd6bdf2f5399e57718436d3",
+        "suite": "format_v1"
+      },
+      {
+        "logSha256": "2fea0a833b4bf48e374e528c54c324ca3364c3084bbf99d83246d6dbd7b5474b",
+        "passed": true,
+        "sha256": "65c351818a4b9fff498225d85a70d09b7e35edc5bf2b098d50669f54dd1d7034",
+        "suite": "image_content"
+      },
+      {
+        "logSha256": "d1db857e665591b562b929a741c7b9a90384ccf97a013627964f6e1ab8ae0316",
+        "passed": true,
+        "sha256": "777589e4c10d77bacf8829837210c87ff9f4c8fbf4ea5f3df1abf4c53bab5430",
+        "suite": "rich_content"
+      },
+      {
+        "logSha256": "3817bcb1d55b0b9c05657ba58dec1d0acf4a0e60cc472b37ed3be0f6c0ca4408",
+        "passed": true,
+        "sha256": "8e4f31ab5c768d795b63e684192c882c691ea74360d41236f18287369155219b",
+        "suite": "storage"
+      }
+    ]
+  },
+  "limitation": "CI resource result claims verified; raw resource logs were not included in this build. Actual M1 resource runs preserve their own logs."
+}

@@ -38,6 +38,12 @@
       {
         "step": "Interactive installer experience, editing, upgrade, uninstall and OneDrive",
         "status": "未测"
+      },
+      {
+        "step": "Current WebView2 isolated Q51 matrix and native saved-content check",
+        "status": "通过",
+        "detail": "467 metric samples; 13 normal exits including 10 consecutive restarts; all 1000 native notes and 10 notebooks checked. Separate performance binary from clean 53be8ce; does not establish the full A23 case.",
+        "report": "performance-windows-current-results.json"
       }
     ],
     "evidenceHashes": [
@@ -70,7 +76,13 @@
   "mac": {
     "reportedChip": "Apple M1 Pro",
     "status": "未测",
-    "actualEnvironmentCollected": false
+    "actualEnvironmentCollected": false,
+    "performanceKit": {
+      "sourceCommit": "8825f5f0aa0ca4368b9a0d6b1111995a293d4fff",
+      "status": "工具已构建并校验，目标设备未测",
+      "report": "performance-macos-kit-results.json",
+      "archiveSha256": "ea80ee994e909355fefe55483a0da9022e6a19d8b688db0b67780cfabfb4dfea"
+    }
   },
   "cases": [
     {
@@ -209,7 +221,7 @@
       "id": "A23",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Issue31 Windows baseline retained at original binary/runtime; no new-candidate or Mac score inferred."
+      "notes": "Windows current-runtime Q51 and native content checks passed in an isolated performance variant; relocated resource regression 47/47 reused. Full case remains unaccepted. Mac kit ready, target device not run."
     },
     {
       "id": "A24",
