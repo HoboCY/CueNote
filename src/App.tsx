@@ -116,11 +116,15 @@ function toWorkspaceError(error: unknown): WorkspaceError {
   };
 }
 
+const timestampFormatter = new Intl.DateTimeFormat('zh-CN', {
+  year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+});
+
 function formatModifiedAt(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? value
-    : date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    : timestampFormatter.format(date);
 }
 
 function noteTitle(note: { title: string }) {
@@ -238,6 +242,7 @@ function App() {
   const editorIssuesRef = useRef<EditorIssues>({ ...emptyEditorIssues });
   const operationInProgressRef = useRef(false);
   const manualSaveInProgressRef = useRef(false);
+  const savingForExternalProbeRef = useRef(false);
   const pendingTransitionRef = useRef<PendingTransition | null>(null);
   const transitionAttemptRef = useRef<PendingTransition | null>(null);
   const transitionWaitingForOperationRef = useRef(false);
@@ -505,6 +510,10 @@ function App() {
         }
       },
       onState: (nextState) => {
+        if (savingForExternalProbeRef.current && nextState.phase !== 'saving') {
+          externalChangesCoordinatorRef.current?.afterSave();
+        }
+        savingForExternalProbeRef.current = nextState.phase === 'saving';
         setSaveState(nextState);
         if (nextState.phase === 'conflict' && !externalConflictRef.current) {
           externalConflictRef.current = true;
@@ -820,6 +829,8 @@ function App() {
   if (externalChangesCoordinatorRef.current === null) {
     externalChangesCoordinatorRef.current = createExternalChangesCoordinator({
       getSessionId: () => sessionRef.current?.sessionId ?? null,
+      canProbe: () => !manualSaveInProgressRef.current
+        && saveCoordinatorRef.current?.getState().phase !== 'saving',
       probe: (sessionId) => workspaceApi.probeExternalChanges(sessionId),
       onChanged: (result, token, isCurrent) => externalChangeHandlerRef.current(result, token, isCurrent),
       onProbeResult: handleExternalProbeResult,
@@ -2919,7 +2930,7 @@ function App() {
                         : '选择一个笔记库，开始保存本机笔记。'}
             </p>
           </div>
-          <span className="runtime-readonly">{desktopRuntime ? saveStatus : '只读'}</span>
+          <span className={`runtime-readonly${isSaving ? ' is-saving' : ''}`}>{desktopRuntime ? saveStatus : '只读'}</span>
         </section>
 
         {sidebarCollapsed && visibleSearchProgress && (

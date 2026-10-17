@@ -2,8 +2,10 @@ use super::{
     digest_bytes, inspect_note, is_link_or_reparse, open_read_nofollow, sync_directory_chain,
     write_and_verify_package, OpenedNote, ResolvedTarget, StorageError,
 };
+use crate::note_format::MAX_PACKAGE_BYTES;
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Component, Path, PathBuf};
@@ -23,6 +25,7 @@ const TITLE_DISPLAY_CHARACTERS: usize = 180;
 const VERSION_SCAN_LIMIT: usize = 100_000;
 const WARNING_LIMIT: usize = 100;
 const VERSION_SCHEMA: u32 = 1;
+const WITNESS_HASH_BUFFER_BYTES: usize = 64 * 1024;
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -176,6 +179,198 @@ pub fn lease_observed_version(
         version_id: outcome.version_id,
         lock,
     })
+}
+
+/// A durable receipt for an observed version whose package bytes were already
+/// fully validated by an earlier open and preserve.
+///
+/// The receipt is only an optimization hint for a caller that has just
+/// re-observed the exact same source bytes. It must never be used on its own to
+/// skip preservation, and it never replaces the source-side full validation.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct ObservedVersionWitness {
+    pub(crate) version_id: String,
+    pub(crate) source_revision: String,
+    pub(crate) stored_revision: String,
+}
+
+/// Binds the durable metadata of the observed version that
+/// `preserve_observed_version` (or `lease_observed_version`) just confirmed for
+/// `opened`.
+///
+/// Precondition: the caller must have completed that preservation successfully
+/// for exactly this `opened` package and `origin`, immediately before calling
+/// this function. The returned witness must not be used to skip the existing
+/// preservation of a new source; it only lets `verify_observed_version_witness`
+/// re-check the already stored version without parsing the package again.
+///
+/// This function reads `metadata.json` again under the existing shared
+/// store/version locks and requires it to bind exactly to the opened note
+/// identity/title, the opened source revision, the normalized origin, and an
+/// ordinary (non-conflict) version. Metadata that is unavailable or does not
+/// match is an error; no package bytes are parsed or re-encoded here.
+pub(crate) fn observed_version_witness(
+    root: &Path,
+    opened: &OpenedNote,
+    origin: &str,
+) -> Result<ObservedVersionWitness, StorageError> {
+    let note_id = opened.package.document.note_id.as_str();
+    validate_note_id(note_id)?;
+    validate_revision(&opened.revision, "sourceRevision")?;
+    let (display_origin, origin_key) = normalize_origin(origin)?;
+    let version_id = make_version_id(false, note_id, &opened.revision, &origin_key)?;
+
+    let root = prepare_root(root, false)?
+        .ok_or_else(|| StorageError::new("versionNotFound", "已保存版本不存在；没有跳过保留。"))?;
+    let versions = ensure_child_directory(&root, VERSIONS_DIRECTORY, false)?
+        .ok_or_else(|| StorageError::new("versionNotFound", "已保存版本不存在；没有跳过保留。"))?;
+    let _store_lock = acquire_store_lock(&root, true)?;
+    let _version_lock = acquire_version_lock(&root, &version_id, true)?;
+    let metadata = read_metadata(&versions, &version_id)?;
+    if metadata.conflict
+        || metadata.version_id != version_id
+        || metadata.note_id != note_id
+        || metadata.source_revision != opened.revision
+        || metadata.origin != display_origin
+        || metadata.origin_key != origin_key
+        || metadata.title != display_title(&opened.package.document.title)
+    {
+        return Err(StorageError::new(
+            "invalidVersion",
+            "已保存的观察版本与刚完成保留的笔记包不一致；相关数据未被修改。",
+        ));
+    }
+    Ok(ObservedVersionWitness {
+        version_id: metadata.version_id,
+        source_revision: metadata.source_revision,
+        stored_revision: metadata.revision,
+    })
+}
+
+/// Re-verifies a cached observed-version receipt against the durable stored
+/// version without parsing the package or decoding any assets.
+///
+/// Caller contract: invoke this only after a fresh, safe, bounded streaming
+/// SHA-256 of the source file equals a prior fully validated per-file cache
+/// entry for the same `source_revision`, `origin`, `note_id`, and `title`.
+/// This function never substitutes for the existing full open+preserve path:
+///
+/// - `Ok(true)`: the stored metadata, deterministic ordinary version id,
+///   rotation grouping, and the complete bounded stored package bytes all still
+///   match the receipt. The caller may reuse the previous full validation.
+/// - `Ok(false)`: the receipt is missing or does not match durable state
+///   (changed, corrupt, oversized, or a guard failed). The caller must fall
+///   back to the existing full open+preserve path.
+/// - `Err`: verification could not be coordinated (invalid arguments or lock
+///   acquisition failure). The caller must also fall back to the existing full
+///   open+preserve path.
+///
+/// The verifier only takes the existing shared store/version locks and never
+/// writes, deletes, rotates, or re-permissions version data. The stored
+/// revision may differ from the source revision because preservation may
+/// re-encode the package; the stored package is hashed against its own stored
+/// revision, never against the source revision.
+pub(crate) fn verify_observed_version_witness(
+    root: &Path,
+    witness: &ObservedVersionWitness,
+    source_revision: &str,
+    origin: &str,
+    note_id: &str,
+    title: &str,
+) -> Result<bool, StorageError> {
+    if witness.source_revision != source_revision
+        || !is_lower_hex(&witness.version_id, 64)
+        || !is_lower_hex(&witness.source_revision, 64)
+        || !is_lower_hex(&witness.stored_revision, 64)
+    {
+        return Ok(false);
+    }
+    validate_note_id(note_id)?;
+    let (display_origin, origin_key) = normalize_origin(origin)?;
+    if make_version_id(false, note_id, source_revision, &origin_key)? != witness.version_id {
+        return Ok(false);
+    }
+
+    let Some(root) = prepare_root(root, false)? else {
+        return Ok(false);
+    };
+    let Some(versions) = ensure_child_directory(&root, VERSIONS_DIRECTORY, false)? else {
+        return Ok(false);
+    };
+    let _store_lock = acquire_store_lock(&root, true)?;
+    let _version_lock = acquire_version_lock(&root, &witness.version_id, true)?;
+
+    let metadata = match read_metadata(&versions, &witness.version_id) {
+        Ok(metadata) => metadata,
+        Err(_) => return Ok(false),
+    };
+    if metadata.conflict
+        || metadata.version_id != witness.version_id
+        || metadata.note_id != note_id
+        || metadata.source_revision != source_revision
+        || metadata.revision != witness.stored_revision
+        || metadata.origin != display_origin
+        || metadata.origin_key != origin_key
+        || metadata.title != display_title(title)
+    {
+        return Ok(false);
+    }
+
+    let Ok(group_id) = make_group_id(note_id, &origin_key) else {
+        return Ok(false);
+    };
+    let Some(groups) = ensure_child_directory(&versions, GROUPS_DIRECTORY, false)? else {
+        return Ok(false);
+    };
+    let Some(group) = ensure_child_directory(&groups, &group_id, false)? else {
+        return Ok(false);
+    };
+    if validate_group_member(&group, &witness.version_id).is_err() {
+        return Ok(false);
+    }
+
+    let directory = version_directory(&versions, &witness.version_id);
+    let Ok(stable_directory) = super::publication::StableDirectory::open(&directory) else {
+        return Ok(false);
+    };
+    if stable_directory.ensure_current().is_err() {
+        return Ok(false);
+    }
+    let package_path = directory.join(PACKAGE_NAME);
+    let mut package = match open_read_nofollow(&package_path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(StorageError::io("无法安全打开已保存版本笔记包", error)),
+    };
+    if validate_regular_file(&package, "已保存版本笔记包不是普通文件").is_err() {
+        return Ok(false);
+    }
+
+    // The stored package must hash over its complete bounded bytes; metadata,
+    // size, or timestamps alone are never sufficient for a positive receipt.
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0u8; WITNESS_HASH_BUFFER_BYTES];
+    let mut total_bytes: u64 = 0;
+    loop {
+        let read = match package.read(&mut buffer) {
+            Ok(read) => read,
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(StorageError::io("无法读取已保存版本笔记包", error)),
+        };
+        if read == 0 {
+            break;
+        }
+        total_bytes = total_bytes.saturating_add(read as u64);
+        if total_bytes > MAX_PACKAGE_BYTES {
+            return Ok(false);
+        }
+        hasher.update(&buffer[..read]);
+    }
+    if format!("{:x}", hasher.finalize()) != witness.stored_revision {
+        return Ok(false);
+    }
+    Ok(true)
 }
 
 /// Pins a previously observed package as a conflict without consulting its mutable origin.
@@ -512,10 +707,21 @@ fn rotate_observed_versions_locked(
         Ok(entries) => entries,
         Err(_) => return,
     };
+    // At most 30 directory members cannot contain more than 30 eligible
+    // versions. No deletion is possible, so avoid decoding every retained
+    // package just to establish that fact. At larger counts retain the full
+    // verification and lease checks below, including for malformed members.
+    let entries = match entries
+        .take(VERSION_SCAN_LIMIT + 1)
+        .collect::<Result<Vec<_>, _>>()
+    {
+        Ok(entries) if entries.len() <= 30 => return,
+        Ok(entries) if entries.len() <= VERSION_SCAN_LIMIT => entries,
+        _ => return,
+    };
     let mut matching = Vec::new();
     let mut scanned = 0usize;
     for entry in entries {
-        let Ok(entry) = entry else { continue };
         scanned += 1;
         if scanned > VERSION_SCAN_LIMIT {
             return;

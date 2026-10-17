@@ -14,6 +14,8 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 # Explicitly opt in for isolated fault-injection runs. Release code never reads
 # these controls, even if this feature is accidentally enabled during a build.
 storage-fault-injection = []
+# Optimized acceptance runs use an explicit isolated root. Never enabled in packages.
+perf-acceptance = []
 
 [[example]]
 name = "storage_fault_probe"

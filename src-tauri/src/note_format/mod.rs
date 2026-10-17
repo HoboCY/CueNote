@@ -1,5 +1,6 @@
 mod archive;
 mod ast;
+mod decoded_assets;
 mod package;
 mod validation;
 

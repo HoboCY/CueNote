@@ -21,10 +21,12 @@ use uuid::Uuid;
 
 mod backup_restore;
 mod backups;
+mod cache_check;
 mod external;
 mod external_notes;
 mod library_restore;
 mod markdown_export;
+mod scan_cache;
 mod search;
 pub use crate::storage::versions::{PreservedVersionSummary, VersionList};
 pub use backup_restore::{
@@ -238,6 +240,8 @@ struct LibraryScan {
 struct SearchScanContext {
     generation: Arc<AtomicU64>,
     progress: Option<Arc<dyn Fn(SearchProgress) + Send + Sync>>,
+    config_root: PathBuf,
+    bypass_cache: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -372,10 +376,15 @@ impl Workspace {
         SearchScanContext {
             generation: Arc::clone(&self.search_generation),
             progress: self.search_progress.clone(),
+            config_root: self.config_root.clone(),
+            bypass_cache: false,
         }
     }
 
     pub fn snapshot(&mut self) -> Result<WorkspaceView, WorkspaceError> {
+        #[cfg(feature = "perf-acceptance")]
+        let _trace = crate::performance::Trace::new("workspace-snapshot");
+        let mut loaded_generation = None;
         let pending_path = self
             .library
             .as_ref()
@@ -425,6 +434,7 @@ impl Workspace {
                     let path = PathBuf::from(preference.library_path);
                     match self.load_existing_library(&path) {
                         Ok(library) => {
+                            loaded_generation = Some(library.search.generation);
                             if library.default_notebook_id.is_some()
                                 && library.metadata_warnings.is_empty()
                                 && self
@@ -526,7 +536,12 @@ impl Workspace {
                 }
             }
         }
-        let _ = self.refresh_selected_library();
+        // Initial loading already scanned every source and durable witness.
+        // Later snapshots (and a concurrent invalidation) still perform a fresh
+        // scan; do not repeat the same startup scan before the first response.
+        if loaded_generation != Some(self.search_generation.load(Ordering::Acquire)) {
+            let _ = self.refresh_selected_library();
+        }
         if !recovery_warnings.is_empty() {
             if let Some(notice) = self.notice.take() {
                 recovery_warnings.push(notice);
@@ -637,7 +652,8 @@ impl Workspace {
                 SearchSnapshot::unavailable(generation, vec!["搜索索引正在重建。".into()]);
         }
         self.refresh_library_metadata_inner(true)?;
-        let scan_context = self.search_scan_context();
+        let mut scan_context = self.search_scan_context();
+        scan_context.bypass_cache = true;
         let generation = scan_context.generation.load(Ordering::Acquire);
         let Some(library) = self.library.as_ref() else {
             return Err(StorageError::new("noLibrary", "请先选择或使用默认笔记库。"));
@@ -1579,6 +1595,8 @@ impl Workspace {
         session_id: &str,
         content: NoteContent,
     ) -> Result<SaveReceipt, WorkspaceError> {
+        #[cfg(feature = "perf-acceptance")]
+        let mut trace = crate::performance::Trace::new("save-note-content");
         self.require_library_session(session_id)?;
         let library_path = self
             .library
@@ -1658,6 +1676,9 @@ impl Workspace {
 
         self.preserve_removed_assets(session_id, &candidate)?;
 
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("candidate-and-metadata");
+
         let (revision, publish_warning) = match storage::save_note(
             &note_path,
             &self.recovery_root,
@@ -1681,6 +1702,8 @@ impl Workspace {
             },
         };
 
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("native-save");
         let active = self
             .session
             .as_mut()
@@ -1701,6 +1724,9 @@ impl Workspace {
         active.was_writable = true;
         active.retain_baseline(&self.recovery_root)?;
         let saved_session = active.view.clone();
+
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("history-retention");
 
         let scan_context = self.search_scan_context();
         let library = self.library.as_mut().expect("library checked above");
@@ -1735,6 +1761,8 @@ impl Workspace {
             push_warning(&mut receipt_library.warnings, warning);
         }
         library.view.warnings = receipt_library.warnings.clone();
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("library-scan");
         Ok(SaveReceipt {
             session: saved_session,
             library: receipt_library,
@@ -3997,6 +4025,8 @@ fn scan_library_with_previous_inner(
     let mut notes = Vec::new();
     let mut trash_notes = Vec::new();
     let mut search_index = search::SearchIndex::default();
+    let cache = scan_cache::Cache::load(&context.config_root, library_path, context.bypass_cache);
+    let mut next_cache = BTreeMap::new();
     let mut seen_file_ids = HashSet::new();
     let mut seen_package_ids = HashMap::<String, (String, String, bool)>::new();
     let mut omitted_warnings = 0usize;
@@ -4026,10 +4056,16 @@ fn scan_library_with_previous_inner(
         .checked_div(100)
         .unwrap_or(1)
         .max(1);
+    // A warm scan may process a percent every few milliseconds. Keep progress
+    // responsive without forcing the desktop to reconcile 1,000 rows 100 times.
+    let mut last_progress = std::time::Instant::now();
     macro_rules! report_checked_file {
         () => {{
             checked += 1;
-            if checked % progress_interval == 0 || checked == total {
+            if checked == total
+                || (checked % progress_interval == 0
+                    && last_progress.elapsed() >= std::time::Duration::from_millis(100))
+            {
                 emit_search_progress(
                     context,
                     library_path,
@@ -4038,10 +4074,15 @@ fn scan_library_with_previous_inner(
                     total,
                     incomplete,
                 );
+                last_progress = std::time::Instant::now();
             }
         }};
     }
-    for entry in entries {
+    let mut cache_checks = cache_check::Checks::new(&entries, cache.as_ref(), recovery_root);
+    for (entry_index, entry) in entries.iter().enumerate() {
+        let verified = cache_checks
+            .as_mut()
+            .is_some_and(|checks| checks.verified(entry_index));
         let path = entry.path();
         let Some(extension) = path.extension().and_then(|extension| extension.to_str()) else {
             continue;
@@ -4096,96 +4137,128 @@ fn scan_library_with_previous_inner(
             report_checked_file!();
             continue;
         };
-        let opened = match storage::open_note(&path) {
-            Ok(opened) => opened,
-            Err(error) => {
+        let origin = display_path(&path);
+        let cache_key = entry.file_name().to_string_lossy().into_owned();
+        let candidate = cache
+            .as_ref()
+            .and_then(|cache| cache.entries.get(&cache_key))
+            .filter(|entry| {
+                is_canonical_uuid_v4(stem)
+                    && entry.summary.note_id == stem
+                    && !seen_package_ids.contains_key(stem)
+            });
+        let hit = candidate.filter(|_| verified);
+        let (summary, opened, mut cache_entry) = if let Some(entry) = hit {
+            seen_package_ids.insert(
+                stem.to_owned(),
+                (entry.revision.clone(), origin.clone(), true),
+            );
+            seen_file_ids.insert(stem.to_owned());
+            (entry.summary.clone(), None, Some(entry.clone()))
+        } else {
+            let opened = match storage::open_note(&path) {
+                Ok(opened) => opened,
+                Err(error) => {
+                    incomplete = true;
+                    push_warning_counted(
+                        &mut warnings,
+                        &mut omitted_warnings,
+                        format!("无法读取笔记 {stem}：{}", error.message),
+                    );
+                    report_checked_file!();
+                    continue;
+                }
+            };
+            let package_id = opened.package.document.note_id.clone();
+            // Index only versions which have a durable independent witness. Failure
+            // leaves the original untouched and warns instead of claiming protection.
+            if let Err(error) = storage::versions::preserve_observed_version(
+                recovery_root,
+                &opened,
+                &origin,
+                "笔记库中取得的有效版本",
+            ) {
                 incomplete = true;
                 push_warning_counted(
                     &mut warnings,
                     &mut omitted_warnings,
-                    format!("无法读取笔记 {}：{}", stem, error.message),
+                    format!("无法保留笔记 {}，已跳过索引：{}", origin, error.message),
                 );
                 report_checked_file!();
                 continue;
             }
-        };
-        let package_id = opened.package.document.note_id.clone();
-        let origin = display_path(&path);
-        // Index only versions which have a durable independent witness. Failure
-        // leaves the original untouched and warns instead of claiming protection.
-        if let Err(error) = storage::versions::preserve_observed_version(
-            recovery_root,
-            &opened,
-            &origin,
-            "笔记库中取得的有效版本",
-        ) {
-            incomplete = true;
-            push_warning_counted(
-                &mut warnings,
-                &mut omitted_warnings,
-                format!("无法保留笔记 {}，已跳过索引：{}", origin, error.message),
-            );
-            report_checked_file!();
-            continue;
-        }
-        let previous = seen_package_ids.get(&package_id).cloned();
-        if let Some((revision, previous_origin, _)) = &previous {
-            incomplete = true;
-            if revision != &opened.revision {
-                storage::versions::pin_observed_version(
-                    recovery_root,
-                    revision,
-                    previous_origin,
-                    &package_id,
-                    "重复身份的另一版本",
-                )?;
+            let previous = seen_package_ids.get(&package_id).cloned();
+            if let Some((revision, previous_origin, _)) = &previous {
+                incomplete = true;
+                if revision != &opened.revision {
+                    storage::versions::pin_observed_version(
+                        recovery_root,
+                        revision,
+                        previous_origin,
+                        &package_id,
+                        "重复身份的另一版本",
+                    )?;
+                    storage::versions::preserve_conflict_version(
+                        recovery_root,
+                        &opened,
+                        &origin,
+                        "重复身份的不同版本",
+                    )?;
+                }
+                push_warning_counted(
+                    &mut warnings,
+                    &mut omitted_warnings,
+                    format!(
+                        "发现重复笔记身份，已检查相关文件：{}",
+                        opened.package.document.note_id
+                    ),
+                );
+            }
+            if !is_canonical_uuid_v4(stem) || package_id != stem {
+                incomplete = true;
                 storage::versions::preserve_conflict_version(
                     recovery_root,
                     &opened,
                     &origin,
-                    "重复身份的不同版本",
+                    "非标准文件名或同步冲突副本",
                 )?;
+                seen_package_ids.entry(package_id).or_insert((
+                    opened.revision.clone(),
+                    origin,
+                    false,
+                ));
+                push_warning_counted(
+                    &mut warnings,
+                    &mut omitted_warnings,
+                    format!("笔记文件名与内容身份不一致，已保留到历史与冲突：{stem}"),
+                );
+                report_checked_file!();
+                continue;
             }
-            push_warning_counted(
-                &mut warnings,
-                &mut omitted_warnings,
-                format!(
-                    "发现重复笔记身份，已检查相关文件：{}",
-                    opened.package.document.note_id
-                ),
-            );
-        }
-        if !is_canonical_uuid_v4(stem) || package_id != stem {
-            incomplete = true;
-            storage::versions::preserve_conflict_version(
-                recovery_root,
-                &opened,
-                &origin,
-                "非标准文件名或同步冲突副本",
-            )?;
-            seen_package_ids
-                .entry(package_id)
-                .or_insert((opened.revision.clone(), origin, false));
-            push_warning_counted(
-                &mut warnings,
-                &mut omitted_warnings,
-                format!("笔记文件名与内容身份不一致，已保留到历史与冲突：{stem}"),
-            );
-            report_checked_file!();
-            continue;
-        }
-        if previous
-            .as_ref()
-            .is_some_and(|(_, _, canonical)| *canonical)
-            || !seen_file_ids.insert(stem.to_owned())
-        {
-            incomplete = true;
-            report_checked_file!();
-            continue;
-        }
-        seen_package_ids.insert(package_id, (opened.revision.clone(), origin, true));
-        let notebook_id = opened.package.document.organization.notebook_id.as_deref();
-        let trashed_at = opened.package.document.organization.trashed_at.clone();
+            if previous
+                .as_ref()
+                .is_some_and(|(_, _, canonical)| *canonical)
+                || !seen_file_ids.insert(stem.to_owned())
+            {
+                incomplete = true;
+                report_checked_file!();
+                continue;
+            }
+            seen_package_ids.insert(package_id, (opened.revision.clone(), origin.clone(), true));
+            let summary = note_summary_from_package(stem, &opened.package);
+            let cache_entry =
+                storage::versions::observed_version_witness(recovery_root, &opened, &origin)
+                    .ok()
+                    .map(|witness| scan_cache::Entry {
+                        summary: summary.clone(),
+                        revision: opened.revision.clone(),
+                        projection: Vec::new(),
+                        witness,
+                    });
+            (summary, Some(opened), cache_entry)
+        };
+        let notebook_id = summary.notebook_id.as_deref();
+        let trashed_at = summary.trashed_at.as_ref();
         if trashed_at.is_none() && notebook_id.is_none() {
             incomplete = true;
             push_warning_counted(
@@ -4201,15 +4274,21 @@ fn scan_library_with_previous_inner(
                 format!("笔记 {stem} 属于未知笔记本，当前不会重新归属。"),
             );
         }
-        let summary = note_summary_from_package(stem, &opened.package);
         if trashed_at.is_some() {
             trash_notes.push(summary);
         } else {
-            if !search_index_limit_reached
-                && !search_index.add_note(summary.clone(), &opened.package)
-            {
+            let indexed = !search_index_limit_reached
+                && match &opened {
+                    Some(opened) => search_index.add_note(summary.clone(), &opened.package),
+                    None => search_index.add_projection(
+                        summary.clone(),
+                        &cache_entry.as_ref().expect("cache hit").projection,
+                    ),
+                };
+            if !indexed {
                 incomplete = true;
                 search_index_limit_reached = true;
+                cache_entry = None;
                 if !index_limit_warned {
                     push_warning_counted(
                         &mut warnings,
@@ -4221,10 +4300,23 @@ fn scan_library_with_previous_inner(
                     );
                     index_limit_warned = true;
                 }
+            } else if opened.is_some() {
+                if let Some(entry) = cache_entry.as_mut() {
+                    entry.projection = search_index.last_projection();
+                }
             }
             notes.push(summary);
         }
+        if let Some(entry) = cache_entry {
+            next_cache.insert(cache_key, entry);
+        }
         report_checked_file!();
+    }
+    drop(cache_checks);
+    if notes_directory_available && context.generation.load(Ordering::Acquire) == generation {
+        if let Some(cache) = cache {
+            cache.publish(next_cache);
+        }
     }
     if omitted_warnings > 0 {
         warnings.push(format!("另有 {omitted_warnings} 条笔记警告未显示。"));

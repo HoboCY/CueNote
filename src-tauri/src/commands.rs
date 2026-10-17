@@ -124,6 +124,8 @@ async fn save_mutation<T: Send + 'static>(
     action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
 ) -> Result<T, WorkspaceError> {
     tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(feature = "perf-acceptance")]
+        let mut trace = crate::performance::Trace::new("save-command");
         state.ensure_not_restoring()?;
         let _mutation = state.backups.begin_mutation()?;
         let mut workspace = state.workspace.lock().map_err(|_| {
@@ -131,6 +133,8 @@ async fn save_mutation<T: Send + 'static>(
         })?;
         state.ensure_not_restoring()?;
         let _policy = crate::storage::NoCloudDownload::enter()?;
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("workspace-lock-acquired");
         action(&mut workspace)
     })
     .await

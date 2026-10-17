@@ -1,0 +1,4521 @@
+{
+  "schemaVersion": 1,
+  "scope": "Windows local Q51/Q52 evidence; primary-agent Spec and Standards reviews complete; macOS and real OneDrive not covered",
+  "measuredUtc": "2026-10-15",
+  "baseline": "68bae0d07d13fccaaee80d7d6487cacbbe6c58d6",
+  "binarySha256": "9c5d0e689a13501e4d8ccc2f8c1e363785450fdcdccb30ddd403b69ec1ac948c",
+  "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+  "environment": {
+    "utc": "2026-10-15T14:32:46.5024279Z",
+    "os": "Microsoft Windows 11 专业版",
+    "version": "10.0.26200",
+    "build": "26200",
+    "cpu": "13th Gen Intel(R) Core(TM) i7-13700KF",
+    "cores": 16,
+    "logicalProcessors": 24,
+    "memoryBytes": 34115256320,
+    "corpusDisk": "D:",
+    "runtimeDisk": "C:",
+    "runtimeFileSystem": "NTFS",
+    "runtimeFreeBytes": 322064384000,
+    "notes": "Local full copies; no OS file-cache flush; WebView version in each startup record"
+  },
+  "sourceFiles": [
+    {
+      "path": "docs/performance-method.md",
+      "bytes": 8909,
+      "sha256": "036bff66bc14d623bab49b54a7813289785ab20acae37f17d5565249e1ed44e9"
+    },
+    {
+      "path": "docs/search-contract.md",
+      "bytes": 3745,
+      "sha256": "2e8166db2900878d9136bfc8e1084ed3c6a3287d4ea548f19f208b9f0ccd889d"
+    },
+    {
+      "path": "src-tauri/Cargo.toml",
+      "bytes": 1541,
+      "sha256": "dc55e888e48414d1712f8a0f0290ca72913a5d80a96fda2f0130a8063821a20e"
+    },
+    {
+      "path": "src-tauri/examples/performance_fixture.rs",
+      "bytes": 13644,
+      "sha256": "9485828715f82b8d56d1cd4d9bd3dcfd4df55076718664a8105a7404d425537e"
+    },
+    {
+      "path": "src-tauri/examples/performance_fixture/content.rs",
+      "bytes": 23335,
+      "sha256": "40acb4b36922bb2f55ea6ce59d2a11a1366f06a949736ef336c7f44eefa2045a"
+    },
+    {
+      "path": "src-tauri/examples/performance_fixture/manifest.rs",
+      "bytes": 10282,
+      "sha256": "13f39b38f07d5127df5dc0d299ee08d72e529982e095a21843ff9a785c03e00e"
+    },
+    {
+      "path": "src-tauri/examples/performance_fixture/model.rs",
+      "bytes": 15069,
+      "sha256": "486b8065d22772e4431fead544e0ee0d3e1c399cd57c8031e518db263e06c1e0"
+    },
+    {
+      "path": "src-tauri/examples/performance_fixture/png.rs",
+      "bytes": 6148,
+      "sha256": "8496b0ec8b9b12cd17e755320e8ee607e439285a057315f67696af722dbce047"
+    },
+    {
+      "path": "src-tauri/examples/performance_fixture/verify.rs",
+      "bytes": 42726,
+      "sha256": "a263d88718b6bc4b355adba3c9064d0401d707b27824affb36aa6837409af4d4"
+    },
+    {
+      "path": "src-tauri/examples/performance_probe.rs",
+      "bytes": 3443,
+      "sha256": "81a1c476f7e5ccd89da99e2d9dd0bb30b312ff1c4efe697debf1c68461eb1098"
+    },
+    {
+      "path": "src-tauri/src/commands.rs",
+      "bytes": 51710,
+      "sha256": "000ce424cddedc85e0badbb2f571d69182f8914609237ade1eff482773f962f4"
+    },
+    {
+      "path": "src-tauri/src/lib.rs",
+      "bytes": 6589,
+      "sha256": "d3eac8c0834b36e743a6193bdef52193c078ddb0b701346fbb11882590aa2a2c"
+    },
+    {
+      "path": "src-tauri/src/note_format/decoded_assets.rs",
+      "bytes": 1783,
+      "sha256": "bde290aa150a40e56ba0d9d044b64c609f6140657eab2815b15be9c27cb5af4e"
+    },
+    {
+      "path": "src-tauri/src/note_format/mod.rs",
+      "bytes": 603,
+      "sha256": "c3ae24b2f605769acb40454e9bcae3e21f8acea6f8d18d15d115897e02139697"
+    },
+    {
+      "path": "src-tauri/src/note_format/validation.rs",
+      "bytes": 29639,
+      "sha256": "b2d3f253e034b5b81990981fe5d81c5c00f08b90572f660b278c0050649dfabd"
+    },
+    {
+      "path": "src-tauri/src/performance.rs",
+      "bytes": 4550,
+      "sha256": "4d71da5b4bbf7eab9b0c9e13ffbe00b4d4140078f97abc6ea24211f7dcddc11a"
+    },
+    {
+      "path": "src-tauri/src/storage/mod.rs",
+      "bytes": 88203,
+      "sha256": "52c6c748f6b9f24596a58dda62977e4211846cea20e5bfdfadaf46949b120df0"
+    },
+    {
+      "path": "src-tauri/src/storage/versions.rs",
+      "bytes": 66651,
+      "sha256": "a781a08ead4ed007e061101672a20e10bc47276a5109054ac293c36b3ae6c678"
+    },
+    {
+      "path": "src-tauri/src/workspace.rs",
+      "bytes": 210170,
+      "sha256": "59e64ba49ea47fc183f4361e892ce1752bac7ec36e1c4e8ee84342d7bdb80ada"
+    },
+    {
+      "path": "src-tauri/src/workspace/cache_check.rs",
+      "bytes": 6023,
+      "sha256": "65d699840f161d87cb28689986e5b1fbd30fe8e46acbbd00d79befba614b9bd1"
+    },
+    {
+      "path": "src-tauri/src/workspace/scan_cache.rs",
+      "bytes": 6362,
+      "sha256": "b9c2d0a5c847d70672c99ef53a612d7b774e9492aa51d7e44cd4a1e972178879"
+    },
+    {
+      "path": "src-tauri/src/workspace/search.rs",
+      "bytes": 11881,
+      "sha256": "c64dc59663632fde32a5b747d9a1f3b69c5ffc87f8fa19e349c98ce93581a085"
+    },
+    {
+      "path": "src-tauri/tauri.performance.conf.json",
+      "bytes": 126,
+      "sha256": "eef8414c9866a1e7711525d51d6ae6d83ee01ba617a25b28b2b7d6aef07c9a77"
+    },
+    {
+      "path": "src-tauri/tests/format_v1.rs",
+      "bytes": 36093,
+      "sha256": "34d1edd738b7326b76be7c24aae11487db68f90b158ac00cda044bd0e584b444"
+    },
+    {
+      "path": "src-tauri/tests/search_cache.rs",
+      "bytes": 6795,
+      "sha256": "35459c1da1f620b86605df5931004b965c5dfa796e6c20386d8c1b2e9d8b2c1f"
+    },
+    {
+      "path": "src/App.tsx",
+      "bytes": 183062,
+      "sha256": "bd9d5f68d3ee7c37a2e37a55c1f2fab8e99fcb384427cddbb0a2f062a77ed43a"
+    },
+    {
+      "path": "src/external-changes.ts",
+      "bytes": 4038,
+      "sha256": "5f80f44d659d6619c5b4aeba43448a602169a9822111d0bb92d8a1758f5d0cdc"
+    },
+    {
+      "path": "src/styles.css",
+      "bytes": 57915,
+      "sha256": "1df62609cb0c616181300074397469ce70ae65dba181ea48374abe66fc22d363"
+    },
+    {
+      "path": "tests/external-changes.test.ts",
+      "bytes": 9010,
+      "sha256": "1a83e178350c8a2b3e2ffb9d85c304c1b850829e8275c431e34aa296c7dba02c"
+    },
+    {
+      "path": "tools/performance/assert-owner.ps1",
+      "bytes": 1380,
+      "sha256": "a527fb5ba74b42076acc75d64cb9c7b5b101febd1b6ade11485510a3e0a9916b"
+    },
+    {
+      "path": "tools/performance/build-windows.ps1",
+      "bytes": 1288,
+      "sha256": "0ddeaa1d3dae82983a16e3134fb7269d5bf8612e5eb7831b8de663964a85c757"
+    },
+    {
+      "path": "tools/performance/close-windows.ps1",
+      "bytes": 773,
+      "sha256": "e8bb77431864fefb7536de2a69a2fde1815f9eac04dd1b5d8171fbe75e98626f"
+    },
+    {
+      "path": "tools/performance/desktop-windows.mjs",
+      "bytes": 17275,
+      "sha256": "26395eb7c809e7f97036b6281247b3102e0f08b84faba5ec078d9b6f9f16b0e2"
+    },
+    {
+      "path": "tools/performance/make-plans.mjs",
+      "bytes": 6314,
+      "sha256": "66c5d5a205c63ba3d02d2ab8d744cb0adbe2b9a18dbafc9a551bc88f5492a564"
+    },
+    {
+      "path": "tools/performance/prepare-windows.ps1",
+      "bytes": 2468,
+      "sha256": "b3319b13b0c89250a56f1c0311e16caa25d90dd39e8a77db4719c8b6eb88820e"
+    },
+    {
+      "path": "tools/performance/repeat-startup-windows.ps1",
+      "bytes": 971,
+      "sha256": "798b6774b89ba11bb3c9280ba7915a49214baac837014d9a7916aeec4c2f8ffa"
+    },
+    {
+      "path": "tools/performance/request-close-windows.ps1",
+      "bytes": 480,
+      "sha256": "7a4d742e5a94c6a05f5f9e9fc69320e48c0fede11c4e8e8e39aa8d79f10a2b04"
+    },
+    {
+      "path": "tools/performance/summarize.mjs",
+      "bytes": 3941,
+      "sha256": "4a6178543a0302d8bd5eadc191368aaef5eddec25c71977f98e610c91e01eecc"
+    }
+  ],
+  "timingMatrixPassed": true,
+  "method": "nearest-rank; all supplied records retained; the timing matrix alone does not prove resource limits or cancellation behavior",
+  "sampleColumns": [
+    "operation",
+    "metric",
+    "recordedCacheState",
+    "elapsedMs"
+  ],
+  "classificationNotes": [
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-54-46-474Z",
+      "metric": "ordinary-open",
+      "elapsedMs": 150.79269999999997,
+      "recordedCacheState": "first-after-restart",
+      "actualCacheState": "revisit-after-startup",
+      "explanation": "The ordinary note was already opened at startup. This extra revisit remains included in all-sample statistics; main first/cached groups are unaffected."
+    }
+  ],
+  "failures": [],
+  "summary": [
+    {
+      "metric": "startup",
+      "cacheState": "all",
+      "count": 11,
+      "minMs": 1914.8493,
+      "p95Ms": 2149.0365,
+      "maxMs": 2149.0365,
+      "requiredSamples": 10,
+      "limitMs": 3000,
+      "statistic": "max",
+      "status": "pass"
+    },
+    {
+      "metric": "initial-index",
+      "cacheState": "all",
+      "count": 3,
+      "minMs": 13928.4494,
+      "p95Ms": 18190.9038,
+      "maxMs": 18190.9038,
+      "requiredSamples": 3,
+      "limitMs": 60000,
+      "statistic": "max",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "all",
+      "count": 61,
+      "minMs": 132.8065999999999,
+      "p95Ms": 152.83300000000008,
+      "maxMs": 284.2717,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "all",
+      "count": 33,
+      "minMs": 1180.0736000000002,
+      "p95Ms": 1572.7576000000045,
+      "maxMs": 1576.4694000000002,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "all",
+      "count": 41,
+      "minMs": 367.9278999999988,
+      "p95Ms": 400.6750000000002,
+      "maxMs": 484.40610000000015,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "all",
+      "count": 33,
+      "minMs": 3415.4781000000003,
+      "p95Ms": 7252.188500000004,
+      "maxMs": 7346.6381,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "search",
+      "cacheState": "all",
+      "count": 30,
+      "minMs": 127.00590000000011,
+      "p95Ms": 145.84479999999985,
+      "maxMs": 146.39360000000033,
+      "requiredSamples": 30,
+      "limitMs": 300,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-map",
+      "cacheState": "all",
+      "count": 30,
+      "minMs": 32.59669999999983,
+      "p95Ms": 51.38700000000017,
+      "maxMs": 56.678899999999885,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-map",
+      "cacheState": "all",
+      "count": 30,
+      "minMs": 67.2231999999999,
+      "p95Ms": 84.59789999999975,
+      "maxMs": 91.25880000000052,
+      "requiredSamples": 30,
+      "limitMs": 3000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-input",
+      "cacheState": "all",
+      "count": 100,
+      "minMs": 26.634099999999307,
+      "p95Ms": 44.05009999999993,
+      "maxMs": 52.20410000000015,
+      "requiredSamples": 100,
+      "limitMs": 100,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-input",
+      "cacheState": "all",
+      "count": 100,
+      "minMs": 27.65209999999979,
+      "p95Ms": 44.38810000000012,
+      "maxMs": 45.79639999999972,
+      "requiredSamples": 100,
+      "limitMs": 200,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "initial-index",
+      "cacheState": "first",
+      "count": 3,
+      "minMs": 13928.4494,
+      "p95Ms": 18190.9038,
+      "maxMs": 18190.9038,
+      "requiredSamples": 3,
+      "limitMs": 60000,
+      "statistic": "max",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "first",
+      "count": 30,
+      "minMs": 133.9427000000005,
+      "p95Ms": 153.53240000000005,
+      "maxMs": 284.2717,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "cached",
+      "count": 30,
+      "minMs": 132.8065999999999,
+      "p95Ms": 152.1185999999998,
+      "maxMs": 152.40090000000055,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-input",
+      "cacheState": "cached",
+      "count": 100,
+      "minMs": 26.634099999999307,
+      "p95Ms": 44.05009999999993,
+      "maxMs": 52.20410000000015,
+      "requiredSamples": 100,
+      "limitMs": 100,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 1180.0736000000002,
+      "p95Ms": 1180.0736000000002,
+      "maxMs": 1180.0736000000002,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "cached",
+      "count": 28,
+      "minMs": 1181.7363000000005,
+      "p95Ms": 1220.3977000000014,
+      "maxMs": 1222.119200000001,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "rotation",
+      "count": 3,
+      "minMs": 1568.3667999999961,
+      "p95Ms": 1572.7576000000045,
+      "maxMs": 1572.7576000000045,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-map",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 56.678899999999885,
+      "p95Ms": 56.678899999999885,
+      "maxMs": 56.678899999999885,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-map",
+      "cacheState": "cached",
+      "count": 29,
+      "minMs": 32.59669999999983,
+      "p95Ms": 39.41480000000047,
+      "maxMs": 51.38700000000017,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "first",
+      "count": 10,
+      "minMs": 384.16229999999996,
+      "p95Ms": 417.53240000000005,
+      "maxMs": 417.53240000000005,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "cached",
+      "count": 30,
+      "minMs": 367.9278999999988,
+      "p95Ms": 386.3845999999994,
+      "maxMs": 400.6750000000002,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-input",
+      "cacheState": "cached",
+      "count": 100,
+      "minMs": 27.65209999999979,
+      "p95Ms": 44.38810000000012,
+      "maxMs": 45.79639999999972,
+      "requiredSamples": 100,
+      "limitMs": 200,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 3415.4781000000003,
+      "p95Ms": 3415.4781000000003,
+      "maxMs": 3415.4781000000003,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "cached",
+      "count": 28,
+      "minMs": 3535.699299999993,
+      "p95Ms": 3570.0221999999994,
+      "maxMs": 3571.597099999999,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "rotation",
+      "count": 3,
+      "minMs": 7167.749100000001,
+      "p95Ms": 7252.188500000004,
+      "maxMs": 7252.188500000004,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-map",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 68.37439999999992,
+      "p95Ms": 68.37439999999992,
+      "maxMs": 68.37439999999992,
+      "requiredSamples": 30,
+      "limitMs": 3000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-map",
+      "cacheState": "cached",
+      "count": 29,
+      "minMs": 67.2231999999999,
+      "p95Ms": 84.59789999999975,
+      "maxMs": 91.25880000000052,
+      "requiredSamples": 30,
+      "limitMs": 3000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "search",
+      "cacheState": "first",
+      "count": 6,
+      "minMs": 127.38379999999961,
+      "p95Ms": 143.93960000000015,
+      "maxMs": 143.93960000000015,
+      "requiredSamples": 30,
+      "limitMs": 300,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "search",
+      "cacheState": "cached",
+      "count": 24,
+      "minMs": 127.00590000000011,
+      "p95Ms": 145.84479999999985,
+      "maxMs": 146.39360000000033,
+      "requiredSamples": 30,
+      "limitMs": 300,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "startup",
+      "cacheState": "indexed",
+      "count": 11,
+      "minMs": 1914.8493,
+      "p95Ms": 2149.0365,
+      "maxMs": 2149.0365,
+      "requiredSamples": 10,
+      "limitMs": 3000,
+      "statistic": "max",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "first-after-restart",
+      "count": 1,
+      "minMs": 1576.4694000000002,
+      "p95Ms": 1576.4694000000002,
+      "maxMs": 1576.4694000000002,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "first-after-restart",
+      "count": 1,
+      "minMs": 484.40610000000015,
+      "p95Ms": 484.40610000000015,
+      "maxMs": 484.40610000000015,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "first-after-restart",
+      "count": 1,
+      "minMs": 7346.6381,
+      "p95Ms": 7346.6381,
+      "maxMs": 7346.6381,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "first-after-restart",
+      "count": 1,
+      "minMs": 150.79269999999997,
+      "p95Ms": 150.79269999999997,
+      "maxMs": 150.79269999999997,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    }
+  ],
+  "runs": [
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "initial-index",
+          "initial-index",
+          "first",
+          15188.092300000002
+        ],
+        [
+          "ordinary-open-01",
+          "ordinary-open",
+          "first",
+          284.2717
+        ],
+        [
+          "ordinary-open-02",
+          "ordinary-open",
+          "first",
+          151.32839999999987
+        ],
+        [
+          "ordinary-open-03",
+          "ordinary-open",
+          "first",
+          153.53240000000005
+        ],
+        [
+          "ordinary-open-04",
+          "ordinary-open",
+          "first",
+          151.83099999999968
+        ],
+        [
+          "ordinary-open-05",
+          "ordinary-open",
+          "first",
+          151.06359999999995
+        ],
+        [
+          "ordinary-open-06",
+          "ordinary-open",
+          "first",
+          152.83300000000008
+        ],
+        [
+          "ordinary-open-07",
+          "ordinary-open",
+          "first",
+          153.13409999999976
+        ],
+        [
+          "ordinary-open-08",
+          "ordinary-open",
+          "first",
+          134.74890000000005
+        ],
+        [
+          "ordinary-open-09",
+          "ordinary-open",
+          "first",
+          134.6600000000003
+        ],
+        [
+          "ordinary-open-10",
+          "ordinary-open",
+          "first",
+          134.77140000000009
+        ],
+        [
+          "ordinary-open-11",
+          "ordinary-open",
+          "first",
+          150.2826
+        ],
+        [
+          "ordinary-open-12",
+          "ordinary-open",
+          "first",
+          135.57389999999987
+        ],
+        [
+          "ordinary-open-13",
+          "ordinary-open",
+          "first",
+          152.6938
+        ],
+        [
+          "ordinary-open-14",
+          "ordinary-open",
+          "first",
+          134.56219999999985
+        ],
+        [
+          "ordinary-open-15",
+          "ordinary-open",
+          "first",
+          134.85559999999987
+        ],
+        [
+          "ordinary-open-16",
+          "ordinary-open",
+          "first",
+          134.53710000000046
+        ],
+        [
+          "ordinary-open-17",
+          "ordinary-open",
+          "first",
+          150.38810000000012
+        ],
+        [
+          "ordinary-open-18",
+          "ordinary-open",
+          "first",
+          135.38520000000062
+        ],
+        [
+          "ordinary-open-19",
+          "ordinary-open",
+          "first",
+          134.1875
+        ],
+        [
+          "ordinary-open-20",
+          "ordinary-open",
+          "first",
+          134.5025999999998
+        ],
+        [
+          "ordinary-open-21",
+          "ordinary-open",
+          "first",
+          134.6810999999998
+        ],
+        [
+          "ordinary-open-22",
+          "ordinary-open",
+          "first",
+          134.47620000000006
+        ],
+        [
+          "ordinary-open-23",
+          "ordinary-open",
+          "first",
+          134.5054
+        ],
+        [
+          "ordinary-open-24",
+          "ordinary-open",
+          "first",
+          134.34999999999945
+        ],
+        [
+          "ordinary-open-25",
+          "ordinary-open",
+          "first",
+          135.1244999999999
+        ],
+        [
+          "ordinary-open-26",
+          "ordinary-open",
+          "first",
+          133.9427000000005
+        ],
+        [
+          "ordinary-open-27",
+          "ordinary-open",
+          "first",
+          134.52360000000044
+        ],
+        [
+          "ordinary-open-28",
+          "ordinary-open",
+          "first",
+          134.76729999999952
+        ],
+        [
+          "ordinary-open-29",
+          "ordinary-open",
+          "first",
+          134.3068000000003
+        ],
+        [
+          "ordinary-open-30",
+          "ordinary-open",
+          "first",
+          136.3222999999998
+        ],
+        [
+          "ordinary-open-31",
+          "ordinary-open",
+          "cached",
+          134.45190000000002
+        ],
+        [
+          "ordinary-open-32",
+          "ordinary-open",
+          "cached",
+          152.1185999999998
+        ],
+        [
+          "ordinary-open-33",
+          "ordinary-open",
+          "cached",
+          135.0011999999997
+        ],
+        [
+          "ordinary-open-34",
+          "ordinary-open",
+          "cached",
+          134.32979999999952
+        ],
+        [
+          "ordinary-open-35",
+          "ordinary-open",
+          "cached",
+          132.8065999999999
+        ],
+        [
+          "ordinary-open-36",
+          "ordinary-open",
+          "cached",
+          134.25930000000062
+        ],
+        [
+          "ordinary-open-37",
+          "ordinary-open",
+          "cached",
+          151.00950000000012
+        ],
+        [
+          "ordinary-open-38",
+          "ordinary-open",
+          "cached",
+          134.98479999999927
+        ],
+        [
+          "ordinary-open-39",
+          "ordinary-open",
+          "cached",
+          134.41489999999976
+        ],
+        [
+          "ordinary-open-40",
+          "ordinary-open",
+          "cached",
+          134.3152000000009
+        ],
+        [
+          "ordinary-open-41",
+          "ordinary-open",
+          "cached",
+          134.1284999999989
+        ],
+        [
+          "ordinary-open-42",
+          "ordinary-open",
+          "cached",
+          133.84810000000107
+        ],
+        [
+          "ordinary-open-43",
+          "ordinary-open",
+          "cached",
+          150.72950000000128
+        ],
+        [
+          "ordinary-open-44",
+          "ordinary-open",
+          "cached",
+          135.1800000000003
+        ],
+        [
+          "ordinary-open-45",
+          "ordinary-open",
+          "cached",
+          134.86000000000058
+        ],
+        [
+          "ordinary-open-46",
+          "ordinary-open",
+          "cached",
+          135.17180000000008
+        ],
+        [
+          "ordinary-open-47",
+          "ordinary-open",
+          "cached",
+          134.70429999999942
+        ],
+        [
+          "ordinary-open-48",
+          "ordinary-open",
+          "cached",
+          152.01140000000123
+        ],
+        [
+          "ordinary-open-49",
+          "ordinary-open",
+          "cached",
+          134.8630000000012
+        ],
+        [
+          "ordinary-open-50",
+          "ordinary-open",
+          "cached",
+          135.03670000000056
+        ],
+        [
+          "ordinary-open-51",
+          "ordinary-open",
+          "cached",
+          152.40090000000055
+        ],
+        [
+          "ordinary-open-52",
+          "ordinary-open",
+          "cached",
+          134.1302999999989
+        ],
+        [
+          "ordinary-open-53",
+          "ordinary-open",
+          "cached",
+          133.8669000000009
+        ],
+        [
+          "ordinary-open-54",
+          "ordinary-open",
+          "cached",
+          135.16409999999996
+        ],
+        [
+          "ordinary-open-55",
+          "ordinary-open",
+          "cached",
+          134.36369999999988
+        ],
+        [
+          "ordinary-open-56",
+          "ordinary-open",
+          "cached",
+          133.9476999999988
+        ],
+        [
+          "ordinary-open-57",
+          "ordinary-open",
+          "cached",
+          134.69990000000143
+        ],
+        [
+          "ordinary-open-58",
+          "ordinary-open",
+          "cached",
+          134.61030000000028
+        ],
+        [
+          "ordinary-open-59",
+          "ordinary-open",
+          "cached",
+          134.5095999999994
+        ],
+        [
+          "ordinary-open-60",
+          "ordinary-open",
+          "cached",
+          134.6314999999995
+        ],
+        [
+          "ordinary-input-1",
+          "ordinary-input",
+          "cached",
+          52.20410000000015
+        ],
+        [
+          "ordinary-input-2",
+          "ordinary-input",
+          "cached",
+          27.63090000000011
+        ],
+        [
+          "ordinary-input-3",
+          "ordinary-input",
+          "cached",
+          27.523899999999912
+        ],
+        [
+          "ordinary-input-4",
+          "ordinary-input",
+          "cached",
+          41.8578
+        ],
+        [
+          "ordinary-input-5",
+          "ordinary-input",
+          "cached",
+          44.43810000000008
+        ],
+        [
+          "ordinary-input-6",
+          "ordinary-input",
+          "cached",
+          40.184600000000046
+        ],
+        [
+          "ordinary-input-7",
+          "ordinary-input",
+          "cached",
+          27.935999999999922
+        ],
+        [
+          "ordinary-input-8",
+          "ordinary-input",
+          "cached",
+          44.152700000000095
+        ],
+        [
+          "ordinary-input-9",
+          "ordinary-input",
+          "cached",
+          41.20830000000001
+        ],
+        [
+          "ordinary-input-10",
+          "ordinary-input",
+          "cached",
+          42.54560000000038
+        ],
+        [
+          "ordinary-input-11",
+          "ordinary-input",
+          "cached",
+          44.05009999999993
+        ],
+        [
+          "ordinary-input-12",
+          "ordinary-input",
+          "cached",
+          41.844800000000305
+        ],
+        [
+          "ordinary-input-13",
+          "ordinary-input",
+          "cached",
+          41.110299999999825
+        ],
+        [
+          "ordinary-input-14",
+          "ordinary-input",
+          "cached",
+          41.48829999999998
+        ],
+        [
+          "ordinary-input-15",
+          "ordinary-input",
+          "cached",
+          28.205099999999675
+        ],
+        [
+          "ordinary-input-16",
+          "ordinary-input",
+          "cached",
+          43.46590000000015
+        ],
+        [
+          "ordinary-input-17",
+          "ordinary-input",
+          "cached",
+          42.57540000000017
+        ],
+        [
+          "ordinary-input-18",
+          "ordinary-input",
+          "cached",
+          42.899799999999686
+        ],
+        [
+          "ordinary-input-19",
+          "ordinary-input",
+          "cached",
+          42.34280000000035
+        ],
+        [
+          "ordinary-input-20",
+          "ordinary-input",
+          "cached",
+          43.1849000000002
+        ],
+        [
+          "ordinary-input-21",
+          "ordinary-input",
+          "cached",
+          40.940900000000056
+        ],
+        [
+          "ordinary-input-22",
+          "ordinary-input",
+          "cached",
+          42.19329999999991
+        ],
+        [
+          "ordinary-input-23",
+          "ordinary-input",
+          "cached",
+          27.86130000000003
+        ],
+        [
+          "ordinary-input-24",
+          "ordinary-input",
+          "cached",
+          43.0616
+        ],
+        [
+          "ordinary-input-25",
+          "ordinary-input",
+          "cached",
+          41.54340000000002
+        ],
+        [
+          "ordinary-input-26",
+          "ordinary-input",
+          "cached",
+          28.555499999999938
+        ],
+        [
+          "ordinary-input-27",
+          "ordinary-input",
+          "cached",
+          44.39379999999983
+        ],
+        [
+          "ordinary-input-28",
+          "ordinary-input",
+          "cached",
+          29.12519999999995
+        ],
+        [
+          "ordinary-input-29",
+          "ordinary-input",
+          "cached",
+          43.2216999999996
+        ],
+        [
+          "ordinary-input-30",
+          "ordinary-input",
+          "cached",
+          43.64579999999978
+        ],
+        [
+          "ordinary-input-31",
+          "ordinary-input",
+          "cached",
+          43.614700000000084
+        ],
+        [
+          "ordinary-input-32",
+          "ordinary-input",
+          "cached",
+          42.42690000000039
+        ],
+        [
+          "ordinary-input-33",
+          "ordinary-input",
+          "cached",
+          28.240999999999985
+        ],
+        [
+          "ordinary-input-34",
+          "ordinary-input",
+          "cached",
+          43.13110000000006
+        ],
+        [
+          "ordinary-input-35",
+          "ordinary-input",
+          "cached",
+          27.21389999999974
+        ],
+        [
+          "ordinary-input-36",
+          "ordinary-input",
+          "cached",
+          43.72409999999945
+        ],
+        [
+          "ordinary-input-37",
+          "ordinary-input",
+          "cached",
+          29.67740000000049
+        ],
+        [
+          "ordinary-input-38",
+          "ordinary-input",
+          "cached",
+          42.48569999999927
+        ],
+        [
+          "ordinary-input-39",
+          "ordinary-input",
+          "cached",
+          43.590799999999945
+        ],
+        [
+          "ordinary-input-40",
+          "ordinary-input",
+          "cached",
+          40.32690000000002
+        ],
+        [
+          "ordinary-input-41",
+          "ordinary-input",
+          "cached",
+          43.63640000000032
+        ],
+        [
+          "ordinary-input-42",
+          "ordinary-input",
+          "cached",
+          43.386099999999715
+        ],
+        [
+          "ordinary-input-43",
+          "ordinary-input",
+          "cached",
+          42.85409999999956
+        ],
+        [
+          "ordinary-input-44",
+          "ordinary-input",
+          "cached",
+          43.622299999999996
+        ],
+        [
+          "ordinary-input-45",
+          "ordinary-input",
+          "cached",
+          40.45899999999983
+        ],
+        [
+          "ordinary-input-46",
+          "ordinary-input",
+          "cached",
+          27.766599999999926
+        ],
+        [
+          "ordinary-input-47",
+          "ordinary-input",
+          "cached",
+          28.139400000000023
+        ],
+        [
+          "ordinary-input-48",
+          "ordinary-input",
+          "cached",
+          43.71720000000005
+        ],
+        [
+          "ordinary-input-49",
+          "ordinary-input",
+          "cached",
+          42.59699999999975
+        ],
+        [
+          "ordinary-input-50",
+          "ordinary-input",
+          "cached",
+          39.99040000000059
+        ],
+        [
+          "ordinary-input-51",
+          "ordinary-input",
+          "cached",
+          40.01639999999952
+        ],
+        [
+          "ordinary-input-52",
+          "ordinary-input",
+          "cached",
+          28.25500000000011
+        ],
+        [
+          "ordinary-input-53",
+          "ordinary-input",
+          "cached",
+          29.793300000000272
+        ],
+        [
+          "ordinary-input-54",
+          "ordinary-input",
+          "cached",
+          42.266599999999926
+        ],
+        [
+          "ordinary-input-55",
+          "ordinary-input",
+          "cached",
+          41.925200000000586
+        ],
+        [
+          "ordinary-input-56",
+          "ordinary-input",
+          "cached",
+          41.151600000000144
+        ],
+        [
+          "ordinary-input-57",
+          "ordinary-input",
+          "cached",
+          43.579499999999825
+        ],
+        [
+          "ordinary-input-58",
+          "ordinary-input",
+          "cached",
+          42.02729999999974
+        ],
+        [
+          "ordinary-input-59",
+          "ordinary-input",
+          "cached",
+          26.886500000000524
+        ],
+        [
+          "ordinary-input-60",
+          "ordinary-input",
+          "cached",
+          42.5586000000003
+        ],
+        [
+          "ordinary-input-61",
+          "ordinary-input",
+          "cached",
+          28.228900000000067
+        ],
+        [
+          "ordinary-input-62",
+          "ordinary-input",
+          "cached",
+          43.03729999999996
+        ],
+        [
+          "ordinary-input-63",
+          "ordinary-input",
+          "cached",
+          40.61790000000019
+        ],
+        [
+          "ordinary-input-64",
+          "ordinary-input",
+          "cached",
+          43.85040000000026
+        ],
+        [
+          "ordinary-input-65",
+          "ordinary-input",
+          "cached",
+          29.593299999999545
+        ],
+        [
+          "ordinary-input-66",
+          "ordinary-input",
+          "cached",
+          27.726000000000568
+        ],
+        [
+          "ordinary-input-67",
+          "ordinary-input",
+          "cached",
+          42.4368000000004
+        ],
+        [
+          "ordinary-input-68",
+          "ordinary-input",
+          "cached",
+          30.11779999999999
+        ],
+        [
+          "ordinary-input-69",
+          "ordinary-input",
+          "cached",
+          43.08440000000064
+        ],
+        [
+          "ordinary-input-70",
+          "ordinary-input",
+          "cached",
+          42.572000000000116
+        ],
+        [
+          "ordinary-input-71",
+          "ordinary-input",
+          "cached",
+          40.36839999999938
+        ],
+        [
+          "ordinary-input-72",
+          "ordinary-input",
+          "cached",
+          27.666400000000067
+        ],
+        [
+          "ordinary-input-73",
+          "ordinary-input",
+          "cached",
+          43.72559999999976
+        ],
+        [
+          "ordinary-input-74",
+          "ordinary-input",
+          "cached",
+          43.24579999999969
+        ],
+        [
+          "ordinary-input-75",
+          "ordinary-input",
+          "cached",
+          42.70470000000023
+        ],
+        [
+          "ordinary-input-76",
+          "ordinary-input",
+          "cached",
+          42.23329999999987
+        ],
+        [
+          "ordinary-input-77",
+          "ordinary-input",
+          "cached",
+          42.65950000000066
+        ],
+        [
+          "ordinary-input-78",
+          "ordinary-input",
+          "cached",
+          27.661000000000058
+        ],
+        [
+          "ordinary-input-79",
+          "ordinary-input",
+          "cached",
+          29.525700000000143
+        ],
+        [
+          "ordinary-input-80",
+          "ordinary-input",
+          "cached",
+          26.634099999999307
+        ],
+        [
+          "ordinary-input-81",
+          "ordinary-input",
+          "cached",
+          43.925500000000284
+        ],
+        [
+          "ordinary-input-82",
+          "ordinary-input",
+          "cached",
+          41.40560000000005
+        ],
+        [
+          "ordinary-input-83",
+          "ordinary-input",
+          "cached",
+          42.14710000000014
+        ],
+        [
+          "ordinary-input-84",
+          "ordinary-input",
+          "cached",
+          42.58050000000003
+        ],
+        [
+          "ordinary-input-85",
+          "ordinary-input",
+          "cached",
+          44.04690000000028
+        ],
+        [
+          "ordinary-input-86",
+          "ordinary-input",
+          "cached",
+          42.656200000000354
+        ],
+        [
+          "ordinary-input-87",
+          "ordinary-input",
+          "cached",
+          27.557799999999588
+        ],
+        [
+          "ordinary-input-88",
+          "ordinary-input",
+          "cached",
+          43.78769999999895
+        ],
+        [
+          "ordinary-input-89",
+          "ordinary-input",
+          "cached",
+          43.03870000000097
+        ],
+        [
+          "ordinary-input-90",
+          "ordinary-input",
+          "cached",
+          42.4380000000001
+        ],
+        [
+          "ordinary-input-91",
+          "ordinary-input",
+          "cached",
+          27.51560000000063
+        ],
+        [
+          "ordinary-input-92",
+          "ordinary-input",
+          "cached",
+          28.61620000000039
+        ],
+        [
+          "ordinary-input-93",
+          "ordinary-input",
+          "cached",
+          42.696500000000015
+        ],
+        [
+          "ordinary-input-94",
+          "ordinary-input",
+          "cached",
+          40.87830000000031
+        ],
+        [
+          "ordinary-input-95",
+          "ordinary-input",
+          "cached",
+          41.88539999999921
+        ],
+        [
+          "ordinary-input-96",
+          "ordinary-input",
+          "cached",
+          41.33470000000125
+        ],
+        [
+          "ordinary-input-97",
+          "ordinary-input",
+          "cached",
+          40.96110000000044
+        ],
+        [
+          "ordinary-input-98",
+          "ordinary-input",
+          "cached",
+          28.181700000001
+        ],
+        [
+          "ordinary-input-99",
+          "ordinary-input",
+          "cached",
+          44.36229999999887
+        ],
+        [
+          "ordinary-input-100",
+          "ordinary-input",
+          "cached",
+          26.927200000000084
+        ],
+        [
+          "ordinary-save-1",
+          "ordinary-save",
+          "first",
+          1180.0736000000002
+        ],
+        [
+          "ordinary-save-2",
+          "ordinary-save",
+          "cached",
+          1198.4970000000003
+        ],
+        [
+          "ordinary-save-3",
+          "ordinary-save",
+          "cached",
+          1200.8086000000003
+        ],
+        [
+          "ordinary-save-4",
+          "ordinary-save",
+          "cached",
+          1183.8612999999996
+        ],
+        [
+          "ordinary-save-5",
+          "ordinary-save",
+          "cached",
+          1200.2356999999993
+        ],
+        [
+          "ordinary-save-6",
+          "ordinary-save",
+          "cached",
+          1187.5316000000003
+        ],
+        [
+          "ordinary-save-7",
+          "ordinary-save",
+          "cached",
+          1182.0663000000004
+        ],
+        [
+          "ordinary-save-8",
+          "ordinary-save",
+          "cached",
+          1202.3595999999998
+        ],
+        [
+          "ordinary-save-9",
+          "ordinary-save",
+          "cached",
+          1181.7363000000005
+        ],
+        [
+          "ordinary-save-10",
+          "ordinary-save",
+          "cached",
+          1201.5681999999997
+        ],
+        [
+          "ordinary-save-11",
+          "ordinary-save",
+          "cached",
+          1216.6795000000002
+        ],
+        [
+          "ordinary-save-12",
+          "ordinary-save",
+          "cached",
+          1201.3336
+        ],
+        [
+          "ordinary-save-13",
+          "ordinary-save",
+          "cached",
+          1186.4307000000008
+        ],
+        [
+          "ordinary-save-14",
+          "ordinary-save",
+          "cached",
+          1204.9593999999997
+        ],
+        [
+          "ordinary-save-15",
+          "ordinary-save",
+          "cached",
+          1188.902399999999
+        ],
+        [
+          "ordinary-save-16",
+          "ordinary-save",
+          "cached",
+          1189.3519000000015
+        ],
+        [
+          "ordinary-save-17",
+          "ordinary-save",
+          "cached",
+          1217.9804000000004
+        ],
+        [
+          "ordinary-save-18",
+          "ordinary-save",
+          "cached",
+          1201.5048000000024
+        ],
+        [
+          "ordinary-save-19",
+          "ordinary-save",
+          "cached",
+          1205.931199999999
+        ],
+        [
+          "ordinary-save-20",
+          "ordinary-save",
+          "cached",
+          1215.733400000001
+        ],
+        [
+          "ordinary-save-21",
+          "ordinary-save",
+          "cached",
+          1222.119200000001
+        ],
+        [
+          "ordinary-save-22",
+          "ordinary-save",
+          "cached",
+          1201.6964000000007
+        ],
+        [
+          "ordinary-save-23",
+          "ordinary-save",
+          "cached",
+          1206.9033999999992
+        ],
+        [
+          "ordinary-save-24",
+          "ordinary-save",
+          "cached",
+          1206.7968
+        ],
+        [
+          "ordinary-save-25",
+          "ordinary-save",
+          "cached",
+          1203.5276999999987
+        ],
+        [
+          "ordinary-save-26",
+          "ordinary-save",
+          "cached",
+          1203.3102999999974
+        ],
+        [
+          "ordinary-save-27",
+          "ordinary-save",
+          "cached",
+          1200.392200000002
+        ],
+        [
+          "ordinary-save-28",
+          "ordinary-save",
+          "cached",
+          1203.6421999999948
+        ],
+        [
+          "ordinary-save-29",
+          "ordinary-save",
+          "cached",
+          1220.3977000000014
+        ],
+        [
+          "ordinary-save-30",
+          "ordinary-save",
+          "rotation",
+          1572.7576000000045
+        ],
+        [
+          "ordinary-save-31",
+          "ordinary-save",
+          "rotation",
+          1570.7583000000013
+        ],
+        [
+          "ordinary-save-32",
+          "ordinary-save",
+          "rotation",
+          1568.3667999999961
+        ],
+        [
+          "ordinary-map-1",
+          "ordinary-map",
+          "first",
+          56.678899999999885
+        ],
+        [
+          "ordinary-map-2",
+          "ordinary-map",
+          "cached",
+          32.59669999999983
+        ],
+        [
+          "ordinary-map-3",
+          "ordinary-map",
+          "cached",
+          34.63319999999999
+        ],
+        [
+          "ordinary-map-4",
+          "ordinary-map",
+          "cached",
+          34.570700000000215
+        ],
+        [
+          "ordinary-map-5",
+          "ordinary-map",
+          "cached",
+          33.92859999999973
+        ],
+        [
+          "ordinary-map-6",
+          "ordinary-map",
+          "cached",
+          34.13539999999966
+        ],
+        [
+          "ordinary-map-7",
+          "ordinary-map",
+          "cached",
+          34.03729999999996
+        ],
+        [
+          "ordinary-map-8",
+          "ordinary-map",
+          "cached",
+          34.164400000000114
+        ],
+        [
+          "ordinary-map-9",
+          "ordinary-map",
+          "cached",
+          34.20730000000003
+        ],
+        [
+          "ordinary-map-10",
+          "ordinary-map",
+          "cached",
+          34.46469999999999
+        ],
+        [
+          "ordinary-map-11",
+          "ordinary-map",
+          "cached",
+          33.08719999999994
+        ],
+        [
+          "ordinary-map-12",
+          "ordinary-map",
+          "cached",
+          34.19479999999976
+        ],
+        [
+          "ordinary-map-13",
+          "ordinary-map",
+          "cached",
+          34.22220000000016
+        ],
+        [
+          "ordinary-map-14",
+          "ordinary-map",
+          "cached",
+          34.02149999999983
+        ],
+        [
+          "ordinary-map-15",
+          "ordinary-map",
+          "cached",
+          34.501700000000255
+        ],
+        [
+          "ordinary-map-16",
+          "ordinary-map",
+          "cached",
+          33.33909999999969
+        ],
+        [
+          "ordinary-map-17",
+          "ordinary-map",
+          "cached",
+          34.48680000000013
+        ],
+        [
+          "ordinary-map-18",
+          "ordinary-map",
+          "cached",
+          51.38700000000017
+        ],
+        [
+          "ordinary-map-19",
+          "ordinary-map",
+          "cached",
+          34.321899999999914
+        ],
+        [
+          "ordinary-map-20",
+          "ordinary-map",
+          "cached",
+          33.803100000000086
+        ],
+        [
+          "ordinary-map-21",
+          "ordinary-map",
+          "cached",
+          34.44810000000052
+        ],
+        [
+          "ordinary-map-22",
+          "ordinary-map",
+          "cached",
+          34.33170000000064
+        ],
+        [
+          "ordinary-map-23",
+          "ordinary-map",
+          "cached",
+          34.233900000000176
+        ],
+        [
+          "ordinary-map-24",
+          "ordinary-map",
+          "cached",
+          33.3140999999996
+        ],
+        [
+          "ordinary-map-25",
+          "ordinary-map",
+          "cached",
+          39.41480000000047
+        ],
+        [
+          "ordinary-map-26",
+          "ordinary-map",
+          "cached",
+          34.861399999999776
+        ],
+        [
+          "ordinary-map-27",
+          "ordinary-map",
+          "cached",
+          34.74380000000019
+        ],
+        [
+          "ordinary-map-28",
+          "ordinary-map",
+          "cached",
+          34.604200000000674
+        ],
+        [
+          "ordinary-map-29",
+          "ordinary-map",
+          "cached",
+          34.32300000000032
+        ],
+        [
+          "ordinary-map-30",
+          "ordinary-map",
+          "cached",
+          34.587499999999636
+        ],
+        [
+          "stress-open-01",
+          "stress-open",
+          "first",
+          417.53240000000005
+        ],
+        [
+          "stress-open-02",
+          "stress-open",
+          "first",
+          384.58389999999986
+        ],
+        [
+          "stress-open-03",
+          "stress-open",
+          "first",
+          384.16229999999996
+        ],
+        [
+          "stress-open-04",
+          "stress-open",
+          "first",
+          385.30009999999993
+        ],
+        [
+          "stress-open-05",
+          "stress-open",
+          "first",
+          385.2984999999999
+        ],
+        [
+          "stress-open-06",
+          "stress-open",
+          "first",
+          384.3987000000002
+        ],
+        [
+          "stress-open-07",
+          "stress-open",
+          "first",
+          385.3770999999997
+        ],
+        [
+          "stress-open-08",
+          "stress-open",
+          "first",
+          384.5495000000001
+        ],
+        [
+          "stress-open-09",
+          "stress-open",
+          "first",
+          384.5617000000002
+        ],
+        [
+          "stress-open-10",
+          "stress-open",
+          "first",
+          385.3721000000005
+        ],
+        [
+          "stress-open-11",
+          "stress-open",
+          "cached",
+          400.6750000000002
+        ],
+        [
+          "stress-open-12",
+          "stress-open",
+          "cached",
+          368.7620999999999
+        ],
+        [
+          "stress-open-13",
+          "stress-open",
+          "cached",
+          368.5820999999996
+        ],
+        [
+          "stress-open-14",
+          "stress-open",
+          "cached",
+          384.1749
+        ],
+        [
+          "stress-open-15",
+          "stress-open",
+          "cached",
+          385.16270000000077
+        ],
+        [
+          "stress-open-16",
+          "stress-open",
+          "cached",
+          368.66219999999976
+        ],
+        [
+          "stress-open-17",
+          "stress-open",
+          "cached",
+          384.5062000000007
+        ],
+        [
+          "stress-open-18",
+          "stress-open",
+          "cached",
+          368.7548999999999
+        ],
+        [
+          "stress-open-19",
+          "stress-open",
+          "cached",
+          385.4320000000007
+        ],
+        [
+          "stress-open-20",
+          "stress-open",
+          "cached",
+          384.84619999999995
+        ],
+        [
+          "stress-open-21",
+          "stress-open",
+          "cached",
+          384.6406999999999
+        ],
+        [
+          "stress-open-22",
+          "stress-open",
+          "cached",
+          368.5095999999994
+        ],
+        [
+          "stress-open-23",
+          "stress-open",
+          "cached",
+          385.0733999999993
+        ],
+        [
+          "stress-open-24",
+          "stress-open",
+          "cached",
+          384.28369999999995
+        ],
+        [
+          "stress-open-25",
+          "stress-open",
+          "cached",
+          384.59569999999985
+        ],
+        [
+          "stress-open-26",
+          "stress-open",
+          "cached",
+          369.2660999999989
+        ],
+        [
+          "stress-open-27",
+          "stress-open",
+          "cached",
+          385.47859999999855
+        ],
+        [
+          "stress-open-28",
+          "stress-open",
+          "cached",
+          384.52779999999984
+        ],
+        [
+          "stress-open-29",
+          "stress-open",
+          "cached",
+          386.3845999999994
+        ],
+        [
+          "stress-open-30",
+          "stress-open",
+          "cached",
+          385.4217000000008
+        ],
+        [
+          "stress-open-31",
+          "stress-open",
+          "cached",
+          385.35759999999937
+        ],
+        [
+          "stress-open-32",
+          "stress-open",
+          "cached",
+          384.90170000000035
+        ],
+        [
+          "stress-open-33",
+          "stress-open",
+          "cached",
+          384.70960000000014
+        ],
+        [
+          "stress-open-34",
+          "stress-open",
+          "cached",
+          384.4402000000009
+        ],
+        [
+          "stress-open-35",
+          "stress-open",
+          "cached",
+          368.08000000000175
+        ],
+        [
+          "stress-open-36",
+          "stress-open",
+          "cached",
+          385.6893
+        ],
+        [
+          "stress-open-37",
+          "stress-open",
+          "cached",
+          384.6965
+        ],
+        [
+          "stress-open-38",
+          "stress-open",
+          "cached",
+          367.9278999999988
+        ],
+        [
+          "stress-open-39",
+          "stress-open",
+          "cached",
+          384.06670000000304
+        ],
+        [
+          "stress-open-40",
+          "stress-open",
+          "cached",
+          385.2273000000023
+        ],
+        [
+          "stress-input-1",
+          "stress-input",
+          "cached",
+          38.94399999999996
+        ],
+        [
+          "stress-input-2",
+          "stress-input",
+          "cached",
+          41.75689999999986
+        ],
+        [
+          "stress-input-3",
+          "stress-input",
+          "cached",
+          42.6078
+        ],
+        [
+          "stress-input-4",
+          "stress-input",
+          "cached",
+          43.05749999999989
+        ],
+        [
+          "stress-input-5",
+          "stress-input",
+          "cached",
+          39.60459999999989
+        ],
+        [
+          "stress-input-6",
+          "stress-input",
+          "cached",
+          40.486199999999826
+        ],
+        [
+          "stress-input-7",
+          "stress-input",
+          "cached",
+          43.862699999999904
+        ],
+        [
+          "stress-input-8",
+          "stress-input",
+          "cached",
+          43.38379999999984
+        ],
+        [
+          "stress-input-9",
+          "stress-input",
+          "cached",
+          40.99000000000024
+        ],
+        [
+          "stress-input-10",
+          "stress-input",
+          "cached",
+          44.634199999999964
+        ],
+        [
+          "stress-input-11",
+          "stress-input",
+          "cached",
+          41.10109999999986
+        ],
+        [
+          "stress-input-12",
+          "stress-input",
+          "cached",
+          40.776400000000194
+        ],
+        [
+          "stress-input-13",
+          "stress-input",
+          "cached",
+          45.79639999999972
+        ],
+        [
+          "stress-input-14",
+          "stress-input",
+          "cached",
+          41.46730000000025
+        ],
+        [
+          "stress-input-15",
+          "stress-input",
+          "cached",
+          43.27399999999989
+        ],
+        [
+          "stress-input-16",
+          "stress-input",
+          "cached",
+          42.2505000000001
+        ],
+        [
+          "stress-input-17",
+          "stress-input",
+          "cached",
+          44.15279999999984
+        ],
+        [
+          "stress-input-18",
+          "stress-input",
+          "cached",
+          40.51670000000013
+        ],
+        [
+          "stress-input-19",
+          "stress-input",
+          "cached",
+          42.20779999999968
+        ],
+        [
+          "stress-input-20",
+          "stress-input",
+          "cached",
+          40.16899999999987
+        ],
+        [
+          "stress-input-21",
+          "stress-input",
+          "cached",
+          42.31449999999995
+        ],
+        [
+          "stress-input-22",
+          "stress-input",
+          "cached",
+          43.79399999999987
+        ],
+        [
+          "stress-input-23",
+          "stress-input",
+          "cached",
+          27.800900000000183
+        ],
+        [
+          "stress-input-24",
+          "stress-input",
+          "cached",
+          43.81829999999991
+        ],
+        [
+          "stress-input-25",
+          "stress-input",
+          "cached",
+          44.32029999999986
+        ],
+        [
+          "stress-input-26",
+          "stress-input",
+          "cached",
+          27.65209999999979
+        ],
+        [
+          "stress-input-27",
+          "stress-input",
+          "cached",
+          43.38889999999992
+        ],
+        [
+          "stress-input-28",
+          "stress-input",
+          "cached",
+          42.953700000000026
+        ],
+        [
+          "stress-input-29",
+          "stress-input",
+          "cached",
+          40.863000000000284
+        ],
+        [
+          "stress-input-30",
+          "stress-input",
+          "cached",
+          40.36499999999978
+        ],
+        [
+          "stress-input-31",
+          "stress-input",
+          "cached",
+          38.57450000000017
+        ],
+        [
+          "stress-input-32",
+          "stress-input",
+          "cached",
+          39.14599999999973
+        ],
+        [
+          "stress-input-33",
+          "stress-input",
+          "cached",
+          41.391999999999825
+        ],
+        [
+          "stress-input-34",
+          "stress-input",
+          "cached",
+          43.70710000000054
+        ],
+        [
+          "stress-input-35",
+          "stress-input",
+          "cached",
+          41.24200000000019
+        ],
+        [
+          "stress-input-36",
+          "stress-input",
+          "cached",
+          43.452800000000025
+        ],
+        [
+          "stress-input-37",
+          "stress-input",
+          "cached",
+          39.57999999999993
+        ],
+        [
+          "stress-input-38",
+          "stress-input",
+          "cached",
+          40.47960000000057
+        ],
+        [
+          "stress-input-39",
+          "stress-input",
+          "cached",
+          39.872699999999895
+        ],
+        [
+          "stress-input-40",
+          "stress-input",
+          "cached",
+          42.53600000000006
+        ],
+        [
+          "stress-input-41",
+          "stress-input",
+          "cached",
+          41.90570000000025
+        ],
+        [
+          "stress-input-42",
+          "stress-input",
+          "cached",
+          40.574900000000525
+        ],
+        [
+          "stress-input-43",
+          "stress-input",
+          "cached",
+          38.324000000000524
+        ],
+        [
+          "stress-input-44",
+          "stress-input",
+          "cached",
+          41.239700000000084
+        ],
+        [
+          "stress-input-45",
+          "stress-input",
+          "cached",
+          43.28610000000026
+        ],
+        [
+          "stress-input-46",
+          "stress-input",
+          "cached",
+          40.91830000000027
+        ],
+        [
+          "stress-input-47",
+          "stress-input",
+          "cached",
+          41.8087000000005
+        ],
+        [
+          "stress-input-48",
+          "stress-input",
+          "cached",
+          41.214500000000044
+        ],
+        [
+          "stress-input-49",
+          "stress-input",
+          "cached",
+          38.469999999999345
+        ],
+        [
+          "stress-input-50",
+          "stress-input",
+          "cached",
+          40.693199999999706
+        ],
+        [
+          "stress-input-51",
+          "stress-input",
+          "cached",
+          42.358400000000074
+        ],
+        [
+          "stress-input-52",
+          "stress-input",
+          "cached",
+          38.246000000000095
+        ],
+        [
+          "stress-input-53",
+          "stress-input",
+          "cached",
+          41.152500000000146
+        ],
+        [
+          "stress-input-54",
+          "stress-input",
+          "cached",
+          39.470000000000255
+        ],
+        [
+          "stress-input-55",
+          "stress-input",
+          "cached",
+          41.461599999999635
+        ],
+        [
+          "stress-input-56",
+          "stress-input",
+          "cached",
+          43.024099999999635
+        ],
+        [
+          "stress-input-57",
+          "stress-input",
+          "cached",
+          39.64510000000064
+        ],
+        [
+          "stress-input-58",
+          "stress-input",
+          "cached",
+          43.79140000000007
+        ],
+        [
+          "stress-input-59",
+          "stress-input",
+          "cached",
+          44.39390000000003
+        ],
+        [
+          "stress-input-60",
+          "stress-input",
+          "cached",
+          39.866799999999785
+        ],
+        [
+          "stress-input-61",
+          "stress-input",
+          "cached",
+          43.93299999999999
+        ],
+        [
+          "stress-input-62",
+          "stress-input",
+          "cached",
+          43.542099999999664
+        ],
+        [
+          "stress-input-63",
+          "stress-input",
+          "cached",
+          39.210399999999936
+        ],
+        [
+          "stress-input-64",
+          "stress-input",
+          "cached",
+          40.43910000000051
+        ],
+        [
+          "stress-input-65",
+          "stress-input",
+          "cached",
+          44.2505000000001
+        ],
+        [
+          "stress-input-66",
+          "stress-input",
+          "cached",
+          40.36830000000009
+        ],
+        [
+          "stress-input-67",
+          "stress-input",
+          "cached",
+          43.16740000000027
+        ],
+        [
+          "stress-input-68",
+          "stress-input",
+          "cached",
+          41.323199999999815
+        ],
+        [
+          "stress-input-69",
+          "stress-input",
+          "cached",
+          42.80209999999988
+        ],
+        [
+          "stress-input-70",
+          "stress-input",
+          "cached",
+          40.83150000000023
+        ],
+        [
+          "stress-input-71",
+          "stress-input",
+          "cached",
+          44.84689999999955
+        ],
+        [
+          "stress-input-72",
+          "stress-input",
+          "cached",
+          38.248899999999594
+        ],
+        [
+          "stress-input-73",
+          "stress-input",
+          "cached",
+          40.067800000000716
+        ],
+        [
+          "stress-input-74",
+          "stress-input",
+          "cached",
+          41.139000000000124
+        ],
+        [
+          "stress-input-75",
+          "stress-input",
+          "cached",
+          44.04600000000028
+        ],
+        [
+          "stress-input-76",
+          "stress-input",
+          "cached",
+          42.36790000000019
+        ],
+        [
+          "stress-input-77",
+          "stress-input",
+          "cached",
+          42.92540000000008
+        ],
+        [
+          "stress-input-78",
+          "stress-input",
+          "cached",
+          42.24549999999999
+        ],
+        [
+          "stress-input-79",
+          "stress-input",
+          "cached",
+          40.53510000000006
+        ],
+        [
+          "stress-input-80",
+          "stress-input",
+          "cached",
+          44.29809999999998
+        ],
+        [
+          "stress-input-81",
+          "stress-input",
+          "cached",
+          40.35229999999956
+        ],
+        [
+          "stress-input-82",
+          "stress-input",
+          "cached",
+          44.05070000000069
+        ],
+        [
+          "stress-input-83",
+          "stress-input",
+          "cached",
+          28.52179999999953
+        ],
+        [
+          "stress-input-84",
+          "stress-input",
+          "cached",
+          42.1851000000006
+        ],
+        [
+          "stress-input-85",
+          "stress-input",
+          "cached",
+          41.9364000000005
+        ],
+        [
+          "stress-input-86",
+          "stress-input",
+          "cached",
+          43.474200000000565
+        ],
+        [
+          "stress-input-87",
+          "stress-input",
+          "cached",
+          43.520800000000236
+        ],
+        [
+          "stress-input-88",
+          "stress-input",
+          "cached",
+          28.348799999999756
+        ],
+        [
+          "stress-input-89",
+          "stress-input",
+          "cached",
+          44.15929999999935
+        ],
+        [
+          "stress-input-90",
+          "stress-input",
+          "cached",
+          43.710800000000745
+        ],
+        [
+          "stress-input-91",
+          "stress-input",
+          "cached",
+          43.595900000000256
+        ],
+        [
+          "stress-input-92",
+          "stress-input",
+          "cached",
+          43.60139999999956
+        ],
+        [
+          "stress-input-93",
+          "stress-input",
+          "cached",
+          40.12740000000122
+        ],
+        [
+          "stress-input-94",
+          "stress-input",
+          "cached",
+          42.58499999999913
+        ],
+        [
+          "stress-input-95",
+          "stress-input",
+          "cached",
+          44.38810000000012
+        ],
+        [
+          "stress-input-96",
+          "stress-input",
+          "cached",
+          42.719200000001365
+        ],
+        [
+          "stress-input-97",
+          "stress-input",
+          "cached",
+          44.703700000000026
+        ],
+        [
+          "stress-input-98",
+          "stress-input",
+          "cached",
+          43.844600000000355
+        ],
+        [
+          "stress-input-99",
+          "stress-input",
+          "cached",
+          42.95299999999952
+        ],
+        [
+          "stress-input-100",
+          "stress-input",
+          "cached",
+          28.65990000000056
+        ],
+        [
+          "stress-save-1",
+          "stress-save",
+          "first",
+          3415.4781000000003
+        ],
+        [
+          "stress-save-2",
+          "stress-save",
+          "cached",
+          3556.4936000000007
+        ],
+        [
+          "stress-save-3",
+          "stress-save",
+          "cached",
+          3548.2577
+        ],
+        [
+          "stress-save-4",
+          "stress-save",
+          "cached",
+          3545.9622
+        ],
+        [
+          "stress-save-5",
+          "stress-save",
+          "cached",
+          3568.9867999999988
+        ],
+        [
+          "stress-save-6",
+          "stress-save",
+          "cached",
+          3568.6951999999983
+        ],
+        [
+          "stress-save-7",
+          "stress-save",
+          "cached",
+          3554.323400000001
+        ],
+        [
+          "stress-save-8",
+          "stress-save",
+          "cached",
+          3538.4701000000023
+        ],
+        [
+          "stress-save-9",
+          "stress-save",
+          "cached",
+          3548.071799999998
+        ],
+        [
+          "stress-save-10",
+          "stress-save",
+          "cached",
+          3556.1956000000064
+        ],
+        [
+          "stress-save-11",
+          "stress-save",
+          "cached",
+          3554.238400000002
+        ],
+        [
+          "stress-save-12",
+          "stress-save",
+          "cached",
+          3554.684199999996
+        ],
+        [
+          "stress-save-13",
+          "stress-save",
+          "cached",
+          3550.4064
+        ],
+        [
+          "stress-save-14",
+          "stress-save",
+          "cached",
+          3553.1924999999974
+        ],
+        [
+          "stress-save-15",
+          "stress-save",
+          "cached",
+          3539.251199999999
+        ],
+        [
+          "stress-save-16",
+          "stress-save",
+          "cached",
+          3554.506500000003
+        ],
+        [
+          "stress-save-17",
+          "stress-save",
+          "cached",
+          3570.0221999999994
+        ],
+        [
+          "stress-save-18",
+          "stress-save",
+          "cached",
+          3536.391300000003
+        ],
+        [
+          "stress-save-19",
+          "stress-save",
+          "cached",
+          3551.739699999991
+        ],
+        [
+          "stress-save-20",
+          "stress-save",
+          "cached",
+          3571.597099999999
+        ],
+        [
+          "stress-save-21",
+          "stress-save",
+          "cached",
+          3553.369900000005
+        ],
+        [
+          "stress-save-22",
+          "stress-save",
+          "cached",
+          3548.016499999998
+        ],
+        [
+          "stress-save-23",
+          "stress-save",
+          "cached",
+          3552.776399999988
+        ],
+        [
+          "stress-save-24",
+          "stress-save",
+          "cached",
+          3567.5329000000056
+        ],
+        [
+          "stress-save-25",
+          "stress-save",
+          "cached",
+          3567.758999999991
+        ],
+        [
+          "stress-save-26",
+          "stress-save",
+          "cached",
+          3556.5534999999945
+        ],
+        [
+          "stress-save-27",
+          "stress-save",
+          "cached",
+          3550.2743000000046
+        ],
+        [
+          "stress-save-28",
+          "stress-save",
+          "cached",
+          3547.462400000004
+        ],
+        [
+          "stress-save-29",
+          "stress-save",
+          "cached",
+          3535.699299999993
+        ],
+        [
+          "stress-save-30",
+          "stress-save",
+          "rotation",
+          7167.749100000001
+        ],
+        [
+          "stress-save-31",
+          "stress-save",
+          "rotation",
+          7252.188500000004
+        ],
+        [
+          "stress-save-32",
+          "stress-save",
+          "rotation",
+          7238.679800000013
+        ],
+        [
+          "stress-map-1",
+          "stress-map",
+          "first",
+          68.37439999999992
+        ],
+        [
+          "stress-map-2",
+          "stress-map",
+          "cached",
+          67.78740000000016
+        ],
+        [
+          "stress-map-3",
+          "stress-map",
+          "cached",
+          83.8887000000002
+        ],
+        [
+          "stress-map-4",
+          "stress-map",
+          "cached",
+          67.2231999999999
+        ],
+        [
+          "stress-map-5",
+          "stress-map",
+          "cached",
+          67.71429999999964
+        ],
+        [
+          "stress-map-6",
+          "stress-map",
+          "cached",
+          68.12159999999994
+        ],
+        [
+          "stress-map-7",
+          "stress-map",
+          "cached",
+          67.95900000000029
+        ],
+        [
+          "stress-map-8",
+          "stress-map",
+          "cached",
+          67.86749999999984
+        ],
+        [
+          "stress-map-9",
+          "stress-map",
+          "cached",
+          68.43119999999999
+        ],
+        [
+          "stress-map-10",
+          "stress-map",
+          "cached",
+          67.92990000000009
+        ],
+        [
+          "stress-map-11",
+          "stress-map",
+          "cached",
+          67.76510000000007
+        ],
+        [
+          "stress-map-12",
+          "stress-map",
+          "cached",
+          67.73939999999993
+        ],
+        [
+          "stress-map-13",
+          "stress-map",
+          "cached",
+          69.07519999999977
+        ],
+        [
+          "stress-map-14",
+          "stress-map",
+          "cached",
+          84.59789999999975
+        ],
+        [
+          "stress-map-15",
+          "stress-map",
+          "cached",
+          68.4422999999997
+        ],
+        [
+          "stress-map-16",
+          "stress-map",
+          "cached",
+          67.80599999999959
+        ],
+        [
+          "stress-map-17",
+          "stress-map",
+          "cached",
+          67.7554999999993
+        ],
+        [
+          "stress-map-18",
+          "stress-map",
+          "cached",
+          69.22050000000036
+        ],
+        [
+          "stress-map-19",
+          "stress-map",
+          "cached",
+          68.74079999999958
+        ],
+        [
+          "stress-map-20",
+          "stress-map",
+          "cached",
+          68.1208000000006
+        ],
+        [
+          "stress-map-21",
+          "stress-map",
+          "cached",
+          68.53709999999955
+        ],
+        [
+          "stress-map-22",
+          "stress-map",
+          "cached",
+          68.12980000000061
+        ],
+        [
+          "stress-map-23",
+          "stress-map",
+          "cached",
+          67.47519999999986
+        ],
+        [
+          "stress-map-24",
+          "stress-map",
+          "cached",
+          67.8136999999997
+        ],
+        [
+          "stress-map-25",
+          "stress-map",
+          "cached",
+          67.48820000000069
+        ],
+        [
+          "stress-map-26",
+          "stress-map",
+          "cached",
+          91.25880000000052
+        ],
+        [
+          "stress-map-27",
+          "stress-map",
+          "cached",
+          68.4951000000001
+        ],
+        [
+          "stress-map-28",
+          "stress-map",
+          "cached",
+          68.15519999999924
+        ],
+        [
+          "stress-map-29",
+          "stress-map",
+          "cached",
+          68.05709999999999
+        ],
+        [
+          "stress-map-30",
+          "stress-map",
+          "cached",
+          68.44990000000053
+        ],
+        [
+          "search-1",
+          "search",
+          "first",
+          141.68759999999997
+        ],
+        [
+          "search-2",
+          "search",
+          "first",
+          143.93960000000015
+        ],
+        [
+          "search-3",
+          "search",
+          "first",
+          140.38459999999986
+        ],
+        [
+          "search-4",
+          "search",
+          "first",
+          132.2203999999997
+        ],
+        [
+          "search-5",
+          "search",
+          "first",
+          128.89480000000003
+        ],
+        [
+          "search-6",
+          "search",
+          "first",
+          127.38379999999961
+        ],
+        [
+          "search-7",
+          "search",
+          "cached",
+          143.00689999999986
+        ],
+        [
+          "search-8",
+          "search",
+          "cached",
+          128.54239999999982
+        ],
+        [
+          "search-9",
+          "search",
+          "cached",
+          127.00590000000011
+        ],
+        [
+          "search-10",
+          "search",
+          "cached",
+          130.73340000000007
+        ],
+        [
+          "search-11",
+          "search",
+          "cached",
+          130.47350000000006
+        ],
+        [
+          "search-12",
+          "search",
+          "cached",
+          129.17570000000023
+        ],
+        [
+          "search-13",
+          "search",
+          "cached",
+          144.84230000000025
+        ],
+        [
+          "search-14",
+          "search",
+          "cached",
+          145.07920000000013
+        ],
+        [
+          "search-15",
+          "search",
+          "cached",
+          127.25460000000021
+        ],
+        [
+          "search-16",
+          "search",
+          "cached",
+          128.88600000000042
+        ],
+        [
+          "search-17",
+          "search",
+          "cached",
+          128.58200000000033
+        ],
+        [
+          "search-18",
+          "search",
+          "cached",
+          128.59589999999935
+        ],
+        [
+          "search-19",
+          "search",
+          "cached",
+          144.64189999999962
+        ],
+        [
+          "search-20",
+          "search",
+          "cached",
+          145.84479999999985
+        ],
+        [
+          "search-21",
+          "search",
+          "cached",
+          140.8807999999999
+        ],
+        [
+          "search-22",
+          "search",
+          "cached",
+          145.48959999999988
+        ],
+        [
+          "search-23",
+          "search",
+          "cached",
+          129.5072
+        ],
+        [
+          "search-24",
+          "search",
+          "cached",
+          127.58039999999983
+        ],
+        [
+          "search-25",
+          "search",
+          "cached",
+          142.06950000000052
+        ],
+        [
+          "search-26",
+          "search",
+          "cached",
+          130.85820000000058
+        ],
+        [
+          "search-27",
+          "search",
+          "cached",
+          146.39360000000033
+        ],
+        [
+          "search-28",
+          "search",
+          "cached",
+          129.10759999999937
+        ],
+        [
+          "search-29",
+          "search",
+          "cached",
+          131.1882999999998
+        ],
+        [
+          "search-30",
+          "search",
+          "cached",
+          128.6786000000002
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-52-40-365Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2041.189
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-52-46-162Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2144.0326
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-52-51-907Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2149.0365
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-52-57-387Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2119.8442999999997
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-53-03-015Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2140.6091
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-53-08-791Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2065.1248
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-53-14-534Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2138.376
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-53-20-313Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2076.5433
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-53-25-989Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2082.9759
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-53-31-755Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          2066.98
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-03/measurements/2026-10-15T14-54-46-474Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "startup",
+          "startup",
+          "indexed",
+          1914.8493
+        ],
+        [
+          "ordinary-save-after-process-restart",
+          "ordinary-save",
+          "first-after-restart",
+          1576.4694000000002
+        ],
+        [
+          "stress-reopen-for-persistence",
+          "stress-open",
+          "first-after-restart",
+          484.40610000000015
+        ],
+        [
+          "stress-save-after-process-restart",
+          "stress-save",
+          "first-after-restart",
+          7346.6381
+        ],
+        [
+          "ordinary-reopen-for-persistence",
+          "ordinary-open",
+          "first-after-restart",
+          150.79269999999997
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-04/measurements/2026-10-15T14-53-37-826Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "initial-index",
+          "initial-index",
+          "first",
+          18190.9038
+        ]
+      ]
+    },
+    {
+      "id": "acceptance-full-05/measurements/2026-10-15T14-54-02-152Z",
+      "webview": "Edg/155.0.4283.45",
+      "samples": [
+        [
+          "initial-index",
+          "initial-index",
+          "first",
+          13928.4494
+        ]
+      ]
+    }
+  ],
+  "longSaveFeedback": [
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-1",
+      "observations": [
+        {
+          "elapsedMs": 1005.6759000000002,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2002.1417000000001,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-2",
+      "observations": [
+        {
+          "elapsedMs": 1005.04,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2004.9505,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-3",
+      "observations": [
+        {
+          "elapsedMs": 1003.2085999999999,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2000.0964000000004,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-4",
+      "observations": [
+        {
+          "elapsedMs": 1002.1033000000007,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2001.2001,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-5",
+      "observations": [
+        {
+          "elapsedMs": 1002.9362000000001,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2004.2080999999998,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-6",
+      "observations": [
+        {
+          "elapsedMs": 1000.4298000000017,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2003.0306999999993,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-7",
+      "observations": [
+        {
+          "elapsedMs": 1003.9998999999989,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2003.3905000000013,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-8",
+      "observations": [
+        {
+          "elapsedMs": 1003.188900000001,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2002.957699999999,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-9",
+      "observations": [
+        {
+          "elapsedMs": 1001.6912999999986,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2000.7217999999993,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-10",
+      "observations": [
+        {
+          "elapsedMs": 1003.614499999996,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2006.0316999999995,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-11",
+      "observations": [
+        {
+          "elapsedMs": 1001.6468000000023,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2001.6445999999996,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-12",
+      "observations": [
+        {
+          "elapsedMs": 1003.0947000000015,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2002.9356000000043,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-13",
+      "observations": [
+        {
+          "elapsedMs": 1001.2086999999956,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2005.9280999999974,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-14",
+      "observations": [
+        {
+          "elapsedMs": 1004.1455999999962,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2002.9526999999944,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-15",
+      "observations": [
+        {
+          "elapsedMs": 1004.3819000000003,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2003.1450999999943,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-16",
+      "observations": [
+        {
+          "elapsedMs": 1004.3086000000039,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2000.2554999999993,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-17",
+      "observations": [
+        {
+          "elapsedMs": 1003.2739999999976,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2005.5469000000012,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-18",
+      "observations": [
+        {
+          "elapsedMs": 1002.7464999999938,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2001.1079000000027,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-19",
+      "observations": [
+        {
+          "elapsedMs": 1000.1223000000027,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2001.9695000000065,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-20",
+      "observations": [
+        {
+          "elapsedMs": 1006.2679000000062,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2002.6065999999992,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-21",
+      "observations": [
+        {
+          "elapsedMs": 1005.3508000000002,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2003.6127000000124,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-22",
+      "observations": [
+        {
+          "elapsedMs": 1003.8263000000006,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2002.064200000008,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-23",
+      "observations": [
+        {
+          "elapsedMs": 1007.4016999999876,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2001.392399999997,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-24",
+      "observations": [
+        {
+          "elapsedMs": 1000.6955999999918,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2001.3686999999918,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-25",
+      "observations": [
+        {
+          "elapsedMs": 1001.3891999999905,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2002.8254000000015,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-26",
+      "observations": [
+        {
+          "elapsedMs": 1001.398000000001,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2003.1592000000092,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-27",
+      "observations": [
+        {
+          "elapsedMs": 1003.7494000000006,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2001.8652000000002,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-28",
+      "observations": [
+        {
+          "elapsedMs": 1003.5328000000009,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2003.880799999999,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-29",
+      "observations": [
+        {
+          "elapsedMs": 1000.6947000000073,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2006.0843000000023,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-30",
+      "observations": [
+        {
+          "elapsedMs": 1003.6208999999944,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2003.8043000000034,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-31",
+      "observations": [
+        {
+          "elapsedMs": 1003.4479000000138,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2001.5282000000007,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "stress-save-32",
+      "observations": [
+        {
+          "elapsedMs": 1000.6906000000017,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2001.940300000002,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-54-46-474Z",
+      "operation": "stress-save-after-process-restart",
+      "observations": [
+        {
+          "elapsedMs": 1005.1598999999997,
+          "text": "正在保存…",
+          "visible": true
+        },
+        {
+          "elapsedMs": 2000.2987999999996,
+          "text": "正在保存…",
+          "visible": true
+        }
+      ]
+    }
+  ],
+  "cancellation": [
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "request-switch-during-save",
+      "elapsedMs": 97.78250000000003,
+      "title": "压力样本 41 · SHARED-Q51-STRESS",
+      "save": "正在保存…",
+      "transition": "切换前保存当前笔记"
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "cancel-switch-while-saving",
+      "elapsedMs": 52.909599999999955,
+      "title": "压力样本 41 · SHARED-Q51-STRESS",
+      "save": "正在保存…",
+      "transition": null
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "cancel-switch-still-finishes-safe-save",
+      "elapsedMs": 6999.1019,
+      "title": "压力样本 41 · SHARED-Q51-STRESS",
+      "save": "已保存到本地",
+      "transition": null
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "request-close-during-save",
+      "elapsedMs": 1368.3124000000007,
+      "title": "压力样本 42 · SHARED-Q51-STRESS",
+      "save": "正在保存…",
+      "transition": "关闭前保存当前笔记"
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "cancel-close-while-saving",
+      "elapsedMs": 53,
+      "title": "压力样本 42 · SHARED-Q51-STRESS",
+      "save": "正在保存…",
+      "transition": null
+    },
+    {
+      "run": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z",
+      "operation": "cancel-close-still-finishes-safe-save",
+      "elapsedMs": 5732.625600000001,
+      "title": "压力样本 42 · SHARED-Q51-STRESS",
+      "save": "已保存到本地",
+      "transition": null
+    }
+  ],
+  "packageVerification": {
+    "checkedUtc": "2026-10-15T15:01:53.2175399Z",
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "passed": true,
+    "notes": [
+      {
+        "profile": "ordinary",
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "title": "普通样本 83 · SHARED-Q51-ORDINARY",
+        "firstHeading": "内容区 · 普通样本 79",
+        "assetsIdentical": true,
+        "editableMapIdentical": true,
+        "assets": [
+          {
+            "path": "assets/10c4eaf6-3832-4bcb-bc4b-8e81bb23023b",
+            "bytes": 1048576,
+            "sha256": "977388359993da3d2b6daefb0edcf1236cee76098d4055f1282a3b5114ff1792"
+          },
+          {
+            "path": "assets/776e7b15-c41e-47fd-8e9d-56fe79b11408",
+            "bytes": 1048576,
+            "sha256": "ba43dbb2822b46d3765f94b7e8ffd176b869310289bc06ac7647ab7fe647f6ee"
+          },
+          {
+            "path": "assets/a262a1ea-fa33-48ee-94fa-a3844efe5635",
+            "bytes": 1048576,
+            "sha256": "2681264d829858c8ab76637e8b1c5e0466619da0c63c0cb624208fc5fa438196"
+          },
+          {
+            "path": "assets/d45aa9f8-86e2-477a-a9d8-f431c078a3e9",
+            "bytes": 1048576,
+            "sha256": "a4ad302ddf520f8f00984763897bc70f3db6f7ca9ab0f33226eb4bb187860f58"
+          },
+          {
+            "path": "assets/f8035b54-d239-4739-b47e-95ff2eb85b22",
+            "bytes": 1048576,
+            "sha256": "4b39636db900a76c20913414f99e2b57f33abeed277ee7fa00f4fe30341b3931"
+          }
+        ]
+      },
+      {
+        "profile": "stress",
+        "noteId": "da509c0e-7713-4234-b8eb-ec5fd6f993d6",
+        "title": "压力样本 84 · SHARED-Q51-STRESS",
+        "firstHeading": "内容区 · 压力样本 00",
+        "assetsIdentical": true,
+        "editableMapIdentical": true,
+        "assets": [
+          {
+            "path": "assets/4c584f74-5593-4fa4-82aa-bcfee8e11eef",
+            "bytes": 5242880,
+            "sha256": "9824971acc0e1b518c1aa22ad3f3c9dab4329810651f73d800253157f4041b25"
+          },
+          {
+            "path": "assets/55594b5a-4aa5-429f-8956-e5031c0ef8e7",
+            "bytes": 5242880,
+            "sha256": "9ce2a11cbb77898abf60ec62d0e0fe53580cd152c6b5ac81db2c6480ac01610c"
+          },
+          {
+            "path": "assets/711fbe1c-4a2f-4f32-9f36-0d4f72efb1be",
+            "bytes": 5242880,
+            "sha256": "6e0a771781fd88c5bea3dca61acd249ad787e624dc5a4fc2d48113029ecb0714"
+          },
+          {
+            "path": "assets/7906facb-6440-482e-b7ca-5f9e5374a271",
+            "bytes": 5242880,
+            "sha256": "50ab5f9f1745f3a53c78b8f2fd2cd47da1ef3c0e874f710f7e52b60f8cc1bdcc"
+          },
+          {
+            "path": "assets/887c72ab-e2d7-408a-9f7d-0d73dc5035d0",
+            "bytes": 5242880,
+            "sha256": "b83214b840c917f3bcbfde9c8b4e5ce8e863c64427e20229e463692fe9f80dbe"
+          },
+          {
+            "path": "assets/91f20ce3-049e-4d3e-9bbb-0f6c89f1f833",
+            "bytes": 5242880,
+            "sha256": "81e56da517cbb15bfb0347633ee7b7b85a9cd36c7cc95b0f4357a625d5e8c6de"
+          },
+          {
+            "path": "assets/9fa9d1f6-6f61-48e7-9802-741c1915e834",
+            "bytes": 5242880,
+            "sha256": "a698202e892c05e871d8e42457c02709f824a30133d526461a0fd63aa9ed7bf0"
+          },
+          {
+            "path": "assets/ae420cc6-f4d5-45b0-9512-58a65ea4ac34",
+            "bytes": 5242880,
+            "sha256": "fd8b2b8c51c2e89fae29224a9cec158c8c946904eff69f3d4eecfa0658fc981c"
+          },
+          {
+            "path": "assets/c2d9e4b2-777b-4f83-9b98-3d1048790a4e",
+            "bytes": 5242880,
+            "sha256": "89991d0821a87a0d69e3c2e3029da2edd43e757fb8c243994830a973a803bef7"
+          },
+          {
+            "path": "assets/f3fb9039-ab06-4404-bccb-0f30ca0af842",
+            "bytes": 5242880,
+            "sha256": "cc3a811190c00b0b4f95366b36990529094056d690505327f45a8f91149b5bbf"
+          }
+        ]
+      }
+    ]
+  },
+  "testResults": {
+    "frontend": {
+      "passed": 136
+    },
+    "rustAllTargets": {
+      "passed": 211,
+      "binaries": 34,
+      "ignored": 0
+    },
+    "faultInjection": {
+      "passed": 63,
+      "note": "Nine focused suites; overlaps normal tests, not 63 additional distinct tests."
+    },
+    "schemaSync": "pass",
+    "formatCheck": "pass",
+    "optimizedDesktopBuild": "pass"
+  },
+  "rawEvidence": [
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z/startup.json",
+      "sha256": "1dc8fefeb61adf48ff85262b19570af23373945c882ceeeab52bbb3d70817bb9",
+      "bytes": 1289
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z/measurements.jsonl",
+      "sha256": "fc0cb48052a33729161e1b3ce6c7a75a9df77395adf0e0a26a80ab9464c9dddf",
+      "bytes": 893670
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z/launcher.json",
+      "sha256": "b9aeee19686774b62e9b39d0d75095a1da85a9dfd36416f5b3d5aed85b0f1a9a",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-46-59-217Z/close-attempts.jsonl",
+      "sha256": "c0ba403dfe9fd9e75320fc1f82d64c8f7d662c8f641a56bb0f7069ee30e5143e",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-40-365Z/startup.json",
+      "sha256": "550ba48b3d5516aa99a959acad8bd5fcf3102f1f86cd67522d27072d9049555d",
+      "bytes": 2377
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-40-365Z/launcher.json",
+      "sha256": "aa6c5c553eed910729b5d7b730b4291f8b3de16e7ad8f28aa55822b092463e29",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-40-365Z/close-attempts.jsonl",
+      "sha256": "efb21fd8c6ab9f7365d83e41280aee4d5c4aa0b675f916c373217ebc35b01b79",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-46-162Z/startup.json",
+      "sha256": "68e9d2a97ecfed0b5b079a326552b1a3d82392738bdbfd4d2b7c298c802bf451",
+      "bytes": 2406
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-46-162Z/launcher.json",
+      "sha256": "1d872a618e89e9c7f5567ffe9540ba7edaf48a0dd779284d4ffaf8377227f7ed",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-46-162Z/close-attempts.jsonl",
+      "sha256": "8161c36dcf75acac6e9de07db7402eacc571877a6106ce94829dd6ae71b8c44e",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-51-907Z/startup.json",
+      "sha256": "634f90f9907f626ae6efd1b668e399008070af5e189140b3dec514d20ecee397",
+      "bytes": 2369
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-51-907Z/launcher.json",
+      "sha256": "f26712c3cae9df71aa95dad3d8ad8085585f15cfe6619a2a9527c359d53529f7",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-51-907Z/close-attempts.jsonl",
+      "sha256": "1c7fc0a01151c63bf750697d976dad838e58708cb512138f93b74a6d3d24b227",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-57-387Z/startup.json",
+      "sha256": "a3abac2f3c13d2bdae27741b1b248c5c2379c43b121a0c086d56163efa662ddf",
+      "bytes": 2378
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-57-387Z/launcher.json",
+      "sha256": "af5e2a403c423fa49936aa931648a34df46d8c8b0d67e413b9d3e280c24a874d",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-52-57-387Z/close-attempts.jsonl",
+      "sha256": "87cace5c199aeab81ae0c870b21507fc7f2f4a77aae2bbb58efa0d48f6bceb01",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-03-015Z/startup.json",
+      "sha256": "4448dbb374d1c8fbb7aeb59c256b2064d2643b655b36c2135609ff555834b58d",
+      "bytes": 2377
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-03-015Z/launcher.json",
+      "sha256": "92ae5aaedff4b87598781937ca0f4b29160f52c35cf78d2d3f3b5c17aa4bc8b5",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-03-015Z/close-attempts.jsonl",
+      "sha256": "d2cee19ca4a8368c9d76557a79e7114069f3af9d1ae0e40e94b6c4d64f454109",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-08-791Z/startup.json",
+      "sha256": "275f8dc1ae620f91bcf550e8b42c98fc75b05ca9f760e89d57e2b16942112436",
+      "bytes": 2406
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-08-791Z/launcher.json",
+      "sha256": "b8abc47cdc5ee97914c64e4407c31e6ff092ce8746cbfe3693ff08a8f0f8e4cd",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-08-791Z/close-attempts.jsonl",
+      "sha256": "aaa48bfbb54a0e1ba16d19b69e99fb7b2cd8b23d0ee09f4e40effb41ad6a0746",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-14-534Z/startup.json",
+      "sha256": "e3c3a24f477f95606ed75a524e231a79ea5c293f7c58f190ef16c6abad5d95bd",
+      "bytes": 2387
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-14-534Z/launcher.json",
+      "sha256": "2055079c9ecff15b20752b48307c3c96352203a975da1c700c89797fec00afd1",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-14-534Z/close-attempts.jsonl",
+      "sha256": "96bb71f75345cb55514c67ca53c60536d349484f38c29d2f1a6e5e6309675faf",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-20-313Z/startup.json",
+      "sha256": "f78b66d14132f28a23400dc7c45048282f5a2e1c6f9b85d149a33b7e6b459209",
+      "bytes": 2387
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-20-313Z/launcher.json",
+      "sha256": "66b3e7cf3f9292b8a65b097fba8ebe27d125c7e98a7baf132eb3364ca0adbdcf",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-20-313Z/close-attempts.jsonl",
+      "sha256": "23ed6e784a2bec2c89cca37d16258b01107b8cf4195a8c24ad7bdebbecd33cf2",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-25-989Z/startup.json",
+      "sha256": "1a71c83cb7220eaa31bcead519d4ce614ed374ca09a35db8393201d44397bfe6",
+      "bytes": 2378
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-25-989Z/launcher.json",
+      "sha256": "a4dc575b0418ccb27bd3fdffe6bd3f3e37f06e4f7aefc6791c7531f404e4745c",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-25-989Z/close-attempts.jsonl",
+      "sha256": "3bac32a6416ce9b06a8b731b8128eb422c468fc68c761a78b4e26b9f262747de",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-31-755Z/startup.json",
+      "sha256": "dcbf70003fb3ec42a1d5d13e1c1af6387ce9712d213ddd79976922df72199d66",
+      "bytes": 2376
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-31-755Z/launcher.json",
+      "sha256": "24e8cba77d513c1012cda503c92ce6ca8bf85cfada4ec7e6ee4bb36958537703",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-53-31-755Z/close-attempts.jsonl",
+      "sha256": "76dd5179f27f8a3c19e41c5ea819b335ee4b3d0f0416ebc379705b577806af5e",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-54-46-474Z/startup.json",
+      "sha256": "3c70442fc11a22015a5653ac75d45253e52cd7f4451d519b3c206e9e09a080c3",
+      "bytes": 2369
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-54-46-474Z/measurements.jsonl",
+      "sha256": "eb4e84c410a824378ac4053e644cba92b1e534dfbf51da9f559fb65711ce267f",
+      "bytes": 16571
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-54-46-474Z/launcher.json",
+      "sha256": "b9a6918019605224e8d2eff9b471c043100eecd61044f99fc8b7f9b16e9a003a",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-03/measurements/2026-10-15T14-54-46-474Z/close-attempts.jsonl",
+      "sha256": "b6b02e066e50e7211e5904420befebe465da0aaaa0aea825466b45c297f54000",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-04/measurements/2026-10-15T14-53-37-826Z/startup.json",
+      "sha256": "4313aa5ad44e3612b760164da7aea6f0d897533940d1767dcf8e6cfcc75bcc11",
+      "bytes": 1298
+    },
+    {
+      "path": "acceptance-full-04/measurements/2026-10-15T14-53-37-826Z/measurements.jsonl",
+      "sha256": "c00951f4b547840ffd7fd38b4305a5fc76357425ed6768a9fba14a180753db1c",
+      "bytes": 1111
+    },
+    {
+      "path": "acceptance-full-04/measurements/2026-10-15T14-53-37-826Z/launcher.json",
+      "sha256": "6620005cf5981e49fd079d7aabc57446a0df5207307c2ee1eea5f6158da09158",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-04/measurements/2026-10-15T14-53-37-826Z/close-attempts.jsonl",
+      "sha256": "4390eb17ef94d7ed6ca684ca17b45265a243c71fa4a0ba2ee3ee2bd219f667e0",
+      "bytes": 101
+    },
+    {
+      "path": "acceptance-full-05/measurements/2026-10-15T14-54-02-152Z/startup.json",
+      "sha256": "ffd9750592f7c2a7211658df0f0c5a6a447cd2031f300cb95d2d2d3c601679ac",
+      "bytes": 1298
+    },
+    {
+      "path": "acceptance-full-05/measurements/2026-10-15T14-54-02-152Z/measurements.jsonl",
+      "sha256": "652fe3c63275e7dd9fbda1e9c433181613963b25540df17574d83d4cf16f04ef",
+      "bytes": 1112
+    },
+    {
+      "path": "acceptance-full-05/measurements/2026-10-15T14-54-02-152Z/launcher.json",
+      "sha256": "c0279480ce5244caec59ad36d5c53f3b6b541ae884cca132db3b6048b2c4c197",
+      "bytes": 852
+    },
+    {
+      "path": "acceptance-full-05/measurements/2026-10-15T14-54-02-152Z/close-attempts.jsonl",
+      "sha256": "b9d749e9f91a333f8eccd2d98047e4649bb892995d389dfd91fd9e357e4ebab6",
+      "bytes": 101
+    }
+  ],
+  "review": {
+    "date": "2026-10-17",
+    "execution": "primary agent, per updated user routing; not independent subagents",
+    "spec": "pass",
+    "standards": "pass",
+    "unresolvedFindings": 0,
+    "record": "performance-review.md",
+    "changesAfterMeasurement": [
+      {
+        "path": "tools/performance/build-windows.ps1",
+        "measuredSha256": "0ddeaa1d3dae82983a16e3134fb7269d5bf8612e5eb7831b8de663964a85c757",
+        "currentSha256": "3a7eaefa1905fbecb013ea784dd73c7336138b4d2152fe82121d949ca9edadee"
+      }
+    ],
+    "changeReason": "Only add --locked to the build command; measured product sources and binary unchanged. Documentation finalized separately."
+  }
+}

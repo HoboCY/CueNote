@@ -1,6 +1,8 @@
 mod commands;
 mod file_watch;
 pub mod note_format;
+#[cfg(feature = "perf-acceptance")]
+mod performance;
 pub mod storage;
 mod storage_faults;
 pub mod workspace;
@@ -29,34 +31,49 @@ fn get_app_version() -> &'static str {
 }
 
 fn create_workspace(app: &tauri::App) -> Result<workspace::Workspace, Box<dyn std::error::Error>> {
-    // Integration runs exercise the real host against an explicitly isolated directory.
-    // Release builds never read this override.
-    #[cfg(debug_assertions)]
-    if let Some(root) = std::env::var_os("CUENOTE_TEST_ROOT") {
-        let root = std::path::PathBuf::from(root);
-        if !root.is_absolute() {
-            return Err("CUENOTE_TEST_ROOT must be an absolute path".into());
-        }
-        return Ok(workspace::Workspace::new(
-            root.join("settings"),
-            root.join("recovery"),
-            root.join("笔记库"),
-        ));
+    #[cfg(feature = "perf-acceptance")]
+    {
+        let _ = app;
+        return performance::workspace();
     }
 
-    let documents = app
-        .path()
-        .document_dir()
-        .or_else(|_| app.path().home_dir().map(|home| home.join("Documents")))?;
-    Ok(workspace::Workspace::new(
-        app.path().app_config_dir()?,
-        app.path().app_local_data_dir()?.join("recovery"),
-        documents.join("CueNote"),
-    ))
+    #[cfg(not(feature = "perf-acceptance"))]
+    {
+        // Integration runs exercise the real host against an explicitly isolated directory.
+        // Release builds never read this override.
+        #[cfg(debug_assertions)]
+        if let Some(root) = std::env::var_os("CUENOTE_TEST_ROOT") {
+            let root = std::path::PathBuf::from(root);
+            if !root.is_absolute() {
+                return Err("CUENOTE_TEST_ROOT must be an absolute path".into());
+            }
+            return Ok(workspace::Workspace::new(
+                root.join("settings"),
+                root.join("recovery"),
+                root.join("笔记库"),
+            ));
+        }
+
+        let documents = app
+            .path()
+            .document_dir()
+            .or_else(|_| app.path().home_dir().map(|home| home.join("Documents")))?;
+        Ok(workspace::Workspace::new(
+            app.path().app_config_dir()?,
+            app.path().app_local_data_dir()?.join("recovery"),
+            documents.join("CueNote"),
+        ))
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+    #[cfg(feature = "perf-acceptance")]
+    let context = performance::isolate(context).unwrap_or_else(|error| {
+        eprintln!("Cannot start isolated performance build: {error}");
+        std::process::exit(2);
+    });
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(CloseGate::default())
@@ -142,7 +159,7 @@ pub fn run() {
             commands::resolve_preserved_version,
             commands::save_preserved_as,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building CueNote")
         .run(|app, event| {
             // Includes application-level quit (for example macOS Cmd+Q), which

@@ -113,8 +113,10 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml --features storage-faul
 - [整库恢复验证](docs/library-restore-validation.md)
 - [库外笔记验证](docs/external-notes-validation.md)
 - [Markdown 导出验证](docs/markdown-export-validation.md)
+- [本机容量与性能验证方法](docs/performance-method.md)
+- [Windows 本机容量与性能结果](docs/performance-validation.md)
 
-Mac、真实 OneDrive 双端、完整编辑能力、容量与性能验收仍需后续实现与测试；当前版本不代表已达到日用标准。
+Windows 千篇库与压力笔记的本机测量及主代理审查已完成。Mac、真实 OneDrive 双端、安装升级及完整日用验收仍需后续测试；当前版本不代表已达到日用标准。
 
 ## 许可
 

@@ -177,14 +177,15 @@ pub(crate) fn validate_package(package: &NotePackage) -> Result<(), FormatError>
                 format!("Asset {} has a mismatched byte length.", entry.id),
             ));
         }
-        let actual_hash = format!("{:x}", sha2::Sha256::digest(bytes));
+        let digest = sha2::Sha256::digest(bytes);
+        let actual_hash = format!("{digest:x}");
         if entry.sha256 != actual_hash {
             return Err(FormatError::new(
                 "asset_integrity",
                 format!("Asset {} has a mismatched SHA-256 digest.", entry.id),
             ));
         }
-        let (width, height) = decode_asset(bytes, entry.media_type)?;
+        let (width, height) = decode_asset(bytes, entry.media_type, digest.into())?;
         if (entry.width, entry.height) != (width, height) {
             return Err(FormatError::new(
                 "asset_integrity",
@@ -557,7 +558,14 @@ fn validate_mind_map(
     Ok(())
 }
 
-fn decode_asset(bytes: &[u8], media_type: MediaType) -> Result<(u32, u32), FormatError> {
+fn decode_asset(
+    bytes: &[u8],
+    media_type: MediaType,
+    digest: [u8; 32],
+) -> Result<(u32, u32), FormatError> {
+    if let Some(dimensions) = super::decoded_assets::lookup(digest, media_type) {
+        return Ok(dimensions);
+    }
     let probe = ImageReader::new(Cursor::new(bytes))
         .with_guessed_format()
         .map_err(|error| FormatError::new("invalid_asset", error.to_string()))?;
@@ -599,6 +607,7 @@ fn decode_asset(bytes: &[u8], media_type: MediaType) -> Result<(u32, u32), Forma
     if (decoded.width(), decoded.height()) != dimensions {
         return Err(invalid_asset("Decoded image dimensions changed."));
     }
+    super::decoded_assets::remember(digest, media_type, dimensions);
     Ok(dimensions)
 }
 
@@ -613,7 +622,7 @@ pub(crate) fn inspect_image(bytes: &[u8]) -> Result<(MediaType, u32, u32), Forma
         ImageFormat::Jpeg => MediaType::Jpeg,
         _ => return Err(invalid_asset("Only PNG and JPEG images are supported.")),
     };
-    let (width, height) = decode_asset(bytes, media_type)?;
+    let (width, height) = decode_asset(bytes, media_type, sha2::Sha256::digest(bytes).into())?;
     Ok((media_type, width, height))
 }
 

@@ -126,6 +126,37 @@ pub fn open_note(path: &Path) -> Result<OpenedNote, StorageError> {
     })
 }
 
+/// A cache hit means that *all* current source bytes match a previously fully
+/// validated package. This is only for derived lists/search, never save authority.
+pub(crate) fn source_matches_cached_revision(
+    path: &Path,
+    expected_revision: &str,
+) -> Result<bool, StorageError> {
+    let _policy = NoCloudDownload::enter()?;
+    let target = resolve_target(path)?;
+    let mut file = open_local_read(&target.path)?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0u8; 64 * 1024];
+    let mut length = 0u64;
+    loop {
+        let count = file
+            .read(&mut buffer)
+            .map_err(|error| local_files::read_error("无法核验笔记内容", error))?;
+        if count == 0 {
+            break;
+        }
+        length += count as u64;
+        if length > MAX_PACKAGE_BYTES {
+            return Err(StorageError::new(
+                "budget_exceeded",
+                "笔记文件超过 256 MiB 安全上限。",
+            ));
+        }
+        hash.update(&buffer[..count]);
+    }
+    Ok(format!("{:x}", hash.finalize()) == expected_revision)
+}
+
 /// Removes one confirmed trashed package after coordinating with note saves and
 /// matching the session's exact package revision. The actual file is moved to a
 /// same-directory quarantine and rechecked before it can be removed.

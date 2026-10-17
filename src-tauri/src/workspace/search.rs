@@ -80,6 +80,45 @@ struct IndexedField {
 }
 
 impl SearchIndex {
+    pub(crate) fn last_projection(&self) -> Vec<(SearchSection, String)> {
+        self.entries
+            .last()
+            .map(|entry| {
+                entry
+                    .fields
+                    .iter()
+                    .map(|field| (field.section, field.text.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    pub(crate) fn add_projection(
+        &mut self,
+        note: NoteSummary,
+        projection: &[(SearchSection, String)],
+    ) -> bool {
+        let bytes = projection.iter().try_fold(0usize, |bytes, (_, text)| {
+            bytes.checked_add(text.len().checked_mul(2)?)
+        });
+        let Some(bytes) = bytes.filter(|bytes| *bytes <= MAX_INDEX_BYTES - self.indexed_bytes)
+        else {
+            self.incomplete = true;
+            return false;
+        };
+        let fields = projection
+            .iter()
+            .map(|(section, text)| IndexedField {
+                section: *section,
+                ascii_folded: text.to_ascii_lowercase(),
+                text: text.clone(),
+            })
+            .collect();
+        self.indexed_bytes += bytes;
+        self.entries.push(IndexedNote { note, fields });
+        true
+    }
+
     pub(crate) fn add_note(&mut self, note: NoteSummary, package: &NotePackage) -> bool {
         let mut remaining = (MAX_INDEX_BYTES - self.indexed_bytes) / 2;
         let mut fields = Vec::new();

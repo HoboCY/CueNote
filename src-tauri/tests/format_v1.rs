@@ -10,6 +10,63 @@ use sha2::Digest;
 const VALID_RICH: &[u8] = include_bytes!("fixtures/valid-rich-v1.cuenote");
 
 #[test]
+fn previously_decoded_image_does_not_authorize_changed_bytes_or_metadata() {
+    let package = read_package(Cursor::new(VALID_RICH)).unwrap();
+    let asset = package
+        .manifest
+        .assets
+        .iter()
+        .find(|entry| entry.media_type == MediaType::Png)
+        .unwrap();
+    let id = asset.id.clone();
+    // Reading and writing first exercise the success path before any mutation.
+    let mut encoded = Cursor::new(Vec::new());
+    write_package(&mut encoded, &package).unwrap();
+    read_package(Cursor::new(encoded.into_inner())).unwrap();
+
+    let mut corrupt = package.clone();
+    let header_only = corrupt.assets[&id][..33].to_vec();
+    update_asset(&mut corrupt, &id, header_only);
+    let error = write_package(&mut Cursor::new(Vec::new()), &corrupt).unwrap_err();
+    assert_eq!(error.kind, "invalid_asset");
+    assert_eq!(
+        read_package(Cursor::new(archive_from_package(&corrupt)))
+            .unwrap_err()
+            .kind,
+        "invalid_asset"
+    );
+
+    let mut wrong_dimensions = package.clone();
+    wrong_dimensions
+        .manifest
+        .assets
+        .iter_mut()
+        .find(|entry| entry.id == id)
+        .unwrap()
+        .width += 1;
+    assert_eq!(
+        write_package(&mut Cursor::new(Vec::new()), &wrong_dimensions)
+            .unwrap_err()
+            .kind,
+        "asset_integrity"
+    );
+    let mut wrong_type = package;
+    wrong_type
+        .manifest
+        .assets
+        .iter_mut()
+        .find(|entry| entry.id == id)
+        .unwrap()
+        .media_type = MediaType::Jpeg;
+    assert_eq!(
+        write_package(&mut Cursor::new(Vec::new()), &wrong_type)
+            .unwrap_err()
+            .kind,
+        "invalid_asset"
+    );
+}
+
+#[test]
 fn rich_v1_fixture_reads_and_round_trips_every_approved_block() {
     let package = read_package(Cursor::new(VALID_RICH)).expect("fixed v1 fixture is valid");
     let content = &package.document.sections.content;

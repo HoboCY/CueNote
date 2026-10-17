@@ -8,6 +8,8 @@ export interface ExternalChangeToken {
 
 export interface ExternalChangesCoordinatorOptions {
   getSessionId: () => string | null;
+  /** Defer a notification while a foreground save already checks the library. */
+  canProbe?: () => boolean;
   probe: (sessionId: string | null) => Promise<ExternalChangeProbe>;
   onChanged: (
     result: ExternalChangeProbe,
@@ -66,6 +68,10 @@ export function createExternalChangesCoordinator(options: ExternalChangesCoordin
       queued = true;
       return active;
     }
+    if (options.canProbe?.() === false) {
+      schedule();
+      return Promise.resolve();
+    }
 
     const token: ExternalChangeToken = {
       sessionId: options.getSessionId(),
@@ -107,6 +113,13 @@ export function createExternalChangesCoordinator(options: ExternalChangesCoordin
     if (active) queued = true;
   };
 
+  // A retry that waited behind a save can be due just as that save completes.
+  // Retain the notification, but start its normal quiet interval again so it
+  // does not immediately queue another full scan ahead of the next edit/save.
+  const afterSave = () => {
+    if (timer !== null) schedule();
+  };
+
   const sessionChanged = () => {
     epoch += 1;
     inputVersion = 0;
@@ -122,5 +135,5 @@ export function createExternalChangesCoordinator(options: ExternalChangesCoordin
 
   const resume = () => { disposed = false; };
 
-  return { schedule, checkNow, noteInputChanged, sessionChanged, dispose, resume };
+  return { schedule, checkNow, noteInputChanged, afterSave, sessionChanged, dispose, resume };
 }
