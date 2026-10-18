@@ -54,6 +54,11 @@ notify = "=8.2.0"
 [dev-dependencies]
 tempfile = "3"
 
+[target.'cfg(all(target_os = "macos", target_arch = "aarch64"))'.dependencies]
+# sha2 0.10 requires this feature for its CPU-selected ARM SHA-256 backend.
+# Keep the same digest algorithm; other target configurations remain unchanged.
+sha2 = { version = "=0.10.9", features = ["asm"] }
+
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = { version = "=0.6.2", optional = true }
 objc2 = { version = "=0.6.5", optional = true }

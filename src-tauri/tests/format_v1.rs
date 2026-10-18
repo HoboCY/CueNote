@@ -9,6 +9,40 @@ use sha2::Digest;
 
 const VALID_RICH: &[u8] = include_bytes!("fixtures/valid-rich-v1.cuenote");
 
+// Included in the precompiled device resource suite as well as hosted CI.
+// CPU backend changes must preserve note revisions and asset identities.
+#[test]
+fn sha256_preserves_canonical_digests_across_block_boundaries() {
+    let cases = [
+        (
+            Vec::new(),
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        ),
+        (
+            b"abc".to_vec(),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+        ),
+        (
+            b"abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq".to_vec(),
+            "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1",
+        ),
+        (
+            vec![b'a'; 1_000_000],
+            "cdc76e5c9914fb9281a1c7e284d73e67f1809a48a497200e046d39ccc7112cd0",
+        ),
+    ];
+    for (input, expected) in cases {
+        assert_eq!(format!("{:x}", sha2::Sha256::digest(&input)), expected);
+        for chunk_size in [1, 63, 64, 65, 4096] {
+            let mut digest = sha2::Sha256::new();
+            for chunk in input.chunks(chunk_size) {
+                digest.update(chunk);
+            }
+            assert_eq!(format!("{:x}", digest.finalize()), expected);
+        }
+    }
+}
+
 #[test]
 fn previously_decoded_image_does_not_authorize_changed_bytes_or_metadata() {
     let package = read_package(Cursor::new(VALID_RICH)).unwrap();
