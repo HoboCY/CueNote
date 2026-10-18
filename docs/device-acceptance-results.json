@@ -84,6 +84,15 @@
       "report": "performance-windows-durability-results.json",
       "backupRetryScope": "One real stress-note save naturally cancels automatic backup during source checking; same-session automatic retry and exact native content verification. Excluded from Q51 timing. Not repeated pressure, copy/publish race, restore or complete A19 acceptance.",
       "backupRetryReport": "backup-retry-windows-results.json"
+    },
+    "witnessFollowup": {
+      "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+      "timingMatrixPassed": true,
+      "metricSamples": 467,
+      "normalExits": 13,
+      "nativeContentVerified": true,
+      "relatedNativeRegressionPassed": 59,
+      "report": "performance-windows-witness-results.json"
     }
   },
   "mac": {
@@ -280,7 +289,7 @@
       "id": "A23",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Windows 00c1e3f variant: 467 timing samples, 13 normal exits, native content and 48 resource checks passed; one-save same-session automatic-backup retry separately passed (not complete A19). M1 native resources 47/47; matrix 5 retains 66 metric samples, initial index failed and repeated title replacement stopped execution. New cbd9c08 runtime validation pending. Full Mac Q51 and complete A23 remain unaccepted."
+      "notes": "Windows 00c1e3f variant: 467 timing samples, 13 normal exits, native content and 48 resource checks passed; one-save same-session automatic-backup retry separately passed (not complete A19). M1 native resources 47/47; matrix 5 retains 66 metric samples, initial index failed and repeated title replacement stopped execution. New cbd9c08 runtime validation pending. Full Mac Q51 and complete A23 remain unaccepted. Windows cbd9c08 follow-up also passed 467 timing samples, 13 normal exits and exact native content comparison; 59 related native regressions passed."
     },
     {
       "id": "A24",

@@ -1,0 +1,914 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "implementationCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+  "environment": {
+    "collectedUtc": "2026-10-18T03:46:52.3197340Z",
+    "os": {
+      "Caption": "Microsoft Windows 11 专业版",
+      "Version": "10.0.26200",
+      "BuildNumber": "26200",
+      "OSArchitecture": "64 位",
+      "TotalVisibleMemorySize": 33315680
+    },
+    "cpu": {
+      "Name": "13th Gen Intel(R) Core(TM) i7-13700KF",
+      "NumberOfCores": 16,
+      "NumberOfLogicalProcessors": 24
+    },
+    "build": {
+      "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+      "sourceDirty": false,
+      "sha256": "66f215fdbedb1cce04cb72b9cd81dcc870e250b92bc5cb6071247f6a02480043",
+      "target": "x86_64-pc-windows-msvc",
+      "features": [
+        "perf-acceptance",
+        "tauri/custom-protocol"
+      ],
+      "traceEnabled": false,
+      "previousMeasuredSha256": "9c5d0e689a13501e4d8ccc2f8c1e363785450fdcdccb30ddd403b69ec1ac948c",
+      "formalCandidate": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+      "candidateComparison": "Includes cbd9c08 store-lock-protected receipt reads without temporary per-version lock writes. Formal installed candidate remains unchanged. Requires new performance validation.",
+      "builtUtc": "2026-10-18T03:37:29.6990923Z"
+    },
+    "note": "Current installed WebView2, recorded in every startup.json; no system cache clearing. No local build/copy/test suite runs during measurement."
+  },
+  "webView2": [
+    "Edg/155.0.4283.60"
+  ],
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 860,
+      "devicePixelRatio": 1
+    }
+  ],
+  "binarySha256": "66f215fdbedb1cce04cb72b9cd81dcc870e250b92bc5cb6071247f6a02480043",
+  "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+  "timingMatrixPassed": true,
+  "totalMetricSamples": 467,
+  "statistics": [
+    {
+      "metric": "startup",
+      "cacheState": "all",
+      "count": 10,
+      "minMs": 2021.3759999999997,
+      "p95Ms": 2365.8738,
+      "maxMs": 2365.8738,
+      "requiredSamples": 10,
+      "limitMs": 3000,
+      "statistic": "max",
+      "status": "pass"
+    },
+    {
+      "metric": "initial-index",
+      "cacheState": "all",
+      "count": 3,
+      "minMs": 14746.607099999997,
+      "p95Ms": 15289.360300000002,
+      "maxMs": 15289.360300000002,
+      "requiredSamples": 3,
+      "limitMs": 60000,
+      "statistic": "max",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "all",
+      "count": 60,
+      "minMs": 104.14409999999953,
+      "p95Ms": 116.76220000000012,
+      "maxMs": 273.9756000000002,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "all",
+      "count": 32,
+      "minMs": 1196.1448999999993,
+      "p95Ms": 1584.3012000000017,
+      "maxMs": 1593.6345000000001,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "all",
+      "count": 40,
+      "minMs": 352.79149999999936,
+      "p95Ms": 417.84169999999904,
+      "maxMs": 475.50199999999995,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "all",
+      "count": 32,
+      "minMs": 3569.3508,
+      "p95Ms": 7334.327699999994,
+      "maxMs": 7416.65849999999,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "search",
+      "cacheState": "all",
+      "count": 30,
+      "minMs": 115.18300000000045,
+      "p95Ms": 128.28809999999976,
+      "maxMs": 130.0842,
+      "requiredSamples": 30,
+      "limitMs": 300,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-map",
+      "cacheState": "all",
+      "count": 30,
+      "minMs": 23.79489999999987,
+      "p95Ms": 36.454499999999825,
+      "maxMs": 50.831699999999955,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-map",
+      "cacheState": "all",
+      "count": 30,
+      "minMs": 54.20499999999993,
+      "p95Ms": 67.1282000000001,
+      "maxMs": 88.63909999999987,
+      "requiredSamples": 30,
+      "limitMs": 3000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-input",
+      "cacheState": "all",
+      "count": 100,
+      "minMs": 16.099500000000262,
+      "p95Ms": 21.04829999999947,
+      "maxMs": 21.87790000000018,
+      "requiredSamples": 100,
+      "limitMs": 100,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-input",
+      "cacheState": "all",
+      "count": 100,
+      "minMs": 18.3161999999993,
+      "p95Ms": 29.56860000000006,
+      "maxMs": 35.91280000000006,
+      "requiredSamples": 100,
+      "limitMs": 200,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "initial-index",
+      "cacheState": "first",
+      "count": 3,
+      "minMs": 14746.607099999997,
+      "p95Ms": 15289.360300000002,
+      "maxMs": 15289.360300000002,
+      "requiredSamples": 3,
+      "limitMs": 60000,
+      "statistic": "max",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "first",
+      "count": 30,
+      "minMs": 104.14409999999953,
+      "p95Ms": 118.56140000000005,
+      "maxMs": 273.9756000000002,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "cached",
+      "count": 30,
+      "minMs": 104.17910000000029,
+      "p95Ms": 116.67220000000088,
+      "maxMs": 116.69789999999921,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 1234.0938,
+      "p95Ms": 1234.0938,
+      "maxMs": 1234.0938,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "cached",
+      "count": 28,
+      "minMs": 1196.1448999999993,
+      "p95Ms": 1245.6860000000006,
+      "maxMs": 1246.7423,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "rotation",
+      "count": 3,
+      "minMs": 1565.3953000000038,
+      "p95Ms": 1593.6345000000001,
+      "maxMs": 1593.6345000000001,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-input",
+      "cacheState": "cached",
+      "count": 100,
+      "minMs": 16.099500000000262,
+      "p95Ms": 21.04829999999947,
+      "maxMs": 21.87790000000018,
+      "requiredSamples": 100,
+      "limitMs": 100,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-map",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 50.831699999999955,
+      "p95Ms": 50.831699999999955,
+      "maxMs": 50.831699999999955,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-map",
+      "cacheState": "cached",
+      "count": 29,
+      "minMs": 23.79489999999987,
+      "p95Ms": 25.748599999999897,
+      "maxMs": 36.454499999999825,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "first",
+      "count": 10,
+      "minMs": 370.2651999999998,
+      "p95Ms": 475.50199999999995,
+      "maxMs": 475.50199999999995,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "cached",
+      "count": 30,
+      "minMs": 352.79149999999936,
+      "p95Ms": 417.84169999999904,
+      "maxMs": 433.1823000000022,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 3631.3265,
+      "p95Ms": 3631.3265,
+      "maxMs": 3631.3265,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "cached",
+      "count": 28,
+      "minMs": 3569.3508,
+      "p95Ms": 3648.090600000003,
+      "maxMs": 3654.135399999999,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "rotation",
+      "count": 3,
+      "minMs": 7230.441200000001,
+      "p95Ms": 7416.65849999999,
+      "maxMs": 7416.65849999999,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-input",
+      "cacheState": "cached",
+      "count": 100,
+      "minMs": 18.3161999999993,
+      "p95Ms": 29.56860000000006,
+      "maxMs": 35.91280000000006,
+      "requiredSamples": 100,
+      "limitMs": 200,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-map",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 56.13239999999996,
+      "p95Ms": 56.13239999999996,
+      "maxMs": 56.13239999999996,
+      "requiredSamples": 30,
+      "limitMs": 3000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-map",
+      "cacheState": "cached",
+      "count": 29,
+      "minMs": 54.20499999999993,
+      "p95Ms": 67.1282000000001,
+      "maxMs": 88.63909999999987,
+      "requiredSamples": 30,
+      "limitMs": 3000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "search",
+      "cacheState": "first",
+      "count": 6,
+      "minMs": 117.85259999999971,
+      "p95Ms": 130.0842,
+      "maxMs": 130.0842,
+      "requiredSamples": 30,
+      "limitMs": 300,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "search",
+      "cacheState": "cached",
+      "count": 24,
+      "minMs": 115.18300000000045,
+      "p95Ms": 124.57040000000052,
+      "maxMs": 128.28809999999976,
+      "requiredSamples": 30,
+      "limitMs": 300,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "startup",
+      "cacheState": "indexed",
+      "count": 10,
+      "minMs": 2021.3759999999997,
+      "p95Ms": 2365.8738,
+      "maxMs": 2365.8738,
+      "requiredSamples": 10,
+      "limitMs": 3000,
+      "statistic": "max",
+      "status": "breakdown"
+    }
+  ],
+  "normalClosures": [
+    {
+      "pid": 81336,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-2/measurements/2026-10-18T03-46-53-650Z"
+    },
+    {
+      "pid": 73412,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-3/measurements/2026-10-18T03-47-15-722Z"
+    },
+    {
+      "pid": 80804,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-47-37-158Z"
+    },
+    {
+      "pid": 80920,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-10-031Z"
+    },
+    {
+      "pid": 82356,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-16-594Z"
+    },
+    {
+      "pid": 80336,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-22-593Z"
+    },
+    {
+      "pid": 76260,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-28-504Z"
+    },
+    {
+      "pid": 76240,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-34-673Z"
+    },
+    {
+      "pid": 76384,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-40-849Z"
+    },
+    {
+      "pid": 79936,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-46-914Z"
+    },
+    {
+      "pid": 74964,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-52-984Z"
+    },
+    {
+      "pid": 80956,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-58-939Z"
+    },
+    {
+      "pid": 78068,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-witness-runtime/index-1/measurements/2026-10-18T03-54-05-065Z"
+    }
+  ],
+  "longSaveFeedback": {
+    "samples": 32,
+    "visibleAt1000ms": 32,
+    "visibleAt2000ms": 32
+  },
+  "cancelSaveWait": [
+    {
+      "operation": "cancel-switch-while-saving",
+      "elapsedMs": 35.659799999999905,
+      "save": "正在保存…",
+      "progress": [
+        "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+        "思维导图已保存到正文。关闭"
+      ]
+    },
+    {
+      "operation": "cancel-switch-still-finishes-safe-save",
+      "elapsedMs": 8490.278900000001,
+      "save": "已保存到本地",
+      "progress": [
+        "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+        "思维导图已保存到正文。关闭"
+      ]
+    },
+    {
+      "operation": "cancel-close-while-saving",
+      "elapsedMs": 36.239800000001196,
+      "save": "正在保存…",
+      "progress": [
+        "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+        "思维导图已保存到正文。关闭"
+      ]
+    },
+    {
+      "operation": "cancel-close-still-finishes-safe-save",
+      "elapsedMs": 3799.8696999999993,
+      "save": "已保存到本地",
+      "progress": [
+        "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+        "思维导图已保存到正文。关闭"
+      ]
+    }
+  ],
+  "contentVerification": {
+    "editedNotes": [
+      {
+        "allOtherContentAndIdentityExact": true,
+        "assets": [
+          {
+            "bytes": 1048576,
+            "name": "10c4eaf6-3832-4bcb-bc4b-8e81bb23023b",
+            "sha256": "977388359993da3d2b6daefb0edcf1236cee76098d4055f1282a3b5114ff1792"
+          },
+          {
+            "bytes": 1048576,
+            "name": "776e7b15-c41e-47fd-8e9d-56fe79b11408",
+            "sha256": "ba43dbb2822b46d3765f94b7e8ffd176b869310289bc06ac7647ab7fe647f6ee"
+          },
+          {
+            "bytes": 1048576,
+            "name": "a262a1ea-fa33-48ee-94fa-a3844efe5635",
+            "sha256": "2681264d829858c8ab76637e8b1c5e0466619da0c63c0cb624208fc5fa438196"
+          },
+          {
+            "bytes": 1048576,
+            "name": "d45aa9f8-86e2-477a-a9d8-f431c078a3e9",
+            "sha256": "a4ad302ddf520f8f00984763897bc70f3db6f7ca9ab0f33226eb4bb187860f58"
+          },
+          {
+            "bytes": 1048576,
+            "name": "f8035b54-d239-4739-b47e-95ff2eb85b22",
+            "sha256": "4b39636db900a76c20913414f99e2b57f33abeed277ee7fa00f4fe30341b3931"
+          }
+        ],
+        "bytes": 5249357,
+        "heading": "内容区 · 普通样本 00",
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "sha256": "525ca8f94b873371a2bbbb4b5f442fa9f7dc33626f486f1fb8c23d1e137fe13f",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY"
+      },
+      {
+        "allOtherContentAndIdentityExact": true,
+        "assets": [
+          {
+            "bytes": 5242880,
+            "name": "4c584f74-5593-4fa4-82aa-bcfee8e11eef",
+            "sha256": "9824971acc0e1b518c1aa22ad3f3c9dab4329810651f73d800253157f4041b25"
+          },
+          {
+            "bytes": 5242880,
+            "name": "55594b5a-4aa5-429f-8956-e5031c0ef8e7",
+            "sha256": "9ce2a11cbb77898abf60ec62d0e0fe53580cd152c6b5ac81db2c6480ac01610c"
+          },
+          {
+            "bytes": 5242880,
+            "name": "711fbe1c-4a2f-4f32-9f36-0d4f72efb1be",
+            "sha256": "6e0a771781fd88c5bea3dca61acd249ad787e624dc5a4fc2d48113029ecb0714"
+          },
+          {
+            "bytes": 5242880,
+            "name": "7906facb-6440-482e-b7ca-5f9e5374a271",
+            "sha256": "50ab5f9f1745f3a53c78b8f2fd2cd47da1ef3c0e874f710f7e52b60f8cc1bdcc"
+          },
+          {
+            "bytes": 5242880,
+            "name": "887c72ab-e2d7-408a-9f7d-0d73dc5035d0",
+            "sha256": "b83214b840c917f3bcbfde9c8b4e5ce8e863c64427e20229e463692fe9f80dbe"
+          },
+          {
+            "bytes": 5242880,
+            "name": "91f20ce3-049e-4d3e-9bbb-0f6c89f1f833",
+            "sha256": "81e56da517cbb15bfb0347633ee7b7b85a9cd36c7cc95b0f4357a625d5e8c6de"
+          },
+          {
+            "bytes": 5242880,
+            "name": "9fa9d1f6-6f61-48e7-9802-741c1915e834",
+            "sha256": "a698202e892c05e871d8e42457c02709f824a30133d526461a0fd63aa9ed7bf0"
+          },
+          {
+            "bytes": 5242880,
+            "name": "ae420cc6-f4d5-45b0-9512-58a65ea4ac34",
+            "sha256": "fd8b2b8c51c2e89fae29224a9cec158c8c946904eff69f3d4eecfa0658fc981c"
+          },
+          {
+            "bytes": 5242880,
+            "name": "c2d9e4b2-777b-4f83-9b98-3d1048790a4e",
+            "sha256": "89991d0821a87a0d69e3c2e3029da2edd43e757fb8c243994830a973a803bef7"
+          },
+          {
+            "bytes": 5242880,
+            "name": "f3fb9039-ab06-4404-bccb-0f30ca0af842",
+            "sha256": "cc3a811190c00b0b4f95366b36990529094056d690505327f45a8f91149b5bbf"
+          }
+        ],
+        "bytes": 52456211,
+        "heading": "内容区 · 压力样本 00",
+        "noteId": "da509c0e-7713-4234-b8eb-ec5fd6f993d6",
+        "sha256": "fe417425c8bf425053250a2c957ca948593ceb03c66971b4916314c0792df74d",
+        "title": "压力样本 42 · SHARED-Q51-STRESS"
+      }
+    ],
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "notebooksChecked": 10,
+    "notesChecked": 1000,
+    "scope": "Exact native package content after all normal exits/restarts"
+  },
+  "relatedNativeRegression": {
+    "counts": [
+      {
+        "passed": 23,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 10,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 11,
+        "failed": 0,
+        "ignored": 0
+      }
+    ],
+    "totalPassed": 59,
+    "failed": 0,
+    "ignored": 0
+  },
+  "observations": [
+    "Automatic backup stayed enabled; any library-change cancellation notices are preserved below. The separately verified one-save retry on the earlier 00c1e3f variant is not treated as full backup acceptance for this build."
+  ],
+  "evidence": [
+    {
+      "file": "windows-witness-runtime/index-2/measurements/2026-10-18T03-46-53-650Z/launcher.json",
+      "sha256": "972e71fda25aec3f77a554593199ecb040287d4cb06950bc9bab7e40b93457f0"
+    },
+    {
+      "file": "windows-witness-runtime/index-2/measurements/2026-10-18T03-46-53-650Z/startup.json",
+      "sha256": "a8f116b9165a29b13c153440e558009a9fa93e07d92923d6ff19bc31c0ef3d86"
+    },
+    {
+      "file": "windows-witness-runtime/index-2/measurements/2026-10-18T03-46-53-650Z/exit-status.json",
+      "sha256": "db1f1551a8874d66f9d5e2a3471f11d2db675ae8e2b7bebbc33b5820da74d258"
+    },
+    {
+      "file": "windows-witness-runtime/index-2/measurements/2026-10-18T03-46-53-650Z/measurements.jsonl",
+      "sha256": "edf5b6ac1d49de24527f5bb8cdfefe6052982161a20d1add684f520382b2eadd"
+    },
+    {
+      "file": "windows-witness-runtime/index-3/measurements/2026-10-18T03-47-15-722Z/launcher.json",
+      "sha256": "a3d72ff7278792ff31486575da2b7d79dc33a13d238d22c4332a7ec087439e54"
+    },
+    {
+      "file": "windows-witness-runtime/index-3/measurements/2026-10-18T03-47-15-722Z/startup.json",
+      "sha256": "31a216cf0f525627aaf0c9cb1565e2c915b85091d6bab379b00dd81c2f01ef68"
+    },
+    {
+      "file": "windows-witness-runtime/index-3/measurements/2026-10-18T03-47-15-722Z/exit-status.json",
+      "sha256": "14b7dd195a75661ff486bf91e458529a17c4282019d5ac7f468e44463a0b27e6"
+    },
+    {
+      "file": "windows-witness-runtime/index-3/measurements/2026-10-18T03-47-15-722Z/measurements.jsonl",
+      "sha256": "269cb6044f3be2f62612cf3f104df80348896f0b14f10122bed28644512613e3"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-47-37-158Z/launcher.json",
+      "sha256": "364bbe7f92fad5c2e412b6c3933dfa55c3da4695e46af752a7d813e0a884f23b"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-47-37-158Z/startup.json",
+      "sha256": "bc8d6d1078f0ea5c7592e608c8fda7d4b5f8d4aec860419bf87cb1e59de0cf8b"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-47-37-158Z/exit-status.json",
+      "sha256": "aa94cd9f1cd6a42c1051e90a1d3244cfbbf72a32ace7e2884427fff66aa9186a"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-47-37-158Z/measurements.jsonl",
+      "sha256": "798e80c083ddf39407d71d09a07009fcacb72eed1e99afd00bf02cd0d83ea640"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-47-37-158Z/final-before-restarts.png",
+      "sha256": "3f426e8102ef8553a4c972ee086549261d671baf5bf16daf699f20973dc9fbdb"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-47-37-158Z/close-save-wait.png",
+      "sha256": "f161a0ad369a30910cdb49351c2c2b772983c8c52ac3d580b6b25d0ae62838a0"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-47-37-158Z/switch-save-wait.png",
+      "sha256": "af6bc0c64be835873c46f9e57da27f1a250b2f6e8c113030397a251a5ce849ac"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-10-031Z/launcher.json",
+      "sha256": "88b75bf6f294fec19eb86d2406a7f702f8690ec9c6b6c67cd7fbda13bdb8fec0"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-10-031Z/startup.json",
+      "sha256": "729ba4f31b39966b65f1fe9280ac59c9cb8d2ffa0b0f104aa60795b95a20a7ac"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-10-031Z/exit-status.json",
+      "sha256": "9df6d5c85b0ccd099e7926e899b89cb1d71987fca7e5775f81ba7bb384bb7145"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-16-594Z/launcher.json",
+      "sha256": "4d38fe87f37f87c1893b92c12b1bd0c41ae9bc92160093fa864931019542b0f7"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-16-594Z/startup.json",
+      "sha256": "4a6a82924107fcfeb33d08b622a382a9c08b633c1a93658083b6b220c599d6af"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-16-594Z/exit-status.json",
+      "sha256": "643701f95cd03870d504b24a2a7ccad79490c48d3db557245a53cd2515bc1de4"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-22-593Z/launcher.json",
+      "sha256": "f1b1f2c1dd605fd0210fd4e10ded250511d470074919937bf0ba070fcf313ff3"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-22-593Z/startup.json",
+      "sha256": "7040a21345756e7c8fe6bc4a5b024ab794fcb3eca3f3b55cf7b7cf429314d900"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-22-593Z/exit-status.json",
+      "sha256": "4fd376db0d80177eb631bb0ad71383c66a6dbb490c97217b9470dfb9228c4c1f"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-28-504Z/launcher.json",
+      "sha256": "7ebbcd6e69129bfded0fc973bdbc375888a0bdfad14cc1162c90deba01f177ac"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-28-504Z/startup.json",
+      "sha256": "28c29078c316b8868aaebb557e809a8978b99c9e54098b74709f72a5a97a4614"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-28-504Z/exit-status.json",
+      "sha256": "bdf8b6b6e885163aa642710be0a1fb479fc9b66b364865783302f9e4fde8aa56"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-34-673Z/launcher.json",
+      "sha256": "8995a19dfb028af86a9a2694a4a1ae4989f350b6502bf100d7b795884172ddaf"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-34-673Z/startup.json",
+      "sha256": "32c97ad26a3442964f78331ccbcf339b279d2ba70b604d13a8b6a9cfef6ee353"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-34-673Z/exit-status.json",
+      "sha256": "0abb3cdd032c7cfae8bf47f51eeaf707508d5d142a83b9467791fb90e0541edd"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-40-849Z/launcher.json",
+      "sha256": "d6dd76c7faf7d9dc1b52bc742dcf9936bdee552d3937f87f8211b270343a3e9b"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-40-849Z/startup.json",
+      "sha256": "af77297127080c9f1dc8e135d3a367d9273368e1aeb33b1010bf93e8ce3eb661"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-40-849Z/exit-status.json",
+      "sha256": "a27ab49975e3a61ebe681c0cb92a3fbea7a1c9a7d04eaaefdac0917ae93e31a0"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-46-914Z/launcher.json",
+      "sha256": "264b6d35b2d41efade80976bf037b238c1e8f63a5ee200336be5a175be2d4959"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-46-914Z/startup.json",
+      "sha256": "27909e6d80447c798ebd3f630d3d93bb74c868113676bb34111153b4f656e8d9"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-46-914Z/exit-status.json",
+      "sha256": "df298cd0366782eb72de0941f8497b99f902fbe2498af40ec0ac7fa85c79f563"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-52-984Z/launcher.json",
+      "sha256": "98cd258ac3c2eb32475c2e10161b4bb253fa2e4ea23f02b473e9c6ec3ff30219"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-52-984Z/startup.json",
+      "sha256": "f7d4a0e47648cfc8d2d89a1507592164c4a6e592c2f24f8ed6c102c7a7a91ba5"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-52-984Z/exit-status.json",
+      "sha256": "a42b4ca39d632bffa158334b202029d1f8f5e5cae8ae1c645a1e97f0bd4b93e0"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-58-939Z/launcher.json",
+      "sha256": "436d0000db6526d6749a59cda3e9e0ca41acf387327d3320cff38b5840596c46"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-58-939Z/startup.json",
+      "sha256": "da8e55ec9f941b32f4dbeffeac7fbf13883d8fc18be03e21abe96d831025e9f5"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-53-58-939Z/exit-status.json",
+      "sha256": "f7a5a826ca099b69cc1397f0b6db4a8eb3aae87bcae6012eb54caa1dd748ce44"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-54-05-065Z/launcher.json",
+      "sha256": "2336e1261859c71a3920174117f2b3908956c297d509e453908b26e9032f004d"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-54-05-065Z/startup.json",
+      "sha256": "59182a1746bac5a89227bd17da9609f8aedea6db92e5d580e12f09aaa14261fb"
+    },
+    {
+      "file": "windows-witness-runtime/index-1/measurements/2026-10-18T03-54-05-065Z/exit-status.json",
+      "sha256": "0bb18ad36d61077c99a3777f1375e8820fd873a5fa6f3e9d2f3d375cf590d4f8"
+    },
+    {
+      "file": "windows-witness-runtime/summary.json",
+      "sha256": "8b9a865ded1c782f201a2476068d9418a25a8301d97838695866e987616eb64f"
+    },
+    {
+      "file": "windows-witness-runtime/runs.json",
+      "sha256": "4d78d7173088bb9b76efb0585ad7ad7efc44afe9e48f99c24fecfdc14c9c888a"
+    },
+    {
+      "file": "windows-witness-runtime/environment.json",
+      "sha256": "31ef6a2ee6bb030aa1a2f848e91d948b698dd7875b348103e567db74b067d426"
+    },
+    {
+      "file": "windows-witness-runtime/content-verification.log",
+      "sha256": "6d4c4f58705d52d47d565708ad51ab808603d95f2e4ff9cf2a9028e33aa571c8"
+    },
+    {
+      "file": "run-witness-windows.ps1",
+      "sha256": "a4462c337b6292b37e4e99f3b0a8127d280f016d414f11f54781bc850eb3a759"
+    },
+    {
+      "file": "windows-witness-build/receipt.json",
+      "sha256": "af06b7658bc72f318ac21eb98b9c12b4a1bd88df2373d405892caba63e72d289"
+    },
+    {
+      "file": "witness-store-lock-windows.log",
+      "sha256": "44d47ba57a0e4b2a5230fad30fd3e1c564094b76c818c4973373869cfa3b8e45"
+    }
+  ],
+  "scope": "Fresh synthetic Windows performance and native-content revalidation of the storage change. Does not establish Mac timing, OneDrive, manual input, installer lifecycle or full A23.",
+  "nonemptyApplicationNotices": {
+    "observations": 297,
+    "messages": [
+      "自动备份失败：笔记库发生变化，备份已取消；请重试。。稍后会重试。"
+    ],
+    "fullBackupAcceptancePassed": false
+  }
+}
