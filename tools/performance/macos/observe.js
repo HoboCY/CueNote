@@ -46,6 +46,11 @@ const rect = element => {
   return {x:r.x,y:r.y,width:r.width,height:r.height,top:r.top,bottom:r.bottom,left:r.left,right:r.right};
 };
 const r=rect(el), x=r.x+r.width/2, y=r.y+r.height/2;
+// Text entry requires actual native focus before subsequent selection keys.
+// Buttons/noneditable node views may intentionally keep focus elsewhere.
+const textTarget = el.matches('input, textarea') ? el
+  : !el.closest('button, a, [role="button"], [contenteditable="false"]')
+    ? el.closest('[contenteditable="true"]') : null;
 const containers=[];
 for(let parent=el.parentElement; parent; parent=parent.parentElement) {
   const style=getComputedStyle(parent);
@@ -58,6 +63,7 @@ return JSON.stringify({rect:r,containers,viewport:{width:innerWidth,height:inner
     height:document.scrollingElement.scrollHeight,width:document.scrollingElement.scrollWidth,
     clientHeight:document.scrollingElement.clientHeight,clientWidth:document.scrollingElement.clientWidth} : null,
   hovered:el.matches(':hover'),
+  textFocus:textTarget ? {focused:document.activeElement===textTarget} : null,
   visible:!el.disabled && r.width>0 && r.height>0 && x>=0 && y>=0 && x<innerWidth && y<innerHeight && el.contains(document.elementFromPoint(x,y)),
   focused:document.activeElement===el,selection:el.selectionStart===undefined?null:{start:el.selectionStart,end:el.selectionEnd},
   text:el.textContent?.slice(0,1024)});

@@ -278,15 +278,18 @@ func calibrate(_ driver: Driver, kit: String) throws {
     let titleGeometry=try driver.request("element",selector:title)
     try driver.action(["kind":"click","selector":title])
     try driver.action(["kind":"key","code":"KeyA","modifiers":2])
-    _ = try driver.until(["kind":"title-selection"],timeout:5000,timings:&timing)
+    let titleSelection=try driver.until(["kind":"title-selection"],timeout:5000,timings:&timing)
+    try append(driver.run+"/calibration-steps.jsonl",["step":"title-selection","state":titleSelection])
     try driver.action(["kind":"text","text":longest])
     let titleResult=try driver.until(["kind":"dirty-title","text":longest],timeout:5000,timings:&timing)
     try driver.action(["kind":"key","code":"KeyS","modifiers":2])
-    _ = try driver.until(["kind":"save"],timings:&timing)
+    let titleSaved=try driver.until(["kind":"save"],timings:&timing)
+    try append(driver.run+"/calibration-steps.jsonl",["step":"title-saved","state":titleSaved])
     try driver.scroll(heading); try driver.action(["kind":"click","selector":heading])
     try driver.action(["kind":"key","code":"Home"])
     try driver.action(["kind":"key","code":"End","modifiers":8])
     let selection=try driver.until(["kind":"content-heading-selection"],timeout:5000,timings:&timing)
+    try append(driver.run+"/calibration-steps.jsonl",["step":"heading-selection","state":selection])
     try driver.action(["kind":"text","text":longest])
     let content=try driver.until(["kind":"content-heading","text":longest],timeout:5000,timings:&timing)
     try driver.action(["kind":"key","code":"KeyS","modifiers":2])
@@ -298,9 +301,11 @@ func calibrate(_ driver: Driver, kit: String) throws {
     let beforeValue=try object(before["value"]), afterValue=try object(after["value"])
     let oldPositions=(beforeValue["containers"] as? [Object] ?? []).map{number($0["scrollTop"])}
     let positions=(afterValue["containers"] as? [Object] ?? []).map{number($0["scrollTop"])}
-    guard yes(afterValue["visible"]), positions != oldPositions else {throw Failure("Native calibration did not prove actual scroll movement")}
+    let oldDocument=try object(beforeValue["documentScroll"]), document=try object(afterValue["documentScroll"])
+    let documentMoved=number(document["top"]) != number(oldDocument["top"]) || number(document["left"]) != number(oldDocument["left"])
+    guard yes(afterValue["visible"]), positions != oldPositions || documentMoved else {throw Failure("Native calibration did not prove actual scroll movement")}
     try write(driver.run+"/calibration.json",["longestInput":longest,"utf16Length":longest.utf16.count,
-        "titleGeometry":titleGeometry,"titleResult":titleResult,"headingSelection":selection,
+        "titleGeometry":titleGeometry,"titleSelection":titleSelection,"titleResult":titleResult,"headingSelection":selection,
         "contentResult":content,"scrollBefore":before,"scrollAfter":after,
         "scope":"Native events and read-only observations, current display/window geometry"])
     try driver.capture("calibrated")

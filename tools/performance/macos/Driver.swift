@@ -130,12 +130,27 @@ final class Driver {
     func snapshot(_ paint: Bool = false) throws -> Object { try object(request("snapshot", paint: paint)["value"]) }
     func point(_ response: Object, x: Double, y: Double) throws -> CGPoint {
         let screen = try object(response["screen"]), value = try object(response["value"]), viewport = try object(value["viewport"])
+        let native = try object(screen["nativeGeometry"]), content = try object(native["safeAreaRect"])
+        let layout = try object(native["windowContentLayoutRect"])
+        for key in ["x","y","width","height"] {
+            guard let observed=content[key] as? NSNumber, let expected=layout[key] as? NSNumber,
+                  observed.doubleValue.isFinite, expected.doubleValue.isFinite,
+                  abs(observed.doubleValue-expected.doubleValue)<=1 else {
+                throw Failure("WebView safe area and window content layout differ")
+            }
+        }
         guard yes(screen["key"]), number(viewport["width"]) > 0, number(viewport["height"]) > 0,
-              number(screen["width"]) > 0, number(screen["height"]) > 0 else { throw Failure("Invalid/unfocused WebView geometry") }
+              number(content["width"]) > 0, number(content["height"]) > 0,
+              number(native["pageZoom"]) == 1, number(native["magnification"]) == 1,
+              abs(number(content["width"])-number(viewport["width"])) <= 1,
+              abs(number(content["height"])-number(viewport["height"])) <= 1,
+              x.isFinite, y.isFinite else { throw Failure("Unsupported/unfocused WebView viewport geometry") }
         guard let window = screen["windowNumber"] as? NSNumber, window.uint32Value > 0 else { throw Failure("Missing native target window") }
         pointerWindow = window.uint32Value
-        return CGPoint(x: number(screen["x"]) + x * number(screen["width"]) / number(viewport["width"]),
-                       y: number(screen["y"]) + y * number(screen["height"]) / number(viewport["height"]))
+        // WKWebView bounds include the title-bar area on macOS 15 and 26.
+        // The observed CSS viewport matches the safe area, not those bounds.
+        return CGPoint(x: number(content["x"]) + x * number(content["width"]) / number(viewport["width"]),
+                       y: number(content["y"]) + y * number(content["height"]) / number(viewport["height"]))
     }
     func pointerTarget(_ point: CGPoint) throws {
         guard Thread.isMainThread, let expected = pointerWindow, let primary = NSScreen.screens.first else {
@@ -164,7 +179,12 @@ final class Driver {
         guard let event else { throw Failure("Cannot create native event") }
         do {
             try foreground()
-            if [.mouseMoved,.leftMouseDown,.leftMouseUp,.scrollWheel].contains(event.type) { try pointerTarget(event.location) }
+            if [.mouseMoved,.leftMouseDown,.leftMouseUp,.scrollWheel].contains(event.type) {
+                // Plans use unmodified pointer input. CGEvent otherwise inherits
+                // the previous synthetic chord (e.g. Command-S), changing clicks.
+                event.flags = []
+                try pointerTarget(event.location)
+            }
             // PID-directed mouse events did not reach WKWebView on the target M1.
             // Use the normal session event route after verifying focus and hit location.
             try foreground()
@@ -189,15 +209,37 @@ final class Driver {
             if yes(value["visible"]) { return }
             if yes(value["missing"]) { throw Failure("Scroll target is missing: \(selector)") }
             let target = try object(value["rect"]), viewport = try object(value["viewport"])
-            let containers = (value["containers"] as? [Object] ?? []).reversed()
-            guard let container = containers.first(where: { number($0["bottom"]) > 0 && number($0["top"]) < number(viewport["height"]) }) else { throw Failure("No visible native scroll container: \(selector)") }
-            let top = max(0, number(container["top"])), bottom = min(number(viewport["height"]), number(container["bottom"]))
-            let left = max(0, number(container["left"])), right = min(number(viewport["width"]), number(container["right"]))
-            guard bottom-top > 20, right-left > 20 else { throw Failure("Scroll container is clipped") }
-            let targetCenter = number(target["top"]) + number(target["height"])/2
-            let delta = max(-800, min(800, targetCenter-(top+bottom)/2))
-            guard abs(delta) >= 1 else { throw Failure("Scroll target is obstructed, not offscreen") }
-            try wheel(response, x: (left+right)/2, y: (top+bottom)/2, delta: delta)
+            // The observer returns nearest-to-outer ancestors. A nested list
+            // must scroll itself once visible, not keep scrolling its sidebar.
+            let containers = value["containers"] as? [Object] ?? []
+            var destination: (Double,Double,Double)?
+            for (index,container) in containers.enumerated() {
+                var top=0.0, left=0.0, bottom=number(viewport["height"]), right=number(viewport["width"])
+                for clip in containers[index...] {
+                    top=max(top,number(clip["top"])); bottom=min(bottom,number(clip["bottom"]))
+                    left=max(left,number(clip["left"])); right=min(right,number(clip["right"]))
+                }
+                guard bottom-top>20, right-left>20 else {continue}
+                let delta=max(-800,min(800,number(target["top"])+number(target["height"])/2-(top+bottom)/2))
+                let position=number(container["scrollTop"]), maximum=number(container["scrollHeight"])-number(container["clientHeight"])
+                guard (delta>1 && position<maximum-1) || (delta < -1 && position>1) else {continue}
+                destination=((left+right)/2,(top+bottom)/2,delta); break
+            }
+            // The document scrolls even when html/body use overflow: visible,
+            // so it is not in the observer's overflow-container list.
+            if destination == nil && containers.isEmpty {
+                let centerX=number(target["left"])+number(target["width"])/2
+                let centerY=number(target["top"])+number(target["height"])/2
+                let height=number(viewport["height"])
+                let document=try object(value["documentScroll"])
+                let position=number(document["top"]), maximum=number(document["height"])-number(document["clientHeight"])
+                if centerX>10, centerX<number(viewport["width"])-10,
+                   (centerY<0 && position>1) || (centerY>=height && position<maximum-1) {
+                    destination=(centerX,height/2,max(-800,min(800,centerY-height/2)))
+                }
+            }
+            guard let (x,y,delta)=destination else {throw Failure("No visible native scroll container can expose target: "+selector)}
+            try wheel(response,x:x,y:y,delta:delta)
             _ = try snapshot(true)
         }
         throw Failure("Native scrolling did not expose target")
@@ -220,8 +262,23 @@ final class Driver {
         case "click":
             let response = try request("element", selector: text(value["selector"])), state = try object(response["value"])
             guard yes(state["visible"]) else { throw Failure("Click target is unavailable/obstructed") }
+            guard state.keys.contains("textFocus") else {throw Failure("Observer lacks native text focus observations")}
             let rect = try object(state["rect"]), whereTo = try point(response, x:number(rect["x"])+number(rect["width"])/2, y:number(rect["y"])+number(rect["height"])/2)
-            for kind in [CGEventType.mouseMoved,.leftMouseDown,.leftMouseUp] { try post(CGEvent(mouseEventSource:nil,mouseType:kind,mouseCursorPosition:whereTo,mouseButton:.left)) }
+            for kind in [CGEventType.mouseMoved,.leftMouseDown,.leftMouseUp] {
+                let event=CGEvent(mouseEventSource:nil,mouseType:kind,mouseCursorPosition:whereTo,mouseButton:.left)
+                if kind != .mouseMoved {event?.setIntegerValueField(.mouseEventClickState,value:1)}
+                try post(event)
+            }
+            if state["textFocus"] is Object {
+                let deadline=monotonicMs()+5000
+                while true {
+                    try foreground()
+                    let current=try object(request("element",selector:text(value["selector"]),paint:true)["value"])
+                    if let focus=current["textFocus"] as? Object, yes(focus["focused"]) {break}
+                    guard !yes(current["missing"]), monotonicMs()<deadline else {throw Failure("Native text click did not acquire focus")}
+                    pause(5)
+                }
+            }
         case "key": try key(value)
         case "text":
             let characters = Array(text(value["text"]).utf16)
