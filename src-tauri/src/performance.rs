@@ -10,6 +10,23 @@ pub(crate) mod scan_trace;
 pub(crate) mod storage_trace;
 
 use sha2::{Digest, Sha256};
+use std::{
+    cell::Cell,
+    io::Write,
+    marker::PhantomData,
+    rc::Rc,
+    sync::atomic::{AtomicU64, Ordering},
+    sync::OnceLock,
+    time::Instant,
+};
+
+static NEXT_HOST_ID: AtomicU64 = AtomicU64::new(1);
+static HOST_EPOCH: OnceLock<Instant> = OnceLock::new();
+thread_local! { static HOST_PARENT: Cell<u64> = const { Cell::new(0) }; }
+
+pub(crate) fn host_trace_id() -> u64 {
+    HOST_PARENT.get()
+}
 
 const IDENTIFIER: &str = "com.hobocy.cuenote.performance";
 
@@ -23,28 +40,48 @@ pub(crate) struct Trace {
     start: std::time::Instant,
     last: std::time::Instant,
     enabled: bool,
+    id: u64,
+    parent: u64,
+    start_ms: f64,
+    _thread: PhantomData<Rc<()>>,
 }
 
 impl Trace {
     pub(crate) fn new(operation: &'static str) -> Self {
+        let enabled = trace_enabled();
+        let epoch = enabled.then(|| *HOST_EPOCH.get_or_init(Instant::now));
         let now = std::time::Instant::now();
+        let id = if enabled {
+            NEXT_HOST_ID.fetch_add(1, Ordering::Relaxed)
+        } else {
+            0
+        };
+        let parent = if enabled { HOST_PARENT.replace(id) } else { 0 };
         Self {
             operation,
             start: now,
             last: now,
-            enabled: trace_enabled(),
+            enabled,
+            id,
+            parent,
+            start_ms: epoch
+                .map(|epoch| now.duration_since(epoch).as_secs_f64() * 1000.0)
+                .unwrap_or_default(),
+            _thread: PhantomData,
         }
     }
 
     pub(crate) fn mark(&mut self, phase: &'static str) {
         let now = std::time::Instant::now();
         if self.enabled {
-            eprintln!(
-                "{}",
-                serde_json::json!({"diagnostic":"host-phase","operation":self.operation,
+            let value = serde_json::json!({"diagnostic":"host-phase","operation":self.operation,
+                "id":self.id,"parent":self.parent,"startMs":self.start_ms,
                 "phase":phase,"elapsedMs":now.duration_since(self.last).as_secs_f64()*1000.0,
-                "totalMs":now.duration_since(self.start).as_secs_f64()*1000.0})
-            );
+                "totalMs":now.duration_since(self.start).as_secs_f64()*1000.0});
+            if let Ok(mut bytes) = serde_json::to_vec(&value) {
+                bytes.push(b'\n');
+                let _ = std::io::stderr().lock().write_all(&bytes);
+            }
         }
         self.last = now;
     }
@@ -53,6 +90,9 @@ impl Trace {
 impl Drop for Trace {
     fn drop(&mut self) {
         self.mark("return");
+        if self.enabled {
+            HOST_PARENT.set(self.parent);
+        }
     }
 }
 

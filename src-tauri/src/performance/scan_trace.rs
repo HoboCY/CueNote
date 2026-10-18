@@ -9,6 +9,7 @@ static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
 pub(crate) struct ScanTrace {
     id: u64,
+    host_operation_id: u64,
     cause: String,
     entries: usize,
     workers: usize,
@@ -77,6 +78,7 @@ impl ScanTrace {
         let caller = std::panic::Location::caller();
         Some(Arc::new(Self {
             id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
+            host_operation_id: super::host_trace_id(),
             cause: format!("{}:{}", caller.file(), caller.line()),
             entries,
             workers,
@@ -150,6 +152,7 @@ impl ScanTrace {
                 "{}",
                 serde_json::json!({
                     "diagnostic":"cache-scan", "id":self.id, "cause":self.cause,
+                    "hostOperationId":self.host_operation_id,
                     "entries":self.entries, "workersRequested":self.workers,
                     "elapsedMs":self.elapsed_ms(), "data":*data,
                 })

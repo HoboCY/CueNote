@@ -105,7 +105,8 @@
       "scope": "Tool-context install/start is not independent user installation acceptance. No copy/delete fallback or production path fix applied.",
       "toolContextLibraryInitializationPassed": false,
       "normalLaunchLibraryInitializationPassed": true,
-      "report": "windows-user-launch-results.json"
+      "report": "windows-user-launch-results.json",
+      "humanEditing": "User confirmed three-section Chinese IME, independent undo/redo, two image sources, and text/images after reopening. Later reduction was intentional cleanup; see report. Full A06/A07 remains open."
     }
   },
   "mac": {
@@ -198,6 +199,15 @@
     },
     "savePerformanceDiagnosis": {
       "formalOrdinarySavePassed": false,
+      "lookahead64Source": "04d9b974e68dc19a9070180e1fd68d1a9de26bbd",
+      "warmSubsetWithTraceDisabled": {
+        "samples": 32,
+        "p95Ms": 2519.231708049774,
+        "maxMs": 2533.6386671066284,
+        "normalExit": true,
+        "thresholdPassed": false,
+        "fullMatrix": false
+      },
       "report": "performance-macos-save-diagnosis.md"
     },
     "matrix7Followup": {
@@ -207,6 +217,22 @@
       "normalExitsIncludingCalibration": 5,
       "nativeResourceTestsPassed": 47,
       "report": "performance-macos-matrix7-results.json"
+    },
+    "focusDiagnosisFollowup": {
+      "causeEstablished": false,
+      "fixed": false,
+      "standaloneStressSavesWithTrace": 32,
+      "matchedApplicationSource": "f6997c1fcfba2fc3056c22b9e24eb6d435a02902",
+      "freshRootControlAndPrefixesCompleted": [
+        10,
+        11,
+        13
+      ],
+      "matchedApplicationNormalExits": 6,
+      "allSevenAxNotificationsRegisteredBeforePlans": true,
+      "recorderOverflowOrTimeout": false,
+      "fullMatrix": false,
+      "report": "performance-macos-focus-diagnosis.md"
     }
   },
   "cases": [

@@ -34,7 +34,7 @@
     }
   },
   "interpretation": "User-launched app and Explorer restart succeeded, whereas Codex-launched AppData preference publication failed. No production path/copy fallback was applied.",
-  "scope": "Basic ordinary-package installation, empty-library initialization, title save and reopen only. Not human IME/clipboard, complete backup recovery, rich-content or OneDrive acceptance. First close exit status was unavailable, not asserted as normal.",
+  "scope": "Ordinary user installation and launch, empty-library initialization, title save and Explorer restart; user-confirmed Chinese IME in three sections, independent undo/redo, two cross-application image pastes and saved-content reopening. Does not cover full A06/A07, backup recovery or OneDrive. First close exit status remains unavailable.",
   "evidence": [
     {
       "file": "windows-user-launch-welcome-3/inspection.json",
@@ -100,5 +100,27 @@
       "file": "windows-user-reopen.json",
       "sha256": "7b4edfe0df0a90978db1976cdcb83417828cf3e63b13bc8da5b5297031a65fe2"
     }
-  ]
+  ],
+  "humanEditingFollowup": {
+    "date": "2026-10-18",
+    "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+    "verificationMethod": "user attestation after ordinary installed app use",
+    "steps": {
+      "threeSectionChineseIme": true,
+      "independentUndoRedo": true,
+      "snippingToolImagePaste": true,
+      "secondImageApplicationPaste": true,
+      "textAndTwoImagesAfterReopen": true
+    },
+    "userReport": "全部正常，文字和两张图片重开后都在",
+    "laterInspection": {
+      "nativeNoteSha256": "346c1df85750d77b38a064517a35d190090ad104e6d87d6f4bf6bb5ec577c262",
+      "textLeaves": 0,
+      "imageAssets": 1,
+      "evidence": "windows-human-editing-1/observation.json"
+    },
+    "clarification": "试用后撤销或删除过内容",
+    "interpretation": "User-confirmed trial passed; later reduced content was intentional cleanup. Pre-cleanup rich-content state was not independently archived.",
+    "fullA06A07Acceptance": false
+  }
 }

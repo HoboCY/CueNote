@@ -127,14 +127,20 @@ async fn save_mutation<T: Send + 'static>(
         #[cfg(feature = "perf-acceptance")]
         let mut trace = crate::performance::Trace::new("save-command");
         state.ensure_not_restoring()?;
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("mutation-gate-start");
         let _mutation = state.backups.begin_mutation()?;
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("mutation-gate-acquired");
         let mut workspace = state.workspace.lock().map_err(|_| {
             command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
         })?;
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("workspace-lock-acquired");
         state.ensure_not_restoring()?;
         let _policy = crate::storage::NoCloudDownload::enter()?;
         #[cfg(feature = "perf-acceptance")]
-        trace.mark("workspace-lock-acquired");
+        trace.mark("save-guards-acquired");
         action(&mut workspace)
     })
     .await
@@ -147,11 +153,15 @@ async fn editor_work<T: Send + 'static>(
     action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
 ) -> Result<T, WorkspaceError> {
     tauri::async_runtime::spawn_blocking(move || {
+        #[cfg(feature = "perf-acceptance")]
+        let mut trace = crate::performance::Trace::new("editor-command");
         state.ensure_not_restoring()?;
         let mut workspace = state
             .workspace
             .lock()
             .map_err(|_| command_error("笔记服务已中断。"))?;
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("workspace-lock-acquired");
         state.ensure_not_restoring()?;
         workspace.ensure_library_transition_allowed()?;
         let _access = if workspace.active_session_is_external() {
@@ -160,6 +170,8 @@ async fn editor_work<T: Send + 'static>(
             workspace.acquire_library_access()?
         };
         let _policy = crate::storage::NoCloudDownload::enter()?;
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("editor-guards-acquired");
         action(&mut workspace)
     })
     .await

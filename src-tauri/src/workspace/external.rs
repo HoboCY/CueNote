@@ -67,6 +67,8 @@ impl Workspace {
         &mut self,
         session_id: Option<&str>,
     ) -> Result<ExternalProbe, WorkspaceError> {
+        #[cfg(feature = "perf-acceptance")]
+        let mut trace = crate::performance::Trace::new("probe-external-changes");
         if self
             .session
             .as_ref()
@@ -79,6 +81,8 @@ impl Workspace {
             ));
         }
         let library = self.refresh_external_library()?;
+        #[cfg(feature = "perf-acceptance")]
+        trace.mark("library-refreshed");
         let mut probe = ExternalProbe {
             session_id: session_id.map(str::to_owned),
             status: "unchanged".into(),
@@ -96,12 +100,16 @@ impl Workspace {
         }
         match storage::open_note(&session.path) {
             Ok(opened) => {
+                #[cfg(feature = "perf-acceptance")]
+                trace.mark("current-note-opened");
                 versions::preserve_observed_version(
                     &self.recovery_root,
                     &opened,
                     &display_path(&session.path),
                     "核对到的文件版本",
                 )?;
+                #[cfg(feature = "perf-acceptance")]
+                trace.mark("current-note-preserved");
                 probe.revision = Some(opened.revision.clone());
                 if session.baseline_revision.as_deref() != Some(opened.revision.as_str()) {
                     probe.status = "changed".into();
