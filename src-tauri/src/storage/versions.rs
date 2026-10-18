@@ -120,12 +120,25 @@ pub fn preserve_observed_version(
     origin: &str,
     reason: &str,
 ) -> Result<(), StorageError> {
+    #[cfg(feature = "perf-acceptance")]
+    let mut trace =
+        crate::performance::storage_trace::StorageTrace::new("preserve-observed-version");
     let root = prepare_root(root, true)?
         .ok_or_else(|| StorageError::new("io", "无法准备版本存储目录。"))?;
     let versions = ensure_child_directory(&root, VERSIONS_DIRECTORY, true)?
         .ok_or_else(|| StorageError::new("io", "无法准备已保存版本目录。"))?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("prepare-directories");
     let _store_lock = acquire_store_lock(&root, false)?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("store-lock");
     let outcome = store_version_locked(&versions, opened, origin, reason, false)?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark(if outcome.created {
+        "store-new"
+    } else {
+        "store-existing"
+    });
     if outcome.created {
         rotate_observed_versions_locked(
             &root,
@@ -134,6 +147,11 @@ pub fn preserve_observed_version(
             &opened.package.document.note_id,
             &normalize_origin(origin)?.1,
         );
+    }
+    #[cfg(feature = "perf-acceptance")]
+    {
+        trace.mark("rotation");
+        trace.success();
     }
     Ok(())
 }
@@ -560,14 +578,20 @@ fn store_version_locked(
     reason: &str,
     conflict: bool,
 ) -> Result<StoreOutcome, StorageError> {
+    #[cfg(feature = "perf-acceptance")]
+    let mut trace = crate::performance::storage_trace::StorageTrace::new("store-version");
     let note_id = opened.package.document.note_id.as_str();
     validate_note_id(note_id)?;
     validate_revision(&opened.revision, "sourceRevision")?;
     let (display_origin, origin_key) = normalize_origin(origin)?;
     validate_display_text(reason, "reason")?;
     let version_id = make_version_id(conflict, note_id, &opened.revision, &origin_key)?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("identity");
     let durability = VersionDurability::new(versions)
         .map_err(|error| StorageError::io("无法确认版本存储目录同步", error))?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("anchor-sync");
     let destination = version_directory(versions, &version_id);
     match fs::symlink_metadata(&destination) {
         Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_dir() => {
@@ -590,6 +614,11 @@ fn store_version_locked(
                         },
                     )?;
                 }
+                #[cfg(feature = "perf-acceptance")]
+                {
+                    trace.mark("existing-validation-group");
+                    trace.success();
+                }
                 return Ok(StoreOutcome {
                     version_id,
                     created: false,
@@ -604,11 +633,18 @@ fn store_version_locked(
         Err(error) => return Err(StorageError::io("无法检查已保存版本目录", error)),
     }
 
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("new-identity-directory-check");
+
     let staging = create_staging_directory(versions, &durability)?;
     let package_path = staging.join(PACKAGE_NAME);
     let package_file = create_new_file(&package_path, true).map_err(with_candidate_warning)?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("staging-create");
     let revision =
         write_and_verify_package(package_file, &opened.package).map_err(with_candidate_warning)?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("candidate-write-verify");
     if opened.package.document.note_id != note_id {
         return Err(with_candidate_warning(StorageError::new(
             "invalid_document",
@@ -650,9 +686,13 @@ fn store_version_locked(
         .and_then(|_| metadata_file.sync_all())
         .map_err(|error| version_publish_error("无法同步版本元数据", error))?;
     drop(metadata_file);
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("metadata-encode-write-sync");
     durability
         .sync(&staging, "candidate-ready")
         .map_err(|error| version_publish_error("候选版本已校验，但无法同步候选目录", error))?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("candidate-directory-sync");
 
     match fs::symlink_metadata(&destination) {
         Ok(_) => {
@@ -672,13 +712,22 @@ fn store_version_locked(
     fs::rename(&staging, &destination).map_err(|error| {
         version_publish_error("已验证的候选版本无法发布；候选数据已保留", error)
     })?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("destination-check-rename");
     durability.sync(versions, "published").map_err(|error| {
         version_publish_error("版本已发布并验证，但无法确认版本目录同步", error)
     })?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("published-directory-sync");
     if !conflict {
         ensure_group_member(&durability, note_id, &metadata.origin_key, &version_id).map_err(
             |error| version_publish_error("版本已发布并验证，但无法更新其轮换索引", error),
         )?;
+    }
+    #[cfg(feature = "perf-acceptance")]
+    {
+        trace.mark("group-membership-sync");
+        trace.success();
     }
     Ok(StoreOutcome {
         version_id,

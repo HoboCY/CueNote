@@ -1579,6 +1579,8 @@ fn inspect_note(target: &ResolvedTarget) -> Result<Option<OpenedNote>, StorageEr
 }
 
 fn read_validated_file(file: &mut File) -> Result<OpenedNote, StorageError> {
+    #[cfg(feature = "perf-acceptance")]
+    let mut trace = crate::performance::storage_trace::StorageTrace::new("read-validated-file");
     let _policy = NoCloudDownload::enter()?;
     file.seek(SeekFrom::Start(0))
         .map_err(|error| StorageError::io("无法定位笔记文件", error))?;
@@ -1587,6 +1589,11 @@ fn read_validated_file(file: &mut File) -> Result<OpenedNote, StorageError> {
         .take(MAX_PACKAGE_BYTES + 1)
         .read_to_end(&mut bytes)
         .map_err(|error| local_files::read_error("无法读取笔记文件", error))?;
+    #[cfg(feature = "perf-acceptance")]
+    {
+        trace.bytes(bytes.len());
+        trace.mark("policy-seek-read");
+    }
     if bytes.len() as u64 > MAX_PACKAGE_BYTES {
         return Err(StorageError::new(
             "budget_exceeded",
@@ -1594,26 +1601,43 @@ fn read_validated_file(file: &mut File) -> Result<OpenedNote, StorageError> {
         ));
     }
     let package = read_package(Cursor::new(bytes.as_slice())).map_err(StorageError::format)?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("parse-and-validate");
     let revision = digest_bytes(&bytes);
+    #[cfg(feature = "perf-acceptance")]
+    {
+        trace.mark("sha256");
+        trace.success();
+    }
     Ok(OpenedNote { package, revision })
 }
 
 fn write_and_verify_package(mut file: File, package: &NotePackage) -> Result<String, StorageError> {
+    #[cfg(feature = "perf-acceptance")]
+    let mut trace = crate::performance::storage_trace::StorageTrace::new("write-verify-version");
     write_package(&mut file, package).map_err(StorageError::format)?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("validate-encode-write");
     file.flush()
         .map_err(|error| StorageError::io("无法写入完整候选笔记", error))?;
     file.sync_all()
         .map_err(|error| StorageError::io("无法同步候选笔记", error))?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("flush-sync");
     file.seek(SeekFrom::Start(0))
         .map_err(|error| StorageError::io("无法重新读取候选笔记", error))?;
     let written_id = package.document.note_id.as_str();
     let opened = read_validated_file(&mut file)?;
+    #[cfg(feature = "perf-acceptance")]
+    trace.mark("seek-read-validate-sha256");
     if opened.package.document.note_id != written_id {
         return Err(StorageError::new(
             "invalid_document",
             "候选笔记校验后身份与请求保存的笔记不一致。",
         ));
     }
+    #[cfg(feature = "perf-acceptance")]
+    trace.success();
     Ok(opened.revision)
 }
 

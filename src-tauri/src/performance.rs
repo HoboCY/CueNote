@@ -7,6 +7,7 @@ use std::{error::Error, fs, path::PathBuf};
 pub(crate) mod macos;
 pub(crate) mod rotation_trace;
 pub(crate) mod scan_trace;
+pub(crate) mod storage_trace;
 
 use sha2::{Digest, Sha256};
 

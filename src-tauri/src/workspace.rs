@@ -3955,6 +3955,8 @@ fn scan_library_with_previous_inner(
     previous: Option<&LibraryView>,
     context: &SearchScanContext,
 ) -> Result<LibraryScan, WorkspaceError> {
+    #[cfg(feature = "perf-acceptance")]
+    let mut scan_trace = crate::performance::storage_trace::StorageTrace::new("scan-library");
     let generation = context.generation.load(Ordering::Acquire);
     let notes_path = library_path.join("notes");
     let mut warnings = metadata_warnings.to_vec();
@@ -4029,6 +4031,8 @@ fn scan_library_with_previous_inner(
     let mut trash_notes = Vec::new();
     let mut search_index = search::SearchIndex::default();
     let cache = scan_cache::Cache::load(&context.config_root, library_path, context.bypass_cache);
+    #[cfg(feature = "perf-acceptance")]
+    scan_trace.mark("directory-and-cache-read");
     let mut next_cache = BTreeMap::new();
     let mut seen_file_ids = HashSet::new();
     let mut seen_package_ids = HashMap::<String, (String, String, bool)>::new();
@@ -4151,6 +4155,12 @@ fn scan_library_with_previous_inner(
                     && !seen_package_ids.contains_key(stem)
             });
         let hit = candidate.filter(|_| verified);
+        #[cfg(feature = "perf-acceptance")]
+        let mut trace = crate::performance::storage_trace::StorageTrace::new(if hit.is_some() {
+            "scan-cache-hit"
+        } else {
+            "scan-cache-miss"
+        });
         let (summary, opened, mut cache_entry) = if let Some(entry) = hit {
             seen_package_ids.insert(
                 stem.to_owned(),
@@ -4172,6 +4182,8 @@ fn scan_library_with_previous_inner(
                     continue;
                 }
             };
+            #[cfg(feature = "perf-acceptance")]
+            trace.mark("open-source");
             let package_id = opened.package.document.note_id.clone();
             // Index only versions which have a durable independent witness. Failure
             // leaves the original untouched and warns instead of claiming protection.
@@ -4190,6 +4202,8 @@ fn scan_library_with_previous_inner(
                 report_checked_file!();
                 continue;
             }
+            #[cfg(feature = "perf-acceptance")]
+            trace.mark("preserve-observed");
             let previous = seen_package_ids.get(&package_id).cloned();
             if let Some((revision, previous_origin, _)) = &previous {
                 incomplete = true;
@@ -4249,6 +4263,8 @@ fn scan_library_with_previous_inner(
             }
             seen_package_ids.insert(package_id, (opened.revision.clone(), origin.clone(), true));
             let summary = note_summary_from_package(stem, &opened.package);
+            #[cfg(feature = "perf-acceptance")]
+            trace.mark("identity-and-summary");
             let cache_entry =
                 storage::versions::observed_version_witness(recovery_root, &opened, &origin)
                     .ok()
@@ -4258,6 +4274,10 @@ fn scan_library_with_previous_inner(
                         projection: Vec::new(),
                         witness,
                     });
+            #[cfg(feature = "perf-acceptance")]
+            {
+                trace.mark("witness-metadata");
+            }
             (summary, Some(opened), cache_entry)
         };
         let notebook_id = summary.notebook_id.as_deref();
@@ -4313,14 +4333,23 @@ fn scan_library_with_previous_inner(
         if let Some(entry) = cache_entry {
             next_cache.insert(cache_key, entry);
         }
+        #[cfg(feature = "perf-acceptance")]
+        {
+            trace.mark("organization-and-search-projection");
+            trace.success();
+        }
         report_checked_file!();
     }
     drop(cache_checks);
+    #[cfg(feature = "perf-acceptance")]
+    scan_trace.mark("note-loop-and-workers");
     if notes_directory_available && context.generation.load(Ordering::Acquire) == generation {
         if let Some(cache) = cache {
             cache.publish(next_cache);
         }
     }
+    #[cfg(feature = "perf-acceptance")]
+    scan_trace.mark("cache-publication");
     if omitted_warnings > 0 {
         warnings.push(format!("另有 {omitted_warnings} 条笔记警告未显示。"));
     }
@@ -4348,6 +4377,11 @@ fn scan_library_with_previous_inner(
             SearchStatus::Unavailable
         };
     emit_search_progress(context, library_path, phase, checked, total, incomplete);
+    #[cfg(feature = "perf-acceptance")]
+    {
+        scan_trace.mark("sort-and-view");
+        scan_trace.success();
+    }
     Ok(LibraryScan {
         view,
         incomplete: incomplete || search_index.is_incomplete(),
