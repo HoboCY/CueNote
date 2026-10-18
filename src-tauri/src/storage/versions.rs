@@ -563,6 +563,8 @@ fn store_version_locked(
     let (display_origin, origin_key) = normalize_origin(origin)?;
     validate_display_text(reason, "reason")?;
     let version_id = make_version_id(conflict, note_id, &opened.revision, &origin_key)?;
+    let durability = VersionDurability::new(versions)
+        .map_err(|error| StorageError::io("无法确认版本存储目录同步", error))?;
     let destination = version_directory(versions, &version_id);
     match fs::symlink_metadata(&destination) {
         Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_dir() => {
@@ -579,7 +581,7 @@ fn store_version_locked(
                 && existing.metadata.conflict == conflict
             {
                 if !conflict {
-                    ensure_group_member(versions, note_id, &origin_key, &version_id).map_err(
+                    ensure_group_member(&durability, note_id, &origin_key, &version_id).map_err(
                         |error| {
                             version_publish_error("已保存版本有效，但无法更新其轮换索引", error)
                         },
@@ -599,7 +601,7 @@ fn store_version_locked(
         Err(error) => return Err(StorageError::io("无法检查已保存版本目录", error)),
     }
 
-    let staging = create_staging_directory(versions)?;
+    let staging = create_staging_directory(versions, &durability)?;
     let package_path = staging.join(PACKAGE_NAME);
     let package_file = create_new_file(&package_path, true).map_err(with_candidate_warning)?;
     let revision =
@@ -645,7 +647,8 @@ fn store_version_locked(
         .and_then(|_| metadata_file.sync_all())
         .map_err(|error| version_publish_error("无法同步版本元数据", error))?;
     drop(metadata_file);
-    sync_directory_chain(&staging)
+    durability
+        .sync(&staging, "candidate-ready")
         .map_err(|error| version_publish_error("候选版本已校验，但无法同步候选目录", error))?;
 
     match fs::symlink_metadata(&destination) {
@@ -666,11 +669,11 @@ fn store_version_locked(
     fs::rename(&staging, &destination).map_err(|error| {
         version_publish_error("已验证的候选版本无法发布；候选数据已保留", error)
     })?;
-    sync_directory_chain(versions).map_err(|error| {
+    durability.sync(versions, "published").map_err(|error| {
         version_publish_error("版本已发布并验证，但无法确认版本目录同步", error)
     })?;
     if !conflict {
-        ensure_group_member(versions, note_id, &metadata.origin_key, &version_id).map_err(
+        ensure_group_member(&durability, note_id, &metadata.origin_key, &version_id).map_err(
             |error| version_publish_error("版本已发布并验证，但无法更新其轮换索引", error),
         )?;
     }
@@ -797,32 +800,139 @@ fn rotate_observed_versions_locked(
 }
 
 fn ensure_group_member(
-    versions: &Path,
+    durability: &VersionDurability<'_>,
     note_id: &str,
     origin_key: &str,
     version_id: &str,
 ) -> Result<(), StorageError> {
     validate_version_id(version_id)?;
-    let groups = ensure_child_directory(versions, GROUPS_DIRECTORY, true)?
-        .ok_or_else(|| StorageError::new("io", "无法准备版本分组索引目录。"))?;
+    let groups = durability.ensure_child(durability.versions, GROUPS_DIRECTORY)?;
     let group_id = make_group_id(note_id, origin_key)?;
-    let group = ensure_child_directory(&groups, &group_id, true)?
-        .ok_or_else(|| StorageError::new("io", "无法准备版本分组索引。"))?;
+    let group = durability.ensure_child(&groups, &group_id)?;
     let path = group.join(version_id);
-    match fs::symlink_metadata(&path) {
-        Ok(_) => validate_group_member(&group, version_id),
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {
-            let file = create_new_file(&path, true)?;
-            file.sync_all()
-                .map_err(|error| StorageError::io("无法同步版本分组索引项", error))?;
-            sync_directory_chain(&group)
-                .map_err(|error| StorageError::io("无法同步版本分组索引", error))
+    let file = match fs::symlink_metadata(&path) {
+        Ok(_) => open_group_member(&group, version_id, true)?,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => create_new_file(&path, true)?,
+        Err(error) => return Err(StorageError::io("无法检查版本分组索引项", error)),
+    };
+    // An earlier attempt may have created the member but failed its durability
+    // barrier. Existence and valid bytes alone do not establish a durable retry.
+    sync_version_file(&file, &path)
+        .map_err(|error| StorageError::io("无法同步版本分组索引项", error))?;
+    durability
+        .sync(&group, "member-directory")
+        .map_err(|error| StorageError::io("无法同步版本分组索引", error))
+}
+
+fn sync_version_file(file: &File, path: &Path) -> io::Result<()> {
+    version_sync_checkpoint("member-file", path)?;
+    file.sync_all()
+}
+
+fn version_sync_checkpoint(stage: &str, path: &Path) -> io::Result<()> {
+    #[cfg(test)]
+    tests::sync_checkpoint(stage, path)?;
+    #[cfg(not(test))]
+    let _ = (stage, path);
+    Ok(())
+}
+
+/// One operation under the exclusive store lock. Ancestors of `versions` are
+/// made durable once; every later mutation still syncs its chain through
+/// `versions`, inclusive. No state is reused across operations or retries.
+struct VersionDurability<'a> {
+    versions: &'a Path,
+    #[cfg(unix)]
+    anchor: File,
+}
+
+impl<'a> VersionDurability<'a> {
+    fn new(versions: &'a Path) -> io::Result<Self> {
+        validate_sync_directory(versions)?;
+        let context = Self {
+            versions,
+            #[cfg(unix)]
+            anchor: nofollow_open_options().read(true).open(versions)?,
+        };
+        let mut current = Some(versions);
+        while let Some(path) = current {
+            version_sync_checkpoint("entry", path)?;
+            super::sync_parent_directory(path)?;
+            current = path.parent();
         }
-        Err(error) => Err(StorageError::io("无法检查版本分组索引项", error)),
+        context.check_anchor()?;
+        Ok(context)
+    }
+
+    fn check_anchor(&self) -> io::Result<()> {
+        validate_sync_directory(self.versions)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::MetadataExt;
+            let original = self.anchor.metadata()?;
+            let current = fs::symlink_metadata(self.versions)?;
+            if (original.dev(), original.ino()) != (current.dev(), current.ino()) {
+                return Err(io::Error::other("Version durability anchor changed"));
+            }
+        }
+        Ok(())
+    }
+
+    fn sync(&self, path: &Path, stage: &str) -> io::Result<()> {
+        let suffix = path
+            .strip_prefix(self.versions)
+            .map_err(|_| io::Error::other("Directory is outside version durability scope"))?;
+        if suffix
+            .components()
+            .any(|part| !matches!(part, Component::Normal(_)))
+        {
+            return Err(io::Error::other("Invalid version durability path"));
+        }
+        self.check_anchor()?;
+        // Validate the whole descendant chain before opening any directory.
+        let mut checked = self.versions.to_path_buf();
+        for component in suffix.components() {
+            checked.push(component.as_os_str());
+            validate_sync_directory(&checked)?;
+        }
+        let mut current = path;
+        loop {
+            version_sync_checkpoint(stage, current)?;
+            super::sync_parent_directory(current)?;
+            if current == self.versions {
+                break;
+            }
+            current = current
+                .parent()
+                .ok_or_else(|| io::Error::other("Missing version ancestor"))?;
+        }
+        self.check_anchor()
+    }
+
+    fn ensure_child(&self, parent: &Path, name: &str) -> Result<PathBuf, StorageError> {
+        let path = parent.join(name);
+        check_or_create_directory_with(&path, true, |parent| {
+            self.sync(parent, "directory-created")
+        })?;
+        Ok(path)
     }
 }
 
+fn validate_sync_directory(path: &Path) -> io::Result<()> {
+    let metadata = fs::symlink_metadata(path)?;
+    if is_link_or_reparse(&metadata) || !metadata.is_dir() {
+        return Err(io::Error::other(
+            "Version sync path is not a real directory",
+        ));
+    }
+    Ok(())
+}
+
 fn validate_group_member(group: &Path, version_id: &str) -> Result<(), StorageError> {
+    open_group_member(group, version_id, false).map(drop)
+}
+
+fn open_group_member(group: &Path, version_id: &str, writable: bool) -> Result<File, StorageError> {
     validate_version_id(version_id)?;
     let path = group.join(version_id);
     let metadata = fs::symlink_metadata(&path)
@@ -833,8 +943,19 @@ fn validate_group_member(group: &Path, version_id: &str) -> Result<(), StorageEr
             "版本分组索引项不是预期的普通空文件；相关数据已保留。",
         ));
     }
-    let file = open_read_nofollow(&path)
-        .map_err(|error| StorageError::io("无法安全打开版本分组索引项", error))?;
+    let file = if writable {
+        let mut options = nofollow_open_options();
+        options.read(true).write(true);
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::OpenOptionsExt;
+            options.share_mode(0x0000_0001);
+        }
+        options.open(&path)
+    } else {
+        open_read_nofollow(&path)
+    }
+    .map_err(|error| StorageError::io("无法安全打开版本分组索引项", error))?;
     validate_regular_file(&file, "版本分组索引项不是普通文件")?;
     if file
         .metadata()
@@ -847,7 +968,7 @@ fn validate_group_member(group: &Path, version_id: &str) -> Result<(), StorageEr
             "版本分组索引项内容无效；相关数据已保留。",
         ));
     }
-    Ok(())
+    Ok(file)
 }
 
 fn directory_contains_only_known_files(directory: &Path) -> bool {
@@ -1074,6 +1195,14 @@ fn prepare_root(root: &Path, create: bool) -> Result<Option<PathBuf>, StorageErr
 }
 
 fn check_or_create_directory(path: &Path, create: bool) -> Result<bool, StorageError> {
+    check_or_create_directory_with(path, create, sync_directory_chain)
+}
+
+fn check_or_create_directory_with(
+    path: &Path,
+    create: bool,
+    sync_parent: impl Fn(&Path) -> io::Result<()>,
+) -> Result<bool, StorageError> {
     match fs::symlink_metadata(path) {
         Ok(metadata) if is_link_or_reparse(&metadata) || !metadata.is_dir() => Err(
             StorageError::new("unsafePath", "版本存储目录及其父目录必须是实际目录。"),
@@ -1086,7 +1215,7 @@ fn check_or_create_directory(path: &Path, create: bool) -> Result<bool, StorageE
                 .ok_or_else(|| StorageError::new("unsafePath", "版本存储目录缺少可验证父目录。"))?;
             match fs::create_dir(path) {
                 Ok(()) => {
-                    sync_directory_chain(parent).map_err(|error| {
+                    sync_parent(parent).map_err(|error| {
                         StorageError::io("版本存储目录已创建但无法确认父目录同步", error)
                     })?;
                 }
@@ -1254,14 +1383,19 @@ fn validate_regular_file(file: &File, message: &str) -> Result<(), StorageError>
     Ok(())
 }
 
-fn create_staging_directory(versions: &Path) -> Result<PathBuf, StorageError> {
+fn create_staging_directory(
+    versions: &Path,
+    durability: &VersionDurability<'_>,
+) -> Result<PathBuf, StorageError> {
     for _ in 0..4 {
         let path = versions.join(format!(".pending-{}", Uuid::new_v4().simple()));
         match fs::create_dir(&path) {
             Ok(()) => {
-                sync_directory_chain(versions).map_err(|error| {
-                    version_publish_error("候选版本目录已创建但无法同步", error)
-                })?;
+                durability
+                    .sync(versions, "candidate-created")
+                    .map_err(|error| {
+                        version_publish_error("候选版本目录已创建但无法同步", error)
+                    })?;
                 let metadata = fs::symlink_metadata(&path)
                     .map_err(|error| StorageError::io("无法检查候选版本目录", error))?;
                 if is_link_or_reparse(&metadata) || !metadata.is_dir() {
@@ -1446,6 +1580,269 @@ mod tests {
     use std::io;
     use std::path::Path;
     use tempfile::TempDir;
+
+    thread_local! {
+        static SYNC_FAILURE: std::cell::RefCell<Option<SyncFault>> = const { std::cell::RefCell::new(None) };
+    }
+
+    struct SyncFault {
+        stage: &'static str,
+        path: Option<std::path::PathBuf>,
+        hits: usize,
+    }
+
+    pub(super) fn sync_checkpoint(stage: &str, path: &Path) -> io::Result<()> {
+        SYNC_FAILURE.with(|state| {
+            let mut state = state.borrow_mut();
+            if let Some(fault) = state.as_mut() {
+                if fault.stage == stage
+                    && fault
+                        .path
+                        .as_deref()
+                        .is_none_or(|expected| expected == path)
+                {
+                    fault.hits += 1;
+                    return Err(io::Error::other("injected version sync failure"));
+                }
+            }
+            Ok(())
+        })
+    }
+
+    struct SyncFailure;
+    impl Drop for SyncFailure {
+        fn drop(&mut self) {
+            SYNC_FAILURE.with(|state| *state.borrow_mut() = None);
+        }
+    }
+
+    fn fail_sync(stage: &'static str) -> SyncFailure {
+        fail_sync_at(stage, None)
+    }
+
+    fn fail_sync_at(stage: &'static str, path: Option<std::path::PathBuf>) -> SyncFailure {
+        SYNC_FAILURE.with(|state| {
+            assert!(state.borrow().is_none());
+            *state.borrow_mut() = Some(SyncFault {
+                stage,
+                path,
+                hits: 0,
+            });
+        });
+        SyncFailure
+    }
+
+    fn assert_sync_hits(expected: usize) {
+        SYNC_FAILURE.with(|state| assert_eq!(state.borrow().as_ref().unwrap().hits, expected));
+    }
+
+    #[test]
+    fn failed_member_sync_cannot_be_reported_successful_on_retry() {
+        let directory = version_temp();
+        let source = directory.path().join("origin.cuenote");
+        let root = directory.path().join("preserved");
+        write_package_file(&source, &plain("Preserve me", "original content")).unwrap();
+        let opened = crate::storage::open_note(&source).unwrap();
+        let fault = fail_sync("member-file");
+        for _ in 0..2 {
+            assert!(
+                preserve_observed_version(&root, &opened, "external note", "observed").is_err()
+            );
+        }
+        assert_sync_hits(2);
+        drop(fault);
+        preserve_observed_version(&root, &opened, "external note", "observed").unwrap();
+        let versions = list_versions(&root).unwrap().versions;
+        assert_eq!(versions.len(), 1);
+        let preserved = open_version(&root, &versions[0].version_id).unwrap();
+        assert_eq!(preserved.opened.package.document.title, "Preserve me");
+        assert_eq!(
+            preserved.opened.package.text_projection().content,
+            "original content"
+        );
+    }
+
+    #[test]
+    fn failed_version_barriers_report_failure_and_retain_written_data() {
+        for stage in ["entry", "candidate-created", "candidate-ready", "published"] {
+            let directory = version_temp();
+            let source = directory.path().join("origin.cuenote");
+            let root = directory.path().join("preserved");
+            write_package_file(&source, &plain("Preserve me", "unchanged source")).unwrap();
+            let source_bytes = fs::read(&source).unwrap();
+            let opened = crate::storage::open_note(&source).unwrap();
+            let fault = fail_sync(stage);
+            assert!(
+                preserve_observed_version(&root, &opened, "external note", "observed").is_err(),
+                "{stage}"
+            );
+            assert_sync_hits(1);
+            drop(fault);
+            let entries: Vec<_> = fs::read_dir(root.join("versions"))
+                .unwrap()
+                .map(|e| e.unwrap().path())
+                .collect();
+            match stage {
+                "entry" => assert!(entries.is_empty()),
+                "candidate-created" => {
+                    assert_eq!(entries.len(), 1);
+                    assert!(entries[0]
+                        .file_name()
+                        .unwrap()
+                        .to_str()
+                        .unwrap()
+                        .starts_with(".pending-"));
+                }
+                "candidate-ready" | "published" => {
+                    assert_eq!(entries.len(), 1);
+                    let retained =
+                        crate::storage::open_note(&entries[0].join("note.cuenote")).unwrap();
+                    assert_eq!(retained.package.document.title, "Preserve me");
+                }
+                _ => unreachable!(),
+            }
+            let retained_bytes: Vec<_> = entries
+                .iter()
+                .filter_map(|path| {
+                    let file = path.join("note.cuenote");
+                    fs::read(&file).ok().map(|bytes| (file, bytes))
+                })
+                .collect();
+            preserve_observed_version(&root, &opened, "external note", "observed").unwrap();
+            assert_eq!(list_versions(&root).unwrap().versions.len(), 1);
+            assert_eq!(fs::read(&source).unwrap(), source_bytes);
+            for (file, bytes) in retained_bytes {
+                assert_eq!(fs::read(file).unwrap(), bytes);
+            }
+        }
+    }
+
+    #[test]
+    fn retries_sync_every_member_directory_without_rewriting_the_preserved_package() {
+        for level in ["group", "groups", "versions"] {
+            let directory = version_temp();
+            let source = directory.path().join("origin.cuenote");
+            let root = directory.path().join("preserved");
+            fs::create_dir(&root).unwrap();
+            let root = fs::canonicalize(root).unwrap();
+            write_package_file(&source, &plain("Durable retry", "unchanged source")).unwrap();
+            let opened = crate::storage::open_note(&source).unwrap();
+            let versions = root.join("versions");
+            let origin_key = super::normalize_origin("external note").unwrap().1;
+            let group_id =
+                super::make_group_id(&opened.package.document.note_id, &origin_key).unwrap();
+            let target = match level {
+                "group" => versions.join("groups").join(group_id),
+                "groups" => versions.join("groups"),
+                _ => versions.clone(),
+            };
+            let fault = fail_sync_at("member-directory", Some(target));
+            assert!(
+                preserve_observed_version(&root, &opened, "external note", "observed").is_err()
+            );
+            let id = list_versions(&root).unwrap().versions[0].version_id.clone();
+            let package = versions.join(&id).join("note.cuenote");
+            let before = fs::read(&package).unwrap();
+            assert!(
+                preserve_observed_version(&root, &opened, "external note", "observed").is_err()
+            );
+            assert_sync_hits(2);
+            drop(fault);
+            preserve_observed_version(&root, &opened, "external note", "observed").unwrap();
+            assert_eq!(fs::read(package).unwrap(), before);
+            assert_eq!(list_versions(&root).unwrap().versions.len(), 1);
+            assert_eq!(
+                open_version(&root, &id)
+                    .unwrap()
+                    .opened
+                    .package
+                    .document
+                    .title,
+                "Durable retry"
+            );
+        }
+    }
+
+    #[test]
+    fn retry_after_group_creation_failure_still_syncs_existing_directories() {
+        for parent in ["versions", "groups"] {
+            let directory = version_temp();
+            let source = directory.path().join("origin.cuenote");
+            let root = directory.path().join("preserved");
+            fs::create_dir(&root).unwrap();
+            let root = fs::canonicalize(root).unwrap();
+            write_package_file(&source, &plain("Group retry", "retained content")).unwrap();
+            let opened = crate::storage::open_note(&source).unwrap();
+            let target = if parent == "versions" {
+                root.join("versions")
+            } else {
+                root.join("versions/groups")
+            };
+            let fault = fail_sync_at("directory-created", Some(target.clone()));
+            assert!(
+                preserve_observed_version(&root, &opened, "external note", "observed").is_err()
+            );
+            assert_sync_hits(1);
+            drop(fault);
+            let fault = fail_sync_at("member-directory", Some(target));
+            assert!(
+                preserve_observed_version(&root, &opened, "external note", "observed").is_err()
+            );
+            assert_sync_hits(1);
+            drop(fault);
+            preserve_observed_version(&root, &opened, "external note", "observed").unwrap();
+            let versions = list_versions(&root).unwrap().versions;
+            assert_eq!(versions.len(), 1);
+            assert_eq!(
+                open_version(&root, &versions[0].version_id)
+                    .unwrap()
+                    .opened
+                    .package
+                    .text_projection()
+                    .content,
+                "retained content"
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn retained_group_member_blocks_external_write_and_rename() {
+        let directory = version_temp();
+        let id = "a".repeat(64);
+        let member = directory.path().join(&id);
+        let moved = directory.path().join("moved");
+        fs::write(&member, []).unwrap();
+        for writable in [false, true] {
+            let held = super::open_group_member(directory.path(), &id, writable).unwrap();
+            assert!(OpenOptions::new().write(true).open(&member).is_err());
+            assert!(fs::rename(&member, &moved).is_err());
+            drop(held);
+            drop(OpenOptions::new().write(true).open(&member).unwrap());
+            fs::rename(&member, &moved).unwrap();
+            fs::rename(&moved, &member).unwrap();
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn durability_context_rejects_replaced_anchor_and_unsafe_descendants() {
+        use std::os::unix::fs::symlink;
+        let directory = version_temp();
+        let versions = directory.path().join("versions");
+        let outside = directory.path().join("outside");
+        fs::create_dir(&versions).unwrap();
+        fs::create_dir(&outside).unwrap();
+        let context = super::VersionDurability::new(&versions).unwrap();
+        assert!(context.sync(&outside, "test").is_err());
+        assert!(context.sync(&versions.join("../outside"), "test").is_err());
+        symlink(&outside, versions.join("linked")).unwrap();
+        assert!(context.sync(&versions.join("linked"), "test").is_err());
+        fs::rename(&versions, directory.path().join("old-versions")).unwrap();
+        fs::create_dir(&versions).unwrap();
+        assert!(context.sync(&versions, "test").is_err());
+        assert!(fs::read_dir(&outside).unwrap().next().is_none());
+    }
 
     fn version_temp() -> TempDir {
         let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
