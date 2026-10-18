@@ -1,0 +1,108 @@
+{
+  "format": 1,
+  "issue": 33,
+  "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+  "binarySha256": "ed397f9a15a99dcca159de4e0b1f4418259b622b83e1b31055f9405e4be00c08",
+  "dailyUseApproved": false,
+  "fullA06A07Accepted": false,
+  "noteId": "73b9050e-8f5a-4e1f-b5ec-834ef19b6611",
+  "userReportedTrial": "Three-region Chinese IME and independent undo/redo, images from macOS screenshot tool and Preview, normal reopen retained text and two images.",
+  "userClarification": "我撤销了以后没有再恢复",
+  "trialBeforeUndoIndependentlyCaptured": false,
+  "postUndoSnapshot": {
+    "utc": "2026-10-18T14:01:35.362391+00:00",
+    "notePackage": {
+      "path": "notes/73b9050e-8f5a-4e1f-b5ec-834ef19b6611.cuenote",
+      "sha256": "892caa3ef43b168e6951ed03f4982cc5070b9d66badaeb3302ed6ab5a3ed7b0a",
+      "bytes": 79675,
+      "flags": 64
+    },
+    "cueTextEmpty": true,
+    "contentTextEmpty": true,
+    "summaryText": "测试撤销",
+    "imageCount": 1,
+    "displayWidth": 614,
+    "imageBytes": 78632,
+    "imageSha256": "4697331a4a247c5064cab5c5ad84ecf108d860893dd911bbb8d7d7aa4382286d"
+  },
+  "windowsOneDriveArrival": {
+    "files": [
+      {
+        "bytes": 197,
+        "sha256": "f9a817d57704df2dd1d95f3a2a4fc549de3a564f02fd8ac17a19d0bc10994c93",
+        "path": "notebooks/74af4d2a-61c9-475f-bf78-f0bc5491a6d2.json"
+      },
+      {
+        "bytes": 195,
+        "sha256": "ebfe9c7283ebd26ccd046562661fa8f5235d68523e27341e7b00897cedf67f32",
+        "path": "notebooks/bfff6ac7-6b68-4c19-9121-0ac9f8485723.json"
+      },
+      {
+        "bytes": 79675,
+        "sha256": "892caa3ef43b168e6951ed03f4982cc5070b9d66badaeb3302ed6ab5a3ed7b0a",
+        "path": "notes/73b9050e-8f5a-4e1f-b5ec-834ef19b6611.cuenote"
+      },
+      {
+        "bytes": 5919,
+        "sha256": "2745e7db51978b1dc780bb82db21441032a06f5464468579feaa855d8d98a728",
+        "path": "notes/d2732090-8d20-4a37-9177-e132d7018126.cuenote"
+      }
+    ],
+    "allFilesExact": true,
+    "comparedTo": "mac-sync-cf350d8-human-input-9760cf6/snapshot.json",
+    "utc": "2026-10-18T14:33:12.1094854Z",
+    "transport": "Observed actual OneDrive endpoint; no copying into this sync root",
+    "source": "E:\\OneDrive\\CueNote-Acceptance-20261018\\library-cf350d8"
+  },
+  "ordinaryUiInspected": true,
+  "ordinaryUiMatchesPostUndoSnapshot": true,
+  "ordinaryUiSavedLocally": true,
+  "normalClose": {
+    "processDisappeared": true,
+    "pid": 66197,
+    "exitStatusAvailable": false
+  },
+  "classification": "User-directed undo after successful manual trial; no data-loss finding. Final snapshot does not independently establish the earlier two-image/three-region-text state.",
+  "evidenceHashes": [
+    {
+      "path": "mac-sync-cf350d8-human-input-9760cf6/snapshot.json",
+      "sha256": "b40e35e40c333484933c3d197cb715686a44a3f9c670e28843619dab096f8b26",
+      "bytes": 6189
+    },
+    {
+      "path": "mac-human-trial-windows-arrival.json",
+      "sha256": "a8fe4d15a53d670f973fed23e8b4f904f9be3553a8e48f682a4ebb39e7fedcf7",
+      "bytes": 1084
+    },
+    {
+      "path": "mac-human-trial-complete-9760cf6-view/summary.json",
+      "sha256": "dcf14ccb4a812d9c70b95ccf1456205504d1e9592826cbf6b2e281c9736b2449",
+      "bytes": 713
+    },
+    {
+      "path": "mac-human-trial-complete-9760cf6-view/ax.json",
+      "sha256": "71a29490ea2daa65e6239ab03834b3b8358a453eba942be4ed86189ad23f49f2",
+      "bytes": 812
+    },
+    {
+      "path": "mac-human-trial-complete-9760cf6-view/window.png",
+      "sha256": "0b1dd7db5b5b7b7bfd9d0d80190b456e5c073858e64aa4a311923158fbd88bb2",
+      "bytes": 437375
+    },
+    {
+      "path": "mac-human-trial-complete-9760cf6-close/summary.json",
+      "sha256": "340a03ad14dae519fd5140e9bd54a4c2f825653c782a442dcba4da644eea0800",
+      "bytes": 603
+    },
+    {
+      "path": "mac-human-trial-complete-9760cf6-close/actions.jsonl",
+      "sha256": "f7b705a751075b0dc3ce8c4512eb5586f2165769d32eeccb506ce86f6cd0bd6c",
+      "bytes": 374
+    },
+    {
+      "path": "native-assets-followup-verification.json",
+      "sha256": "5fa358ea841b0f6d56603d4e4802e5f252cddb8a5bd0e86289193457353b79ba",
+      "bytes": 545
+    }
+  ]
+}

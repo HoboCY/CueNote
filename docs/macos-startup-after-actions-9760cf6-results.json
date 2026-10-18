@@ -1,0 +1,197 @@
+{
+  "format": 1,
+  "scope": "Diagnostic only; never replaces formal Q51 matrix",
+  "formalAcceptance": false,
+  "environment": {
+    "binarySha256": "badf21b8e530e800461a2dc16e963f9c65b6a9370aba3a89b0fce904fdc0959d",
+    "freeBytes": 33701347328,
+    "root": "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1",
+    "scope": "Additional post-action startup diagnostic on already-used synthetic matrix root. No cache clearing, backup disabling or changed timing endpoints. Never Q51 acceptance.",
+    "sequence": [
+      "ordinary-opens",
+      "ordinary-select",
+      "ordinary-saves",
+      "ordinary-inputs",
+      "ordinary-maps",
+      "stress-opens",
+      "stress-select",
+      "stress-saves",
+      "stress-inputs",
+      "stress-maps",
+      "search",
+      "clear-search",
+      "cancel-save-wait",
+      "ordinary-select"
+    ],
+    "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+    "startedUtc": "2026-10-18T14:34:50Z",
+    "traceEnabled": false
+  },
+  "result": {
+    "completed": true,
+    "over3000ms": [
+      3121.4986670017242
+    ],
+    "runs": [
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/272F5F56-844B-4B6F-958A-1F206229206B",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/8F399517-7CC9-429D-8C13-16B872B361B9",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/D90D221E-1DD3-4D56-8A3E-98DEC427717B",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/9F7AFDAF-29CB-4332-B83D-853B72042D21",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/552DE1C8-7DC0-43CB-8279-1633F02784F1",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/D5ED8AD7-97F7-4C97-B46D-AD6C221FE36A",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/343C10E8-6105-4F73-AE4E-EFAD20BBC310",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/B366C9E3-5C63-4EE1-8C7E-55D9CF3FC967",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/44AED3B3-3399-428D-AD53-781BE5D52579",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/8B6753FD-8B9E-49C9-AAF0-63B776BDE7D6",
+      "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/index-1/measurements/0F339702-621F-4D23-B363-C7BC31D10AAA"
+    ],
+    "scope": "Ten startup samples after the frozen heavy-action sequence; phase instrumentation only, diagnostic not acceptance.",
+    "symptomObserved": true,
+    "timingsMs": [
+      3121.4986670017242,
+      1788.456083059311,
+      1831.841709136963,
+      1820.3264999389648,
+      1819.4078750610352,
+      1857.9028751850128,
+      2034.4072079658508,
+      1890.26566696167,
+      1832.2621250152588,
+      2052.236708164215
+    ],
+    "traceEnabled": false
+  },
+  "normalExits": [
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68200,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68369,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68386,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68401,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68408,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68419,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68430,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68446,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68456,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68463,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 68474,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    }
+  ],
+  "firstTwoLaunchPhases": [
+    {
+      "diagnostic": "startup-phase-v1",
+      "phases": {
+        "activationReturnedMs": 948.698667049408,
+        "documentFocusedMs": 1416.7752499580383,
+        "driverInitializedMs": 972.4518749713898,
+        "firstSnapshotReturnedMs": 1395.816416978836,
+        "foregroundReadyMs": 949.4011671543121,
+        "observerEndpointReadyMs": 941.5740840435028,
+        "processRunReturnedMs": 1.348958969116211,
+        "readyMs": 3121.4986670017242
+      },
+      "scope": "Diagnostic only; never Q51 acceptance",
+      "traceEnabled": false
+    },
+    {
+      "diagnostic": "startup-phase-v1",
+      "phases": {
+        "activationReturnedMs": 278.88070797920227,
+        "documentFocusedMs": 410.1927499771118,
+        "driverInitializedMs": 294.163458108902,
+        "firstSnapshotReturnedMs": 410.163290977478,
+        "foregroundReadyMs": 279.7835409641266,
+        "observerEndpointReadyMs": 272.33150005340576,
+        "processRunReturnedMs": 0.5830831527709961,
+        "readyMs": 1788.456083059311
+      },
+      "scope": "Diagnostic only; never Q51 acceptance",
+      "traceEnabled": false
+    }
+  ],
+  "evidenceArchive": {
+    "utc": "2026-10-18T14:45:35.981068+00:00",
+    "archive": "startup-after-actions-20261018-evidence.tar.gz",
+    "sha256": "6124cd1e3d13d7bfb14252337572c8e04589544b8819604a26718098bf3cc1fe",
+    "bytes": 26585839,
+    "files": 193,
+    "manifestSha256": "c81fd53ea4612d1078515c003c06488093ee5e3f7a510c0c054dc47c75969063",
+    "observerSecretsExcluded": true
+  },
+  "verifiedManifestFiles": 193,
+  "interpretation": "First restart exceeded 3000 ms. Delay is already visible before the observer endpoint and first DOM snapshot; these observations do not establish an OS or application root cause. Formal matrix10 failure remains unchanged."
+}

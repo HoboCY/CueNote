@@ -1,5 +1,7 @@
 # CueNote Windows 笔记本管理验收整理（源 9760cf6，二进制 a4520e94）
 
+本文保留 13:21 UTC 时的局部结果。后续已补齐的 Windows 缺口见[功能补充验收](windows-functional-followup-9760cf6.md)，以下“未测/等待”均为本文采集时状态。
+
 **结论：仅 Windows 单端的部分合成证据。A01、A02 部分通过但未闭环，A04 未测；`dailyUseApproved=false`，不得标记为整例或双端验收通过。**
 
 - 验收口径：Q53 A01 / A02 / A04（`accepted-q50-q53-a01-a26.md` 第 100、101、103 行）。

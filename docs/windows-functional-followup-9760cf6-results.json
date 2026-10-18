@@ -1,0 +1,164 @@
+{
+  "format": 1,
+  "issue": 33,
+  "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+  "binarySha256": "a4520e94a0807b7f45a2ed722bd7dbce92016342a312ca6480845002846e0919",
+  "scope": "Ordinary installed Windows candidate; native GUI actions and dedicated synthetic local library. No observer/business IPC.",
+  "dailyUseApproved": false,
+  "macCasesAccepted": false,
+  "priorReport": "windows-management-9760cf6-results.json",
+  "cases": {
+    "A01": "通过",
+    "A02": "通过",
+    "A03": "通过",
+    "A04": "通过",
+    "A21": "通过"
+  },
+  "managementStages": [
+    "reopened",
+    "blank-name",
+    "duplicate-name",
+    "book-pinned",
+    "global-pinned",
+    "unpin-order",
+    "rename-duplicate",
+    "rename-blank",
+    "trash-seed",
+    "trash-content",
+    "trashed-list",
+    "trash-readonly-position",
+    "trash-readonly",
+    "restore-existing",
+    "trash-missing-book",
+    "restore-target-dialog",
+    "restored-target",
+    "before-missing-restart",
+    "missing-note-reopened",
+    "trash-after-restart",
+    "permanent-dialog",
+    "permanent-cancel",
+    "permanent-confirm"
+  ],
+  "searchStages": [
+    "search-title",
+    "search-cue",
+    "search-content",
+    "search-summary",
+    "search-map",
+    "search-code",
+    "search-formula",
+    "search-image-pixels",
+    "search-outside-again",
+    "search-book-hit",
+    "search-book-miss",
+    "search-trash-excluded",
+    "search-restored",
+    "search-rebuilt"
+  ],
+  "externalStages": [
+    "external-picker",
+    "external-open",
+    "external-saved",
+    "external-excluded",
+    "external-backup",
+    "external-copied"
+  ],
+  "verification": {
+    "nativeSnapshots": 43,
+    "factCopies": 294,
+    "evidenceFiles": 557,
+    "manifestFile": "windows-functional-followup-9760cf6-manifest.json",
+    "manifestSha256": "ff7ce743666da8e95bb31637ea0d05640f2c244bd66a8f03c390799d02686f47",
+    "nativeFactBytesUnchangedAfterCacheRemoval": true,
+    "externalSectionsAndAssetBytesPreserved": true,
+    "independentCopyNewId": "ea03c676-d543-41f8-9213-1f56425d4769",
+    "sourceUnchangedAfterImportAndCopyEdit": true,
+    "externalExcludedFromBackupId": "6a52442b-c085-4a66-b881-b72e5afe6597",
+    "nativeAssetsVerification": {
+      "path": "native-assets-followup-verification.json",
+      "sha256": "5fa358ea841b0f6d56603d4e4802e5f252cddb8a5bd0e86289193457353b79ba",
+      "importedAssetBytesExact": true
+    }
+  },
+  "searchMatches": {
+    "search-title": [
+      "1 条匹配",
+      "命中标题"
+    ],
+    "search-cue": [
+      "1 条匹配",
+      "命中线索区"
+    ],
+    "search-content": [
+      "1 条匹配",
+      "命中内容区"
+    ],
+    "search-summary": [
+      "1 条匹配",
+      "命中总结区"
+    ],
+    "search-map": [
+      "1 条匹配",
+      "知识地图"
+    ],
+    "search-code": [
+      "1 条匹配",
+      "console.log"
+    ],
+    "search-formula": [
+      "1 条匹配",
+      "\\frac{1}{3}"
+    ],
+    "search-image-pixels": [
+      "0 条匹配",
+      "没有找到匹配笔记"
+    ],
+    "search-outside-again": [
+      "0 条匹配",
+      "没有找到匹配笔记"
+    ],
+    "search-book-hit": [
+      "1 条匹配 · “验收甲改”"
+    ],
+    "search-book-miss": [
+      "0 条匹配 · “默认笔记本”"
+    ],
+    "search-trash-excluded": [
+      "0 条匹配 · 全部笔记"
+    ],
+    "search-restored": [
+      "1 条匹配"
+    ],
+    "search-rebuilt": [
+      "1 条匹配",
+      "console.log"
+    ]
+  },
+  "normalExits": [
+    {
+      "receipt": "windows-management-missing-note-close.json",
+      "exitCode": 0
+    },
+    {
+      "receipt": "windows-search-cache-removal.json",
+      "exitCode": 0
+    }
+  ],
+  "independentVerification": {
+    "taskId": "08cb6352486a4cac85a856672fe7ef2c",
+    "status": "Completed",
+    "eventCursor": 157,
+    "hasMore": false,
+    "scope": "A01/A02/A04 new snapshots; reviewed by primary against accepted contract. Source/binary provenance from existing candidate update receipt.",
+    "report": "windows-management-followup-independent-review.json"
+  },
+  "clarifications": [
+    "Default notebook deletion is unavailable through ordinary UI. No direct business IPC was used to invent a deletion control.",
+    "Blank names disable submit; contract does not require an additional message.",
+    "restore-target-dialog uses windows-management-restore-existing-plan.json, not a separate same-name plan.",
+    "First trash read-only pointer attempt stopped before typing; second coordinate attempt actually typed and preserved all file bytes.",
+    "Prior partial report remains a historical observation; this supplement closes its Windows gaps.",
+    "A21 normal native saving covered here; fault injection and durability interruptions remain in A16/A17.",
+    "A22 Listary interference resolved by user; subsequent export acceptance passed separately in windows-markdown-export-9760cf6-results.json."
+  ]
+}

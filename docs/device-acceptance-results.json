@@ -199,6 +199,19 @@
     ],
     "managementFollowup": {
       "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+      "report": "windows-functional-followup-9760cf6-results.json",
+      "evidenceFilesVerified": 557,
+      "nativeSnapshotsVerified": 43,
+      "reopenedUiVerified": true,
+      "fullA01Accepted": true,
+      "fullA02Accepted": true,
+      "fullA03Accepted": true,
+      "fullA04Accepted": true,
+      "fullA21Accepted": true,
+      "scope": "Windows single-device ordinary candidate; native UI and exact synthetic-file verification. Does not approve corresponding Mac or daily-use cases."
+    },
+    "managementFollowupHistorical": {
+      "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
       "report": "windows-management-9760cf6-results.json",
       "evidenceFilesVerified": 169,
       "nativeSnapshotsVerified": 14,
@@ -210,6 +223,15 @@
       "fullA02Accepted": false,
       "fullA04Accepted": false,
       "scope": "Ordinary installed Windows candidate, dedicated synthetic local library. Creation, rename, note entry defaults, same titles, guarded deletion, pin and move substeps verified. Reopened UI awaits foreground; other required management and trash substeps remain untested."
+    },
+    "markdownExportFollowup": {
+      "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+      "report": "windows-markdown-export-9760cf6.md",
+      "results": "windows-markdown-export-9760cf6-results.json",
+      "fullA22Accepted": true,
+      "richExportFiles": 5,
+      "allFormatsExportFiles": 18,
+      "relativeReferences": 21
     }
   },
   "mac": {
@@ -409,35 +431,47 @@
     },
     "humanInputFollowup": {
       "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
-      "noteTitle": "Mac 输入与图片验收 · 9760cf6",
-      "status": "等待用户实际输入法与两种外部图片来源试用反馈",
-      "testAutomationStopped": true
+      "report": "macos-human-input-9760cf6-results.json",
+      "userConfirmedImeUndoRedoAndTwoClipboardSources": true,
+      "userConfirmedReopenedBeforeUndo": true,
+      "userConfirmedLaterUndoWithoutRedo": true,
+      "postUndoSnapshotAndOneDriveHashVerified": true,
+      "fullA06A07Accepted": false
+    },
+    "postActionStartupDiagnostic": {
+      "report": "macos-startup-after-actions-9760cf6.md",
+      "results": "macos-startup-after-actions-9760cf6-results.json",
+      "formalAcceptance": false,
+      "samples": 10,
+      "over3000ms": [
+        3121.4986670017242
+      ]
     }
   },
   "cases": [
     {
       "id": "A01",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "未测",
-      "notes": "9760cf6 ordinary Windows management substeps verified; full case remains unaccepted. See windows-management-9760cf6-results.json for exact facts and missing scenarios."
+      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
     },
     {
       "id": "A02",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "未测",
-      "notes": "9760cf6 ordinary Windows management substeps verified; full case remains unaccepted. See windows-management-9760cf6-results.json for exact facts and missing scenarios."
+      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
     },
     {
       "id": "A03",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "未测",
-      "notes": ""
+      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
     },
     {
       "id": "A04",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "未测",
-      "notes": ""
+      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
     },
     {
       "id": "A05",
@@ -449,13 +483,13 @@
       "id": "A06",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Mac 9760cf6 manual IME/independent undo and real screenshot/Preview clipboard/reopen substeps user-confirmed; subsequent undo clarified and snapshot retained. Complete cases remain unaccepted."
     },
     {
       "id": "A07",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Mac 9760cf6 manual IME/independent undo and real screenshot/Preview clipboard/reopen substeps user-confirmed; subsequent undo clarified and snapshot retained. Complete cases remain unaccepted."
     },
     {
       "id": "A08",
@@ -537,15 +571,15 @@
     },
     {
       "id": "A21",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "未测",
-      "notes": ""
+      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
     },
     {
       "id": "A22",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "未测",
-      "notes": ""
+      "notes": "Windows 9760cf6 ordinary installed UI: two exports, 23 files and 21 relative references exact after moving directories; source unchanged; static map notice verified. Mac full case untested."
     },
     {
       "id": "A23",
@@ -574,7 +608,7 @@
   ],
   "pending": [
     "Mac9760cf6 matrix10 startup failed at 4590.58/4101.88ms, other 10 timing gates passed. Short untraced diagnostic reproduced first startup3149.52ms. Additional trace diagnostic did not exceed3000ms; remaining pre-readiness and initial-load cost still under investigation.",
-    "Mac actual IME and two external clipboard sources on9760cf6 awaiting user; earlier Windows user-confirmed IME/clipboard evidence remains scoped to its candidate, with remaining A06/A07 cases open.",
+    "Mac 9760cf6 manual IME/clipboard/reopen substeps confirmed; complete A06/A07 format and block-operation cases remain open.",
     "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and late organization metadata; one ordinary rich-note sequential round trip has passed.",
     "Full A01-A26, Q51/Q52 target-device evidence",
     "Interactive installation, actual upgrade/uninstall data retention and remaining formal-candidate UI cases on both devices"
