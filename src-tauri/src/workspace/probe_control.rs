@@ -1,27 +1,35 @@
-//! Foreground saves may interrupt a background probe only at safe boundaries.
+//! Foreground saves and image reads interrupt probes only at safe boundaries.
 use std::sync::{
     atomic::{AtomicBool, AtomicUsize, Ordering},
     Arc,
 };
 
 #[derive(Clone, Default)]
-pub(crate) struct ForegroundSaves(Arc<AtomicUsize>);
+pub(crate) struct ForegroundRequests(Arc<AtomicUsize>);
 
-pub(crate) struct SaveIntent {
-    saves: ForegroundSaves,
+pub(crate) struct ForegroundIntent {
+    requests: ForegroundRequests,
 }
 
-impl ForegroundSaves {
-    pub(crate) fn begin_save(&self) -> SaveIntent {
+impl ForegroundRequests {
+    pub(crate) fn begin_save(&self) -> ForegroundIntent {
+        self.begin_request()
+    }
+
+    pub(crate) fn begin_image_read(&self) -> ForegroundIntent {
+        self.begin_request()
+    }
+
+    fn begin_request(&self) -> ForegroundIntent {
         self.0.fetch_add(1, Ordering::AcqRel);
-        SaveIntent {
-            saves: self.clone(),
+        ForegroundIntent {
+            requests: self.clone(),
         }
     }
 
     pub(crate) fn probe(&self) -> ProbeAttempt {
         ProbeAttempt {
-            saves: self.clone(),
+            requests: self.clone(),
             must_report: AtomicBool::new(false),
             #[cfg(test)]
             hook: None,
@@ -29,9 +37,9 @@ impl ForegroundSaves {
     }
 }
 
-impl Drop for SaveIntent {
+impl Drop for ForegroundIntent {
     fn drop(&mut self) {
-        self.saves.0.fetch_sub(1, Ordering::AcqRel);
+        self.requests.0.fetch_sub(1, Ordering::AcqRel);
     }
 }
 
@@ -46,7 +54,7 @@ pub(super) enum ProbeCheckpoint {
 }
 
 pub(crate) struct ProbeAttempt {
-    saves: ForegroundSaves,
+    requests: ForegroundRequests,
     must_report: AtomicBool,
     #[cfg(test)]
     hook: Option<Arc<dyn Fn(ProbeCheckpoint) + Send + Sync>>,
@@ -58,7 +66,7 @@ impl ProbeAttempt {
         if let Some(hook) = &self.hook {
             hook(_at);
         }
-        !self.must_report.load(Ordering::Acquire) && self.saves.0.load(Ordering::Acquire) != 0
+        !self.must_report.load(Ordering::Acquire) && self.requests.0.load(Ordering::Acquire) != 0
     }
 
     /// Preserve the existing classification/visibility of protection warnings.
@@ -82,7 +90,7 @@ mod tests {
 
     #[test]
     fn concurrent_save_intents_survive_independent_error_returns() {
-        let saves = ForegroundSaves::default();
+        let saves = ForegroundRequests::default();
         let probe = saves.probe();
         assert!(!probe.should_yield(ProbeCheckpoint::Start));
         let first = saves.begin_save();

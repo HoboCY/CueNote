@@ -2,9 +2,12 @@ use super::*;
 use std::sync::Mutex;
 
 fn defer_at(
-    saves: &ForegroundSaves,
+    saves: &ForegroundRequests,
     checkpoint: ProbeCheckpoint,
-) -> (ProbeAttempt, Arc<Mutex<Option<probe_control::SaveIntent>>>) {
+) -> (
+    ProbeAttempt,
+    Arc<Mutex<Option<probe_control::ForegroundIntent>>>,
+) {
     let intent = Arc::new(Mutex::new(None));
     let held = intent.clone();
     let incoming = saves.clone();
@@ -57,7 +60,7 @@ fn fixture() -> (tempfile::TempDir, Workspace) {
 fn pending_save_defers_background_refresh_and_retry_completes() {
     let (_temp, mut workspace) = fixture();
     let before = workspace.library.as_ref().unwrap().view.clone();
-    let saves = ForegroundSaves::default();
+    let saves = ForegroundRequests::default();
     let saving = saves.begin_save();
     let probe = workspace
         .probe_external_changes_interruptible(None, &saves.probe())
@@ -283,7 +286,7 @@ fn deferred_refresh_keeps_the_previous_view_and_cache(checkpoint: ProbeCheckpoin
     workspace.attach_search_progress(Arc::new(move |event| {
         progress_sink.lock().unwrap().push(event.phase)
     }));
-    let saves = ForegroundSaves::default();
+    let saves = ForegroundRequests::default();
     let intent = Arc::new(Mutex::new(None));
     let held = intent.clone();
     let incoming = saves.clone();
@@ -360,7 +363,7 @@ fn obsolete_generation_does_not_publish_cache_or_ready() {
     workspace.attach_search_progress(Arc::new(move |event| {
         sink.lock().unwrap().push(event.phase)
     }));
-    let attempt = ForegroundSaves::default().probe().with_hook(move |at| {
+    let attempt = ForegroundRequests::default().probe().with_hook(move |at| {
         if at == ProbeCheckpoint::BeforeCommit {
             generation.fetch_add(1, Ordering::AcqRel);
         }
@@ -380,7 +383,7 @@ fn obsolete_generation_does_not_publish_cache_or_ready() {
         .iter()
         .all(|phase| *phase == SearchStatus::Building));
     workspace
-        .probe_external_changes_interruptible(None, &ForegroundSaves::default().probe())
+        .probe_external_changes_interruptible(None, &ForegroundRequests::default().probe())
         .unwrap();
     assert_eq!(progress.lock().unwrap().last(), Some(&SearchStatus::Ready));
     assert_ne!(cache_files(temp.path()), cache_before);
@@ -403,7 +406,7 @@ fn unavailable_notes_keep_the_previous_list_and_only_commit_a_completed_probe() 
         workspace.attach_search_progress(Arc::new(move |event| {
             sink.lock().unwrap().push(event.phase)
         }));
-        let saves = ForegroundSaves::default();
+        let saves = ForegroundRequests::default();
         let (attempt, intent) = defer_at(&saves, ProbeCheckpoint::BeforeCommit);
         assert_eq!(
             workspace
@@ -452,7 +455,7 @@ fn preservation_warning_and_current_note_error_are_not_hidden_by_deferred() {
             fs::rename(&versions, temp.path().join("recovery/versions-away")).unwrap();
         }
         fs::write(&versions, b"blocked version directory").unwrap();
-        let saves = ForegroundSaves::default();
+        let saves = ForegroundRequests::default();
         let (attempt, _intent) = defer_at(&saves, ProbeCheckpoint::NoteRetentionComplete);
         let result = workspace.probe_external_changes_interruptible(
             session.as_ref().map(|s| s.session_id.as_str()),
@@ -502,7 +505,7 @@ fn no_editor_new_note_and_preserved_preview_all_commit_after_retry() {
         let note = write_external_note(&workspace, "Arrived while editing");
         let note_id = storage::open_note(&note).unwrap().package.document.note_id;
         let before = workspace.library.as_ref().unwrap().view.clone();
-        let saves = ForegroundSaves::default();
+        let saves = ForegroundRequests::default();
         let (attempt, intent) = defer_at(&saves, ProbeCheckpoint::BeforeCommit);
         assert_eq!(
             workspace
@@ -549,7 +552,7 @@ fn late_notebook_metadata_does_not_make_a_deferred_editor_writable() {
     assert!(!workspace.session.as_ref().unwrap().was_writable);
     fs::write(metadata_path, serde_json::to_vec(&metadata).unwrap()).unwrap();
     let original = fs::read(&path).unwrap();
-    let saves = ForegroundSaves::default();
+    let saves = ForegroundRequests::default();
     let (attempt, intent) = defer_at(&saves, ProbeCheckpoint::MetadataPrepared);
     assert_eq!(
         workspace
@@ -606,7 +609,7 @@ fn duplicate_identity_protection_error_keeps_its_warning_instead_of_deferring() 
     let duplicate = path.parent().unwrap().join("zz-conflict.cuenote");
     crate::note_format::write_package(&mut File::create(&duplicate).unwrap(), &second).unwrap();
     let source_bytes = (fs::read(&path).unwrap(), fs::read(&duplicate).unwrap());
-    let saves = ForegroundSaves::default();
+    let saves = ForegroundRequests::default();
     let (attempt, _intent) = defer_at(&saves, ProbeCheckpoint::BeforeCommit);
     let probe = workspace
         .probe_external_changes_interruptible(None, &attempt)
@@ -654,7 +657,7 @@ fn external_editor_probe_holds_library_access_until_commit_or_defer() {
                 terminal_checks.fetch_add(1, Ordering::AcqRel);
             }
         }));
-        let saves = ForegroundSaves::default();
+        let saves = ForegroundRequests::default();
         let incoming = saves.clone();
         let intent = Arc::new(Mutex::new(None));
         let held = intent.clone();

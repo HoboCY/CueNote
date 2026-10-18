@@ -47,7 +47,7 @@ pub use library_restore::{
 };
 pub use markdown_export::MarkdownExportReceipt;
 use probe_control::ProbeCheckpoint;
-pub(crate) use probe_control::{ForegroundSaves, ProbeAttempt};
+pub(crate) use probe_control::{ForegroundRequests, ProbeAttempt};
 pub use search::{SearchHit, SearchResults, SearchSection, SearchSnippet, SearchStatus};
 
 pub type WorkspaceError = StorageError;

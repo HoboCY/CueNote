@@ -22,9 +22,11 @@ pub struct WorkspaceState {
     workspace: Arc<Mutex<Workspace>>,
     backups: BackupControl,
     restore_running: Arc<AtomicBool>,
-    foreground_saves: crate::workspace::ForegroundSaves,
+    foreground_requests: crate::workspace::ForegroundRequests,
     #[cfg(test)]
     save_waiting_hook: Option<Arc<dyn Fn() + Send + Sync>>,
+    #[cfg(test)]
+    image_waiting_hook: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 
 impl WorkspaceState {
@@ -33,9 +35,11 @@ impl WorkspaceState {
             workspace: Arc::new(Mutex::new(workspace)),
             backups: BackupControl::default(),
             restore_running: Arc::new(AtomicBool::new(false)),
-            foreground_saves: crate::workspace::ForegroundSaves::default(),
+            foreground_requests: crate::workspace::ForegroundRequests::default(),
             #[cfg(test)]
             save_waiting_hook: None,
+            #[cfg(test)]
+            image_waiting_hook: None,
         }
     }
 
@@ -133,7 +137,7 @@ async fn save_mutation<T: Send + 'static>(
         #[cfg(feature = "perf-acceptance")]
         let mut trace = crate::performance::Trace::new("save-command");
         state.ensure_not_restoring()?;
-        let _save_intent = state.foreground_saves.begin_save();
+        let _save_intent = state.foreground_requests.begin_save();
         #[cfg(feature = "perf-acceptance")]
         trace.mark("mutation-gate-start");
         let _mutation = state.backups.begin_mutation()?;
@@ -163,10 +167,29 @@ async fn editor_work<T: Send + 'static>(
     state: WorkspaceState,
     action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
 ) -> Result<T, WorkspaceError> {
+    editor_work_inner(state, false, action).await
+}
+
+async fn editor_work_inner<T: Send + 'static>(
+    state: WorkspaceState,
+    foreground_image: bool,
+    action: impl FnOnce(&mut Workspace) -> Result<T, WorkspaceError> + Send + 'static,
+) -> Result<T, WorkspaceError> {
     tauri::async_runtime::spawn_blocking(move || {
         #[cfg(feature = "perf-acceptance")]
         let mut trace = crate::performance::Trace::new("editor-command");
         state.ensure_not_restoring()?;
+        // Visible images must not queue behind a full background scan. Keep
+        // the intent inside the blocking job until its guards/action finish,
+        // including when the caller stops awaiting it. Reads do not mutate
+        // library files or cancel backups. Probes themselves stay unmarked.
+        let _image_intent = foreground_image.then(|| state.foreground_requests.begin_image_read());
+        #[cfg(test)]
+        if foreground_image {
+            if let Some(hook) = &state.image_waiting_hook {
+                hook();
+            }
+        }
         let mut workspace = state
             .workspace
             .lock()
@@ -1021,10 +1044,18 @@ pub async fn read_image_asset(
     session_id: String,
     asset_id: String,
 ) -> Result<Response, WorkspaceError> {
-    editor_work(state.inner().clone(), move |workspace| {
-        workspace
-            .read_image_asset(&session_id, &asset_id)
-            .map(Response::new)
+    image_asset_work(state.inner().clone(), session_id, asset_id)
+        .await
+        .map(Response::new)
+}
+
+async fn image_asset_work(
+    state: WorkspaceState,
+    session_id: String,
+    asset_id: String,
+) -> Result<Vec<u8>, WorkspaceError> {
+    editor_work_inner(state, true, move |workspace| {
+        workspace.read_image_asset(&session_id, &asset_id)
     })
     .await
 }
@@ -1109,7 +1140,7 @@ pub async fn probe_external_changes(
     state: State<'_, WorkspaceState>,
     session_id: Option<String>,
 ) -> Result<ExternalProbe, WorkspaceError> {
-    let attempt = state.foreground_saves.probe();
+    let attempt = state.foreground_requests.probe();
     let mut probe = editor_work(state.inner().clone(), move |workspace| {
         workspace.probe_external_changes_interruptible(session_id.as_deref(), &attempt)
     })
@@ -1286,6 +1317,128 @@ mod tests {
     use std::path::Path;
 
     #[test]
+    fn queued_image_read_defers_probe_without_cancelling_backup_and_retry_completes() {
+        let (_temp, mut workspace, session_id, _) = fixture();
+        let bytes = include_bytes!("../tests/fixtures/pixel.png").to_vec();
+        let asset = workspace.stage_image(&session_id, bytes.clone()).unwrap();
+        let mut content = test_content("image priority");
+        content.sections.content.push(Block::Image {
+            asset_id: asset.id.clone(),
+            display_width_px: 1,
+        });
+        workspace.save_note_content(&session_id, content).unwrap();
+        let mut state = WorkspaceState::new(workspace);
+        let (waiting, queued) = std::sync::mpsc::channel();
+        state.image_waiting_hook = Some(Arc::new(move || waiting.send(()).unwrap()));
+        let job = state.backups.begin_job(None).unwrap();
+        let mut locked = state.workspace.lock().unwrap();
+        let reading = state.clone();
+        let read_session = session_id.clone();
+        let worker = std::thread::spawn(move || {
+            tauri::async_runtime::block_on(image_asset_work(reading, read_session, asset.id))
+        });
+        queued
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .unwrap();
+        let probe = locked
+            .probe_external_changes_interruptible(
+                Some(&session_id),
+                &state.foreground_requests.probe(),
+            )
+            .unwrap();
+        let backup_untouched = job.checkpoint().is_ok();
+        drop(locked);
+        assert_eq!(worker.join().unwrap().unwrap(), bytes);
+        assert!(
+            backup_untouched,
+            "reading an image must not cancel an active backup"
+        );
+        assert_eq!(
+            probe.status, "deferred",
+            "pending image bytes must take priority over a full background scan"
+        );
+        let retry = state
+            .workspace
+            .lock()
+            .unwrap()
+            .probe_external_changes_interruptible(
+                Some(&session_id),
+                &state.foreground_requests.probe(),
+            )
+            .unwrap();
+        assert_eq!(
+            retry.status, "unchanged",
+            "the full probe must complete after the image read"
+        );
+    }
+
+    #[test]
+    fn failed_image_read_releases_priority_without_cancelling_backup() {
+        let (_temp, workspace, session_id, _) = fixture();
+        let mut state = WorkspaceState::new(workspace);
+        let (waiting, queued) = std::sync::mpsc::channel();
+        state.image_waiting_hook = Some(Arc::new(move || waiting.send(()).unwrap()));
+        let job = state.backups.begin_job(None).unwrap();
+        let mut locked = state.workspace.lock().unwrap();
+        let reading = state.clone();
+        let worker = std::thread::spawn(move || {
+            tauri::async_runtime::block_on(image_asset_work(
+                reading,
+                "stale-session".into(),
+                "unavailable-asset".into(),
+            ))
+        });
+        queued
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .unwrap();
+        let probe = locked
+            .probe_external_changes_interruptible(
+                Some(&session_id),
+                &state.foreground_requests.probe(),
+            )
+            .unwrap();
+        drop(locked);
+        assert_eq!(worker.join().unwrap().unwrap_err().kind, "staleSession");
+        assert_eq!(probe.status, "deferred");
+        assert!(job.checkpoint().is_ok());
+        let retry = state
+            .workspace
+            .lock()
+            .unwrap()
+            .probe_external_changes_interruptible(
+                Some(&session_id),
+                &state.foreground_requests.probe(),
+            )
+            .unwrap();
+        assert_eq!(retry.status, "unchanged");
+    }
+
+    #[test]
+    fn image_read_rejected_by_restore_guard_does_not_leave_priority() {
+        let (_temp, workspace, session_id, _) = fixture();
+        let state = WorkspaceState::new(workspace);
+        state.restore_running.store(true, Ordering::Release);
+        let error = tauri::async_runtime::block_on(image_asset_work(
+            state.clone(),
+            session_id.clone(),
+            "unavailable-asset".into(),
+        ))
+        .unwrap_err();
+        assert_eq!(error.kind, "desktop");
+        state.restore_running.store(false, Ordering::Release);
+        let retry = state
+            .workspace
+            .lock()
+            .unwrap()
+            .probe_external_changes_interruptible(
+                Some(&session_id),
+                &state.foreground_requests.probe(),
+            )
+            .unwrap();
+        assert_eq!(retry.status, "unchanged");
+    }
+
+    #[test]
     fn queued_save_defers_probe_before_workspace_lock_and_cleans_up_on_error() {
         let (_temp, workspace, session_id, _) = fixture();
         let mut state = WorkspaceState::new(workspace);
@@ -1311,7 +1464,7 @@ mod tests {
             locked
                 .probe_external_changes_interruptible(
                     Some(&session_id),
-                    &state.foreground_saves.probe()
+                    &state.foreground_requests.probe()
                 )
                 .unwrap()
                 .status,
@@ -1329,7 +1482,7 @@ mod tests {
                 .unwrap()
                 .probe_external_changes_interruptible(
                     Some(&session_id),
-                    &state.foreground_saves.probe()
+                    &state.foreground_requests.probe()
                 )
                 .unwrap()
                 .status,
@@ -1360,7 +1513,7 @@ mod tests {
                 .unwrap()
                 .probe_external_changes_interruptible(
                     Some(&session_id),
-                    &state.foreground_saves.probe()
+                    &state.foreground_requests.probe()
                 )
                 .unwrap()
                 .status,
@@ -1371,7 +1524,7 @@ mod tests {
     #[test]
     fn deferred_probe_keeps_the_watch_and_completed_probe_reconfigures_it() {
         let (_temp, mut workspace, session_id, _) = fixture();
-        let saves = crate::workspace::ForegroundSaves::default();
+        let saves = crate::workspace::ForegroundRequests::default();
         let intent = saves.begin_save();
         let mut probe = workspace
             .probe_external_changes_interruptible(Some(&session_id), &saves.probe())
