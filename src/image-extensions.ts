@@ -459,7 +459,13 @@ function createImageNodeView(
   };
   bindAction(moveUp, position => editor.commands.moveImageNode(position, 'up'));
   bindAction(moveDown, position => editor.commands.moveImageNode(position, 'down'));
-  bindAction(remove, position => editor.commands.deleteImageNode(position));
+  bindAction(remove, position => {
+    const deleted = editor.commands.deleteImageNode(position);
+    // The focused width control or delete button disappears with this NodeView.
+    // Return keyboard shortcuts to the body after the successful transaction.
+    if (deleted) editor.view.focus();
+    return deleted;
+  });
 
   const setMessage = (message: string | null) => {
     error.textContent = message ?? '';

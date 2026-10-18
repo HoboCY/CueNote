@@ -156,6 +156,7 @@ class TestElement extends EventTarget {
   setAttribute(name: string, value: string) { this.attributes.set(name, value); }
   getAttribute(name: string) { return this.attributes.get(name) ?? null; }
   removeAttribute(name: string) { this.attributes.delete(name); }
+  focus() { this.ownerDocument.activeElement = this; }
   contains(target: EventTarget | null): boolean {
     return target === this || this.children.some(child => child.contains(target));
   }
@@ -172,6 +173,7 @@ class TestElement extends EventTarget {
 }
 
 class TestDocument {
+  activeElement: TestElement | null = null;
   readonly defaultView = {
     Node: TestElement,
     IntersectionObserver: class {
@@ -547,6 +549,43 @@ test('image width controls preserve native mouse defaults and stay inside the no
     editor.destroy();
     if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument);
     else Reflect.deleteProperty(globalThis, 'document');
+  }
+});
+
+test('deleting an image returns focus from its controls to the body for immediate undo', () => {
+  for (const focusedControl of ['rich-image-resize-handle', 'rich-image-delete']) {
+    const editor = createEditor(makeBridge().bridge, {
+      type: 'doc',
+      content: [
+        { type: 'image', attrs: { assetId: IMAGE_ID, displayWidthPx: 97 } },
+        { type: 'paragraph', content: [{ type: 'text', text: 'after' }] },
+      ],
+    });
+    const document = new TestDocument();
+    const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+    Object.defineProperty(globalThis, 'document', { configurable: true, value: document });
+    const body = document.createElement('div');
+    Object.defineProperty(editor.view, 'focus', { configurable: true, value: () => body.focus() });
+    let nodeView: ReturnType<typeof createImageNodeView> | undefined;
+    try {
+      nodeView = createImageNodeView(editor, document);
+      const root = nodeView.dom as TestElement;
+      const initial = editor.getJSON();
+      findTestElement(root, focusedControl)!.focus();
+      findTestElement(root, 'rich-image-delete')!.dispatchEvent(new Event('click'));
+      assert.equal(imagePosition(editor), -1);
+      assert.equal(document.activeElement, body, `${focusedControl}: deletion must return keyboard focus to the body`);
+      assert.equal(editor.commands.undo(), true);
+      assert.deepEqual(editor.getJSON(), initial);
+      assert.equal(editor.commands.redo(), true);
+      assert.equal(imagePosition(editor), -1);
+      assert.equal(editor.state.doc.textContent, 'after');
+    } finally {
+      nodeView?.destroy?.();
+      editor.destroy();
+      if (originalDocument) Object.defineProperty(globalThis, 'document', originalDocument);
+      else Reflect.deleteProperty(globalThis, 'document');
+    }
   }
 });
 
