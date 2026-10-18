@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "sourceCommit": "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+  "binarySha256": "3b4837a78dc10a2d5b9106f3a121c7d1c666273e5653e4590dd35c52ab67cb82",
+  "device": "Windows ordinary installed candidate, native keyboard and UIA observations",
+  "stages": [
+    "three-texts",
+    "cue-undo",
+    "content-undo",
+    "summary-undo",
+    "all-redone",
+    "markdown",
+    "formula",
+    "formula-edit-open",
+    "formula-edited",
+    "formula-undo",
+    "formula-redo",
+    "code",
+    "table-ready",
+    "table-created",
+    "table-row-added",
+    "table-column-added",
+    "table-row-deleted",
+    "table-row-restored",
+    "table-column-deleted",
+    "table-column-restored",
+    "reopened"
+  ],
+  "verifiedFactCopies": 189,
+  "unrelatedNotesAndNotebooksExact": true,
+  "independentUndoRedo": true,
+  "formula": {
+    "inlineValid": 8,
+    "inlineInvalidPreserved": 1,
+    "blockSourceExact": true,
+    "sourceEditUndoRedoExact": true,
+    "rendering": "Visible native window screenshot: valid formula layout and invalid-source warning observed"
+  },
+  "code": {
+    "specifiedLanguages": 7,
+    "unknownLanguage": 1,
+    "allSourceAndLanguageMarkersExact": true,
+    "tabsSpacesBlankLinesHtmlDollarsBackticksPreserved": true
+  },
+  "knownFailure": "Advertised task marker creates outer bullet in079fa6e; new source fix under validation.",
+  "scope": "Substeps only. Task-marker defect fixed in newer source but installed-candidate retest pending. Full block operations, offline, cross-platform, export/search and complete A06/A25/A26 remain open.",
+  "table": {
+    "createHeaderAndBody": true,
+    "addDeleteRowsAndColumns": true,
+    "undoRestoresExactContent": true,
+    "otherContentUnchanged": true
+  },
+  "reopen": {
+    "nativeFilesExact": 9,
+    "normalCloseRequestAccepted": true,
+    "processDisappearanceVerified": true,
+    "exitStatusAvailable": false,
+    "ordinaryExplorerLaunch": {
+      "sha256": "3b4837a78dc10a2d5b9106f3a121c7d1c666273e5653e4590dd35c52ab67cb82",
+      "parentName": "explorer.exe",
+      "parentId": 95212,
+      "pid": 76056,
+      "utc": "2026-10-18T17:15:20.8610487Z"
+    }
+  }
+}

@@ -255,6 +255,15 @@
       "nativeResourceTestsPassed": 48,
       "report": "performance-windows-startup-current-results.json",
       "fullA23Accepted": false
+    },
+    "editorFollowup": {
+      "sourceCommit": "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+      "report": "windows-editor-079fa6e-results.json",
+      "snapshots": 21,
+      "verifiedFactCopies": 189,
+      "fullA06Accepted": false,
+      "fullA25Accepted": false,
+      "fullA26Accepted": false
     }
   },
   "mac": {
@@ -488,6 +497,19 @@
       "nativeResourceTestsPassed": 47,
       "nativeContentVerified": true,
       "fullA23Accepted": false
+    },
+    "immediateStartupSaveDiagnostic": {
+      "sourceCommit": "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+      "report": "macos-startup-immediate-save-079fa6e.md",
+      "formalQ51": false,
+      "samples": 2,
+      "saveMs": [
+        1229.4060411453247,
+        1102.7781660556793
+      ],
+      "beforeSaveListPending": true,
+      "normalExits": 3,
+      "nativeContentVerified": true
     }
   },
   "cases": [
@@ -523,9 +545,9 @@
     },
     {
       "id": "A06",
-      "windows": "未测",
+      "windows": "失败",
       "mac": "未测",
-      "notes": "Mac 9760cf6 manual IME/independent undo and real screenshot/Preview clipboard/reopen substeps user-confirmed; subsequent undo clarified and snapshot retained. Complete cases remain unaccepted."
+      "notes": "079fa6e ordinary Windows reproduced an extra outer bullet for the advertised task marker. Fix7a11fb1 passes159 frontend tests/build; installed-candidate keyboard retest pending. Independent section undo, formatting/table substeps and ordinary reopen are recorded in windows-editor-079fa6e-results.json; full case remains open."
     },
     {
       "id": "A07",
@@ -639,17 +661,18 @@
       "id": "A25",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Windows079fa6e ordinary UI input/source/save/reopen substeps recorded in windows-editor-079fa6e-results.json; full cross-platform/offline/export/search case remains open."
     },
     {
       "id": "A26",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Windows079fa6e ordinary UI input/source/save/reopen substeps recorded in windows-editor-079fa6e-results.json; full cross-platform/offline/export/search case remains open."
     }
   ],
   "pending": [
-    "079fa6e full Q51 passed on Windows and M1. Separately measure immediate save while the startup library list is still pending; full A23 Q52 UI boundaries remain open.",
+    "7a11fb1 task-marker structure fix: ordinary installed keyboard regression pending;159 frontend tests and build passed.",
+    "079fa6e full Q51 passed on Windows and M1; two separate M1 immediate-startup save diagnostics while list-pending also passed. Full A23 Q52 UI boundaries remain open.",
     "Mac 9760cf6 manual IME/clipboard/reopen substeps confirmed; complete A06/A07 format and block-operation cases remain open.",
     "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and late organization metadata; one ordinary rich-note sequential round trip has passed.",
     "Full A01-A26, Q51/Q52 target-device evidence",
