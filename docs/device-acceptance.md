@@ -7,9 +7,14 @@
 
 ## 候选与当前证据
 
-两端使用 0.1.0，源码 `f1308f4b6f88b48e3f8054c09391c4bde822db58`。
-包来源和校验值见[安装包报告](package-validation.md)，后续验收文档提交不改变候选包。
-本机私人交付目录为 `package-output/personal-f1308f4/Windows` 和 `Mac`，已忽略 Git。
+最初安装记录对应两端 0.1.0，源码 `f1308f4b6f88b48e3f8054c09391c4bde822db58`。
+其包来源和校验值见[安装包报告](package-validation.md)，私人交付目录为
+`package-output/personal-f1308f4/Windows` 和 `Mac`，已忽略 Git。下表保留这次安装的历史结果。
+
+截至 2026-10-18 本轮检查，Windows 普通安装版已由用户安装为 `cbd9c08`，Mac 普通安装版
+仍为 `f1308f4`；两端尚未更新到同一最新候选。`3013f3c` 的独立 Windows 性能版已完成
+[467 样本实测](performance-windows-probe-yield.md)：内容核对及正常退出通过，启动和普通保存
+两项计时失败。不能以旧候选或独立性能变体的子步骤宣布当前双端日用验收通过。
 
 | 记录 | Windows 目标实机 | M1 Pro 目标实机 |
 | --- | --- | --- |

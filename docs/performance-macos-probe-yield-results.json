@@ -1,0 +1,226 @@
+{
+  "format": 1,
+  "issue": 33,
+  "sourceCommit": "3013f3c1cfb45c156c64459fb90ced10b9b94633",
+  "date": "2026-10-18",
+  "attempt": 17,
+  "traceEnabled": false,
+  "ordinarySaveSubsetTimingPassed": false,
+  "fullQ51Passed": false,
+  "scope": "Partial save regression on existing synthetic library, no host trace or sampler; 32 fixed native saves. Not full Q51 acceptance.",
+  "saveTiming": {
+    "count": 32,
+    "p95Ms": 2365.7152910232544,
+    "maxMs": 2705.0940408706665
+  },
+  "over2000ms": [
+    {
+      "operation": "ordinary-save-1",
+      "elapsedMs": 2216.4610838890076
+    },
+    {
+      "operation": "ordinary-save-14",
+      "elapsedMs": 2073.433000087738
+    },
+    {
+      "operation": "ordinary-save-19",
+      "elapsedMs": 2365.7152910232544
+    },
+    {
+      "operation": "ordinary-save-20",
+      "elapsedMs": 2174.9504158496857
+    },
+    {
+      "operation": "ordinary-save-23",
+      "elapsedMs": 2705.0940408706665
+    },
+    {
+      "operation": "ordinary-save-27",
+      "elapsedMs": 2027.1370828151703
+    }
+  ],
+  "normalExit": {
+    "exitStatusAvailable": true,
+    "normalExit": true,
+    "pid": 24130,
+    "quitRequested": true,
+    "status": 0,
+    "terminationReason": 1
+  },
+  "contentVerification": {
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "changed": [
+      {
+        "path": "library/notes/c54da484-4c2b-46d1-855f-b84ac08cb0a2.cuenote",
+        "profile": "ordinary",
+        "sha256": "ce7fc9b9d2ea2e8df05ca9b8646f5da1bc14e52b58d4b8fdeee4ba6cb603910b",
+        "members": [
+          {
+            "name": "document.json",
+            "beforeSha256": "1241f4687e5ab617f8556c679d9f1d84f30ba6f17fe5c23b6c159efc2f44211e",
+            "afterSha256": "8b185a6a6823473000dd421c7c9a1935b0b8cc4c12d30d7e82cd6bc269a55e6f",
+            "differences": [
+              {
+                "path": "/timestamps/contentModifiedAt",
+                "before": "2026-01-05T23:00:30.000Z",
+                "after": "2026-10-18T08:28:09.990Z"
+              },
+              {
+                "path": "/title",
+                "before": "普通样本 00 · SHARED-Q51-ORDINARY",
+                "after": "普通样本 32 · SHARED-Q51-ORDINARY"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "path": "library/notes/da509c0e-7713-4234-b8eb-ec5fd6f993d6.cuenote",
+        "profile": "stress",
+        "sha256": "894e26c6c98341c0548bbc3ae9140185029a072f00b736f8dca71b91f6c2d26f",
+        "members": [
+          {
+            "name": "document.json",
+            "beforeSha256": "f39e3d046fdaa9824212bfdf302f4b89b9d9e21be7e2bbb52af52dedd2ccd10f",
+            "afterSha256": "d281a4ef396fdf49c4f9d5e49d63b1d909600d55acc6c7512ab22c8eda92838e",
+            "differences": [
+              {
+                "path": "/timestamps/contentModifiedAt",
+                "before": "2026-01-06T00:30:30.000Z",
+                "after": "2026-10-18T06:26:23.840Z"
+              },
+              {
+                "path": "/title",
+                "before": "压力样本 00 · SHARED-Q51-STRESS",
+                "after": "压力样本 32 · SHARED-Q51-STRESS"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "unchanged": 998,
+    "notebooksExact": 10
+  },
+  "evidence": {
+    "archive": "mac-save-profile-17-20261018.tar.gz",
+    "sha256": "c016a804a5e7102539ac4cf55bf7ad3dfc88f893aa6069c5da20e80f28ecd8d7",
+    "files": [
+      {
+        "file": "17/build/Driver.swift",
+        "sha256": "1ac2f13d7c175f273b8911fdd4a0773fe65af7eac9123f918cea8bee79f1229f",
+        "bytes": 40190
+      },
+      {
+        "file": "17/build/Matrix.swift",
+        "sha256": "6811f4321840d2bbddf9bab9d1e4931907fbaa7bcfdb46931a98724702163849",
+        "bytes": 20358
+      },
+      {
+        "file": "17/build/main.swift",
+        "sha256": "f5066f7b6b3ca19d8de743a52cc31f6bcaba920a8929698ef27c4b40a3a5f4f0",
+        "bytes": 2324
+      },
+      {
+        "file": "17/build/runtime-exit.json",
+        "sha256": "3edd82d4e49f89c30270dee752ac018539f4dc6848d7a33b1553404e6f8b58af",
+        "bytes": 15
+      },
+      {
+        "file": "17/build/runtime.stderr",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "file": "17/build/runtime.stdout",
+        "sha256": "459d508ee495381a49d840b5c4a10fcbc941078449f0a430b88fdd5b9a610b78",
+        "bytes": 2100
+      },
+      {
+        "file": "17/content-diff.json",
+        "sha256": "bb5ef2e62d98027aec15765ae85d9a1018826990ba889b61ba91e03dac8f854f",
+        "bytes": 1919
+      },
+      {
+        "file": "17/diagnosis/after.json",
+        "sha256": "44d37bccc9943d31ab9cd7fa93f3b6f721d32de4ea5777405a3b3f5f587745a0",
+        "bytes": 1185
+      },
+      {
+        "file": "17/diagnosis/before.json",
+        "sha256": "44afc8df3489a7e0cedad0b37c1bbb8c9d094241ccfe907216b99494f787b316",
+        "bytes": 1176
+      },
+      {
+        "file": "17/diagnosis/result.json",
+        "sha256": "3ee8d55a3c57460737fdd37c32839ebe883fcdf1e69ae83fd2a6a617182ce9c8",
+        "bytes": 268
+      },
+      {
+        "file": "17/diagnosis/run.json",
+        "sha256": "0ac347adceda131b94019c2a914976289a60233ecf762110a89b0da05f58dbbc",
+        "bytes": 280
+      },
+      {
+        "file": "17/diagnosis/summary.json",
+        "sha256": "3de70d7f96d8348fdd9bcc54bcba07b959538ec4fd848b4a5fd04ec3ee8ade54",
+        "bytes": 1460
+      },
+      {
+        "file": "17/diagnosis/thirtytwo-saves.json",
+        "sha256": "f6ebc83c207d946bc9b8e31f22662e2ae5ca4f84170eb2dc801d44ab47f06467",
+        "bytes": 16925
+      },
+      {
+        "file": "17/run/closed.json",
+        "sha256": "7b60065e9ae21c745ef4a6e395e36f9e265cd73d2dd58b2d4b6df48ef260005d",
+        "bytes": 112
+      },
+      {
+        "file": "17/run/launcher.json",
+        "sha256": "d116d4b7e2a15e4a5c7944bde0607aeb30f20f850f76ac1e7d97453f1231eddf",
+        "bytes": 520
+      },
+      {
+        "file": "17/run/measurements.jsonl",
+        "sha256": "1778cb93ce12de1adf5bfbcf539f17e39a8d591dd74c9fdaf7c4ea7a7fc40ea6",
+        "bytes": 58537
+      },
+      {
+        "file": "17/run/native-pointer.jsonl",
+        "sha256": "f4c7f4a7c8ad862464035dc7bd11d8e6e27e86a41aa1caaa009b6402327c476b",
+        "bytes": 21305
+      },
+      {
+        "file": "17/run/native-selection.jsonl",
+        "sha256": "875f14320e85007853324a9e2ab4653897edd14f7f4fb59ce491f2ff1ca02d23",
+        "bytes": 18367
+      },
+      {
+        "file": "17/run/startup.json",
+        "sha256": "f04da70d6066d79326d10324845143ceb0dfff897748c55cf8abc0cfe2677948",
+        "bytes": 1473
+      },
+      {
+        "file": "17/run/startup.png",
+        "sha256": "e500057ece057255ee43162d8f3ed6596a990daf41fba7cb14cd392b79f90d59",
+        "bytes": 484172
+      },
+      {
+        "file": "17/run/stderr.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      },
+      {
+        "file": "17/run/stdout.txt",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0
+      }
+    ]
+  },
+  "limitations": [
+    "Existing warm synthetic library, not a fresh full matrix.",
+    "Only ordinary saves measured; no conclusion about focus stability or other Q51 metrics.",
+    "Differences from an earlier run do not estimate stable performance gains."
+  ]
+}
