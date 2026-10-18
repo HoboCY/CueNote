@@ -1,0 +1,491 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "hostedCI": false,
+  "scope": "Real M1 native driver input diagnosis and regression only. Not full Q51 timing, IME, clipboard, OneDrive or daily-use approval.",
+  "environment": {
+    "os": "macOS 26.6.2 (25G83)",
+    "chip": "Apple M1 Pro",
+    "viewport": {
+      "width": 1280,
+      "height": 832,
+      "devicePixelRatio": 2
+    },
+    "accessibility": true,
+    "nativeInput": true,
+    "screenshots": false
+  },
+  "failedMatrices": [
+    {
+      "session": "CueNote-ui-acceptance-20261018-1",
+      "driverSha256": "a42d3a00166f0c86d36942fbdcd68450758c7af2d968aa25a5e3f9b02dc166f8",
+      "matrixExitCode": 1,
+      "phase": "calibration",
+      "metricSamples": 0,
+      "failure": "PID-directed native click did not dismiss welcome; subsequent document focus/visibility loss stopped run.",
+      "evidenceArchiveSha256": "fb5c74e1435c9a1e5eb7eb8683bfb67dc60d4b041285e961981a24ef9eacbc45",
+      "verifiedRawFiles": 24
+    },
+    {
+      "session": "CueNote-ui-acceptance-20261018-2",
+      "driverSha256": "786cb5e6a0d34c838600ae6c9e3c81e8962e4ac614a4a22b683399d3899651c6",
+      "matrixExitCode": 1,
+      "phase": "calibration",
+      "metricSamples": 0,
+      "failure": "NSWindow hit test returned 0 before CLI AppKit display-server initialization. First mouse move rejected.",
+      "evidenceArchiveSha256": "7bdd9722f79d9f398187be8df2dd8ae2b002d60f25903cb8cf633f412b139487",
+      "verifiedRawFiles": 28
+    },
+    {
+      "session": "CueNote-ui-acceptance-20261018-3",
+      "driverSha256": "054868fe415bbea889a70cbe5071ac317e93dba0570887f114ecf1525384bf8b",
+      "matrixExitCode": 1,
+      "phase": "calibration",
+      "metricSamples": 0,
+      "failure": "Index completed; ordinary-note selection exhausted native scrolling because the outer sidebar was selected instead of its nested list.",
+      "calibrationIndexMs": 93560.443417,
+      "evidenceArchiveSha256": "a6cb467543e599334b188b39dd7591143493780a3460b94bc70e545fc0fd9d7d",
+      "verifiedRawFiles": 28
+    }
+  ],
+  "routingExperiment": [
+    {
+      "mode": "pid-current",
+      "run": "/Users/hobo/CueNote-native-click-matrix-20261018-2/pid-current/measurements/4F698369-32A6-4E89-9D62-F83BBCD89B38",
+      "welcomeDismissed": false
+    },
+    {
+      "mode": "pid-single",
+      "run": "/Users/hobo/CueNote-native-click-matrix-20261018-2/pid-single/measurements/07EDC6DF-2538-4AB4-8015-A6281CAF0900",
+      "welcomeDismissed": false
+    },
+    {
+      "mode": "session-current",
+      "run": "/Users/hobo/CueNote-native-click-matrix-20261018-2/session-current/measurements/0CDDC21C-C799-49BC-8C23-203AB8B9B7EC",
+      "welcomeDismissed": true
+    },
+    {
+      "mode": "session-single",
+      "run": "/Users/hobo/CueNote-native-click-matrix-20261018-2/session-single/measurements/F01279B9-73FB-49F8-A8FA-1AE217F3FA35",
+      "welcomeDismissed": true
+    }
+  ],
+  "windowFieldExperiment": [
+    {
+      "mode": "pid-window",
+      "run": "/Users/hobo/CueNote-native-click-matrix-20261018-pid-window/pid-window/measurements/7D64C515-B3F3-471C-A754-FBEA361EF57D",
+      "welcomeDismissed": false
+    }
+  ],
+  "discardedGuards": [
+    "Rectangle-only occlusion check falsely matched the WindowServer cursor window.",
+    "Ignoring only that cursor window still falsely matched the Dock full-screen transparent helper. No process/layer whitelist remains."
+  ],
+  "initialization": {
+    "observedDefaultActivationPolicy": 2,
+    "setProhibitedReturned": false,
+    "finalPolicy": 2,
+    "fix": "Initialize NSApplication.shared for matrix/actions and assert existing .prohibited policy; do not require redundant setActivationPolicy to return true.",
+    "actualCLIWelcomeDismissed": true
+  },
+  "actualCLIRegression": {
+    "actualDriverSha256": "054868fe415bbea889a70cbe5071ac317e93dba0570887f114ecf1525384bf8b",
+    "coveredClickRejected": true,
+    "coveredWelcomeUnchanged": true,
+    "inputViaActualCLI": true,
+    "normalExitVerified": true,
+    "run": "/Users/hobo/CueNote-pointer-cli-regression-20261018-1/measurements/F672F526-934D-4A3E-847C-7C5AB5F57757",
+    "uncoveredClickSucceeded": true,
+    "closure": {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 17825,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1
+    }
+  },
+  "derivedKit": {
+    "baseReceiptSha256": "33f073913db62ee2a357b669f1baa816342402f71c32c660d3e34992cb5b73e9",
+    "derivedReceiptSha256": "251768f9ee816191c2d0285ed0f4b4073e898efde1c837c9bcbb05d84f031c31",
+    "baseFiles": 1310,
+    "changed": [
+      "cuenote-performance-driver",
+      "receipt.json"
+    ],
+    "added": [
+      "base-receipt.json",
+      "driver-build/Driver.swift",
+      "driver-build/Matrix.swift",
+      "driver-build/architecture.txt",
+      "driver-build/build.stderr",
+      "driver-build/build.stdout",
+      "driver-build/codesign.stderr",
+      "driver-build/compiler.txt",
+      "driver-build/host-os.txt",
+      "driver-build/main.swift",
+      "driver-build/sdk-path.txt",
+      "driver-build/sdk-version.txt",
+      "driver-build/signature-verification.txt",
+      "driver-build/source.json"
+    ],
+    "unchangedFiles": 1308,
+    "binariesVerified": 7,
+    "plansVerified": 14,
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "driverSha256": "054868fe415bbea889a70cbe5071ac317e93dba0570887f114ecf1525384bf8b",
+    "sourceCommitScope": "Original CI application, fixture and resource tests; replacement driver is identified in derivation.driverBuild.",
+    "baseBuild": {
+      "swift": "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)\nTarget: arm64-apple-macosx15.0",
+      "xcode": "Xcode 16.4\nBuild version 16F6",
+      "runner": {
+        "image": "macos15",
+        "imageVersion": "20260907.0337.1",
+        "runId": "39049647964"
+      }
+    },
+    "derivation": {
+      "kind": "local-driver-rebuild",
+      "createdUtc": "2026-10-18T01:20:28.220659+00:00",
+      "baseReceiptSha256": "33f073913db62ee2a357b669f1baa816342402f71c32c660d3e34992cb5b73e9",
+      "baseArchiveSha256": "ea80ee994e909355fefe55483a0da9022e6a19d8b688db0b67780cfabfb4dfea",
+      "originalDriverSha256": "a42d3a00166f0c86d36942fbdcd68450758c7af2d968aa25a5e3f9b02dc166f8",
+      "driverBuild": {
+        "sourceCommit": "77a19b88db8a596c9757fd514246bd2ad73376c6",
+        "sourceDirty": false,
+        "files": {
+          "Driver.swift": "e6a8c46eea79fc8421f9169a9e36d9429e41889aafd48e81e3c0e0557478904c",
+          "Matrix.swift": "e0b4e28029f70b02fd4ebf70f4595f4c6af3ed844f0d5f29f3c7bbeee1a14b1e",
+          "main.swift": "23ff7f87ba8048d7ab963175ad512d0d58229b155bb5330788de736ab9c43638",
+          "README.md": "ab75d5c576517d61c8c84020dc0b39e22124baf86be91ff22218e09374e48147"
+        },
+        "hostedCI": false,
+        "compiler": "Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)\nTarget: arm64-apple-macosx26.0",
+        "sdkVersion": "27.0",
+        "target": "arm64-apple-macosx14.0",
+        "compileCommand": [
+          "swiftc",
+          "-O",
+          "-whole-module-optimization",
+          "-target",
+          "arm64-apple-macosx14.0",
+          "Driver.swift",
+          "Matrix.swift",
+          "main.swift",
+          "-o",
+          "cuenote-performance-driver"
+        ],
+        "signCommand": [
+          "codesign",
+          "--sign",
+          "-",
+          "cuenote-performance-driver"
+        ],
+        "signatureVerification": "passed",
+        "architecture": "arm64",
+        "binarySha256": "054868fe415bbea889a70cbe5071ac317e93dba0570887f114ecf1525384bf8b",
+        "evidenceFiles": {
+          "build.stdout": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "source.json": "917f8ca9522443ae8bbf54447ee02654ca90352d8ed2fa530651868f99c334ca",
+          "signature-verification.txt": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "build.stderr": "03876ac6c92dc1269e9f8c2eb2b2901c3af2715ba915f2e50a7d1287c34fdcbc",
+          "sdk-version.txt": "7b01c549928398a045692f24bcac7803b348524cdd76f21265b02984b2ba556a",
+          "sdk-path.txt": "71d2d22cf2f2d1a4606d2b131f4f1cc22ab8f2f05df7e76fb6298e428ace92e6",
+          "codesign.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "Driver.swift": "e6a8c46eea79fc8421f9169a9e36d9429e41889aafd48e81e3c0e0557478904c",
+          "compiler.txt": "c469aee809408e0f8f981436d9afb0cf3deb47b1647747357cf47aa1d7f9f922",
+          "Matrix.swift": "e0b4e28029f70b02fd4ebf70f4595f4c6af3ed844f0d5f29f3c7bbeee1a14b1e",
+          "architecture.txt": "c1669e1d8edca98769c37d494b76442a1d6e5ffffd7b4da1fb63aef8ebaf6f01",
+          "host-os.txt": "cd5d6399b3785b04ceaae75045a9ca9f80f0bbc3526eff9d0c36b170ed1ec348",
+          "main.swift": "23ff7f87ba8048d7ab963175ad512d0d58229b155bb5330788de736ab9c43638"
+        }
+      }
+    }
+  },
+  "evidence": {
+    "archive": "mac-native-input-diagnostics-20261018-v2.tar.gz",
+    "sha256": "94df58622023beaea8b8534e5ed0c5eb488b8b19072f2fc37a7b4e8cb3eac93a",
+    "rawFiles": 318,
+    "allHashesVerified": true,
+    "excludes": [
+      "observer tokens",
+      "note libraries",
+      "backups"
+    ],
+    "selectedHashes": [
+      {
+        "file": "CueNote-acceptance-delivery-20261018-f1308f4/derived-kit-77a19b8-verification.json",
+        "sha256": "418cc67701eba1bcb2d46e9da5dc28229007d901fba68929ec7eaf2c4ed0451d"
+      },
+      {
+        "file": "CueNote-acceptance-delivery-20261018-f1308f4/driver-session-input-20261018-v6/activation-probe-v2.txt",
+        "sha256": "e3188762dc0a79c9ded5e071c2ac393a1b231e7a873c89c705b9e7e602967453"
+      },
+      {
+        "file": "CueNote-acceptance-delivery-20261018-f1308f4/driver-session-input-20261018-v7/cli-guard-check/main.swift",
+        "sha256": "77cf90d955ce2c6ca9b1931da33cf75657ff1d8199fdcb585d37c2ef9cd82273"
+      },
+      {
+        "file": "CueNote-acceptance-delivery-20261018-f1308f4/performance-8825f5f-driver-77a19b8/receipt.json",
+        "sha256": "251768f9ee816191c2d0285ed0f4b4073e898efde1c837c9bcbb05d84f031c31"
+      },
+      {
+        "file": "CueNote-native-click-matrix-20261018-2/results.json",
+        "sha256": "830f660a9c119343e1d49b2b521c05688ac276d44557ad75473f423244472c43"
+      },
+      {
+        "file": "CueNote-native-click-matrix-20261018-pid-window/results.json",
+        "sha256": "ac84bc0d7299ea3d71a2d5b28bdb21d7d4d1e5ea02f5a49f29771f32de33f8ee"
+      },
+      {
+        "file": "CueNote-pointer-cli-regression-20261018-1/covered-rejection.json",
+        "sha256": "5af54d499a5e3ea872fab669ece74fdb19280432c5a15653a488689260c8d7b1"
+      },
+      {
+        "file": "CueNote-pointer-cli-regression-20261018-1/result.json",
+        "sha256": "dc746d9596eb0b03cd887ab6eb0621920fd0e358becf86bfff722bc8e4a1bf52"
+      }
+    ]
+  },
+  "nextStep": "Run the frozen matrix after validating the initial-index durability optimization. No daily-use approval.",
+  "dailyUseApproved": false,
+  "scrollAndGeometryDiagnosis": {
+    "status": "Scroll and geometry defects fixed; v12 diagnostic full input calibration and reopen passed. Exact 7ad4bfb driver verification is separate.",
+    "v8DriverSha256": "7adacbeea654a9ccf2daf1f31bfed6d2cd89f37756cf3a9d8abd86b4ce17c74d",
+    "v9DriverSha256": "d03aba56aa1396d4286843631ac4c76dd81fb7bf62f8d9e8790ac17565b761cd",
+    "ordinarySelectMs": 7707.6875,
+    "scope": "Diagnostic reuse of an already indexed disposable calibration root; not an acceptance sample.",
+    "nestedList": "Nearest-to-outer selection and clipping exposed the ordinary note; moving the mouse before the original wheel event did not fix outer-only scrolling.",
+    "rootDocument": "Image was outside the viewport with no overflow container; native wheel fallback exposed the first image.",
+    "title": "Click followed by observations through 500ms never focused title; Cmd+A selected the page. No text write followed.",
+    "nativeBounds": {
+      "x": 116,
+      "y": 41,
+      "width": 1280,
+      "height": 860
+    },
+    "domViewport": {
+      "width": 1280,
+      "height": 832
+    },
+    "geometryObserverSourceCommit": "53e4a5d990c7ce59a73756ddba090562075920cc",
+    "evidence": {
+      "archive": "mac-native-input-diagnostics-20261018-v3.tar.gz",
+      "sha256": "2fcc6e84cd11eb5219dbf39e081098d6a229ae270042542a13f9ba579307f0a5",
+      "rawFiles": 118,
+      "allHashesVerified": true
+    }
+  },
+  "initialIndexProfile": {
+    "status": "Reproduced slow initial index; diagnosis in progress, no performance pass.",
+    "binarySha256": "400bd49035e22bc5cdd867985b1b6d66c4f0460c5aa11dad08d3c3c90aa0c773",
+    "run": "/Users/hobo/CueNote-index-profile-20261018-1/root/measurements/DBFCDFB1-A14B-4D33-A897-18C8ACAB219E",
+    "elapsedMs": 94386.9214580059,
+    "formalMetricSample": false,
+    "method": "Fresh independent frozen-corpus copy; native input; app PID sampled for 25s and a later 10s at 5ms intervals; no storage semantics changed.",
+    "sampleExitStatus": 0,
+    "normalExitVerified": true,
+    "nonemptyErrors": [],
+    "evidence": {
+      "archive": "mac-index-profile-evidence-20261018.tar.gz",
+      "sha256": "e6eef1fe9dad5e794eae6b7ca80c9fe0f6d2638b304bc3a6ded0989da1919509",
+      "rawFiles": 21,
+      "allHashesVerified": true
+    },
+    "nextExperiment": {
+      "sourceCommit": "86f437f1967b960414a408744df021c1a1982fda",
+      "scope": "Enable sha2 0.10.9 asm only for macOS/aarch64; storage durability unchanged.",
+      "newDependency": {
+        "name": "sha2-asm",
+        "version": "0.6.4",
+        "license": "MIT",
+        "checksum": "b845214d6175804686b2bd482bcffe96651bb2d1200742b712003504a2dac1ab"
+      },
+      "windowsFormatTests": {
+        "passed": 14,
+        "failed": 0,
+        "ignored": 0
+      },
+      "windowsFeatureTreeUnchanged": true,
+      "macOSFeatureTreeIncludesAsm": true,
+      "macOSCI": "https://github.com/HoboCY/CueNote/actions/runs/39088492314",
+      "macOSRuntimeValidation": "47 native resource checks passed; fresh-copy index completed but remains over the 60-second threshold.",
+      "performanceImprovementClaimed": true,
+      "diagnostic": {
+        "elapsedMs": 64887.56100010872,
+        "normalExitVerified": true,
+        "formalMetricSample": false,
+        "thresholdMs": 60000,
+        "thresholdPassed": false,
+        "scope": "Single fresh-corpus diagnostic, no profiler. Not the three-run Q51 acceptance matrix.",
+        "previousAttempt": "Stopped on document focus/visibility loss; no valid index timing."
+      },
+      "evidence": {
+        "archive": "mac-sha256-diagnostics-20261018.tar.gz",
+        "sha256": "afd61f412568f27e607a96557eb0386943b9c926c361414e1d03d1cde9dc1c45",
+        "rawFiles": 46,
+        "allHashesVerified": true
+      },
+      "resources": {
+        "hostedCI": false,
+        "os": "Version 26.6.2 (Build 25G83)",
+        "passed": true,
+        "scope": "Native Q52 format/image/storage regressions on this host; no UI, OneDrive or power-loss claim",
+        "sourceCommit": "86f437f1967b960414a408744df021c1a1982fda",
+        "suites": [
+          {
+            "logSha256": "3218b267283d75f08e9abfdeae65576e30f87656310c06aefcbcfa7aa2d5b4ad",
+            "passed": true,
+            "sha256": "01ff265d99d6562b057858022a8d0855e51e8df7c0669793cbef9f8ffc08da0b",
+            "suite": "format_v1"
+          },
+          {
+            "logSha256": "310fd0a51f7b8acdd24f2b618d5d72628e20bed8567c22814106bcc38fd2e4f0",
+            "passed": true,
+            "sha256": "38d89a74e860dc22f2b8e0ac6c409facde292a232ac387e69f95eebb9e434387",
+            "suite": "image_content"
+          },
+          {
+            "logSha256": "677263c7bde7f5fd94c6a01f1d420e19c807d6acdeb00d8e2dd6ee91f4f33ac4",
+            "passed": true,
+            "sha256": "5586a9a6cad762f104940d929f7be8b79e47c2c1cea9f8fcf036f0de36907462",
+            "suite": "rich_content"
+          },
+          {
+            "logSha256": "7081fe06fafa0fc9ea30ac6eb15d8366c55c9b80a9b780616c2c7b8d99ff80a1",
+            "passed": true,
+            "sha256": "0af8cc3ec6bbda5492d8572d2e2a477eaae9a961607287270753e95668bca092",
+            "suite": "storage"
+          }
+        ],
+        "counts": [
+          {
+            "suite": "format_v1",
+            "passed": 14,
+            "failed": 0,
+            "ignored": 0
+          },
+          {
+            "suite": "image_content",
+            "passed": 17,
+            "failed": 0,
+            "ignored": 0
+          },
+          {
+            "suite": "rich_content",
+            "passed": 6,
+            "failed": 0,
+            "ignored": 0
+          },
+          {
+            "suite": "storage",
+            "passed": 10,
+            "failed": 0,
+            "ignored": 0
+          }
+        ],
+        "totalPassed": 47,
+        "failed": 0,
+        "ignored": 0,
+        "rawLogHashesVerified": true
+      }
+    },
+    "durabilityOptimization": {
+      "sourceCommit": "00c1e3f825503939648326607882186410545985",
+      "scope": "Within each exclusive store lock, sync versions and all ancestors once; subsequent directory barriers still include every descendant through versions. Retain file sync, readback, witness and rotation semantics. Resync existing group members on retry.",
+      "windows": {
+        "relatedRegressionPassed": 57,
+        "versionTestsPassed": 12,
+        "interruptionTestsPassed": 7,
+        "logs": [
+          {
+            "file": "version-durability-windows-native.log",
+            "sha256": "000636767af5cca1986a37ed79eb48f87da63d50be233dff39bbf49726933286"
+          },
+          {
+            "file": "version-durability-windows-focused.log",
+            "sha256": "20e3ff9acbee25669f9ce0077df396ed569deb33bdcd15394bc6c1d77951a2fc"
+          },
+          {
+            "file": "version-durability-interruptions.log",
+            "sha256": "e0d066f4c81cd538b2e05c4d2c9c4dce1ece28f555203a42dfcd8c5b9d91a37e"
+          }
+        ]
+      },
+      "macOSRuntimeValidation": "pending",
+      "ci": "https://github.com/HoboCY/CueNote/actions/runs/39090829180",
+      "powerLossProof": false
+    }
+  },
+  "inputCalibration": {
+    "nativeCalibrationPassed": true,
+    "normalExitVerified": true,
+    "reopenedRun": "/Users/hobo/CueNote-ui-acceptance-20261018-3/result/calibration/measurements/43BE5E33-5E3E-4A9C-975E-2DC7D1AF3F8C",
+    "reopenPassed": true,
+    "run": "/Users/hobo/CueNote-ui-acceptance-20261018-3/result/calibration/measurements/13C276D6-B50A-4A12-8892-4344A928D987",
+    "scope": "Input regression on reused isolated calibration root. Excluded from Q51 timing.",
+    "driverScope": "v12 prototype with v11 guarded geometry/modifier driver and explicit editor-focus wait; not the exact final 7ad4bfb binary.",
+    "safeArea": {
+      "x": 116,
+      "y": 69,
+      "width": 1280,
+      "height": 832
+    },
+    "headingFocusWaitMs": 92.4377498626709,
+    "modifierExperiment": "Inherited Command after Cmd+S prevented heading focus; explicit empty mouse modifiers restored focus. Focus readiness still required.",
+    "finalDriverSourceCommit": "7ad4bfb413bd93a10b2208c28ce7c2de9ea4f0ba",
+    "finalDriverCI": "https://github.com/HoboCY/CueNote/actions/runs/39089684858",
+    "finalDriverRuntime": "Passed separate fresh-corpus calibration, normal reopen, pointer guard and exact native content comparison; see exactDriverRegression.",
+    "evidence": {
+      "archive": "mac-native-input-diagnostics-20261018-v4.tar.gz",
+      "sha256": "21b5ba617d5579657667442dada9e3d0bfe3da9dd5b2315bb8c23ad919bd2259",
+      "rawFiles": 167,
+      "allHashesVerified": true
+    }
+  },
+  "exactDriverRegression": {
+    "sourceCommit": "7ad4bfb413bd93a10b2208c28ce7c2de9ea4f0ba",
+    "driverSha256": "241af0316b08e501d9f09ce3dd991ca784aefdc67e9fa835d0b352ad1b644983",
+    "applicationSha256": "59e0e1561c05998eef3442f95f17990e35bc7a6fc9b80cd3800d15a124bd083e",
+    "kitArchiveSha256": "6ed39c69c61e897c58f9359a715d27f1a464b7a6d4c18b2dd4b202d0c1385489",
+    "receiptSha256": "aba282f6ff03acdc265271f5205ba5b3b213c0f56a1f437998803928f48428cb",
+    "pointerGuard": {
+      "actualDriverSha256": "241af0316b08e501d9f09ce3dd991ca784aefdc67e9fa835d0b352ad1b644983",
+      "coveredClickRejected": true,
+      "coveredWelcomeUnchanged": true,
+      "inputViaActualCLI": true,
+      "normalExitVerified": true,
+      "run": "/Users/hobo/CueNote-pointer-cli-regression-20261018-2/measurements/BB1EE185-E0FF-40D9-9989-BA8CBF66BBF2",
+      "uncoveredClickSucceeded": true
+    },
+    "calibration": {
+      "nativeCalibrationPassed": true,
+      "normalExitVerified": true,
+      "reopenedRun": "/Users/hobo/CueNote-calibration-diagnostic-20261018-6/root/measurements/CC6EB1B5-DE71-48F3-85B6-9486C53FE8E7",
+      "reopenPassed": true,
+      "run": "/Users/hobo/CueNote-calibration-diagnostic-20261018-6/root/measurements/802537AE-2779-44AA-BBEA-E81861FD286E",
+      "scope": "Input regression on a fresh frozen-corpus copy. Excluded from Q51 timing."
+    },
+    "contentVerification": {
+      "notesChecked": 1000,
+      "untouchedNotesByteExact": 999,
+      "notebooksChecked": 10,
+      "editedNotes": [
+        {
+          "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+          "sha256": "928bb2f8ecffd140eefe0b98b139d825ba4aab352218718457be539e9f5ecf70",
+          "allOtherContentAndIdentityExact": true,
+          "assetsAndManifestByteExact": true
+        }
+      ],
+      "scope": "Read-only exact package comparison after native calibration and normal reopen; excluded from formal Q51 matrix."
+    },
+    "evidence": {
+      "archive": "mac-native-input-diagnostics-20261018-v5.tar.gz",
+      "sha256": "6def8c4c92dc94914852a64f270d8159fa972057f49f8aaa6dff5300c09523e5",
+      "rawFiles": 57,
+      "allHashesVerified": true
+    }
+  }
+}

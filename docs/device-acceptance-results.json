@@ -79,7 +79,7 @@
     "actualEnvironmentCollected": true,
     "performanceKit": {
       "sourceCommit": "8825f5f0aa0ca4368b9a0d6b1111995a293d4fff",
-      "status": "M1 native resource checks passed (46/46); Q51 UI matrix awaits accessibility permission",
+      "status": "Original kit retained. Follow-up SHA hardware kit: 47/47 native resource tests. Input calibration/reopen diagnostic passed; full Q51 and initial-index threshold remain open.",
       "report": "performance-macos-kit-results.json",
       "archiveSha256": "ea80ee994e909355fefe55483a0da9022e6a19d8b688db0b67780cfabfb4dfea"
     },
@@ -104,12 +104,18 @@
       {
         "step": "Precompiled native resource suites on actual M1",
         "status": "通过",
-        "detail": "46/46, zero failed/ignored; raw logs retrieved and hashes verified."
+        "detail": "Original 46/46; SHA hardware follow-up 47/47, zero failed/ignored; raw logs retrieved and hashes verified."
       },
       {
         "step": "Q51 native input permissions",
-        "status": "阻塞",
-        "detail": "Driver enabled per user confirmation. Both GUI Terminal checks still report accessibility/nativeInput false; TCC attributes this launch chain to com.apple.Terminal. Awaiting Terminal Accessibility authorization; matrix has not started."
+        "status": "通过",
+        "detail": "After user enabled Terminal Accessibility, actual GUI doctor reports accessibility/nativeInput true. Screenshot permission remains optional and false."
+      },
+      {
+        "step": "Actual CLI native click and nonactivating overlay regression",
+        "status": "通过",
+        "detail": "Covered target rejected; after removing overlay, real default-library click succeeded; held application Process exited normally. This does not establish full calibration or timing gates.",
+        "report": "performance-macos-input-results.json"
       }
     ]
   },
@@ -250,7 +256,7 @@
       "id": "A23",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Windows Q51 and native content checks passed; Windows resource regression 47/47. Actual M1 native resource checks 46/46 with verified raw logs; M1 Q51 waits for native input permission. Full case remains unaccepted."
+      "notes": "Windows Q51 and native content checks passed; Windows resource regression 47/47. M1 follow-up native resource checks 47/47; input calibration/reopen diagnostic passed, fresh-copy index 64.9s exceeds 60s. Full Mac Q51 and complete A23 remain unaccepted."
     },
     {
       "id": "A24",
@@ -272,7 +278,7 @@
     }
   ],
   "pending": [
-    "Mac Terminal Accessibility authorization, then native input calibration and complete Q51 matrix",
+    "Initial-index durability optimization and complete frozen Q51 matrix; exact Mac driver regression passed",
     "Real IME and cross-application clipboard on both target devices",
     "Same-account real OneDrive round trips and conflict scenarios",
     "Full A01-A26, Q51/Q52 target-device evidence",
