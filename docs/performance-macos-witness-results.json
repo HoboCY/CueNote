@@ -82,8 +82,9 @@
   "followup": {
     "change": "Wait for original target :active before mouse-up; bound observer I/O to the remaining deadline; record guarded cleanup separately.",
     "runtimeValidation": "Native controls, bounded timeout cleanup, normal reopen and exact package comparison passed in separately retained diagnostic runs. Full regression interrupted by unexplained focus loss.",
-    "fullPerformanceMatrix": "pending",
-    "report": "performance-macos-pointer-results.json"
+    "fullPerformanceMatrix": "failed: ordinary-save p95 over 2 seconds and native quit bypassed save protection; startup unmeasured",
+    "report": "performance-macos-pointer-results.json",
+    "fullPerformanceMatrixReport": "performance-macos-matrix6-results.json"
   },
   "evidence": {
     "archive": "mac-witness-diagnostics-20261018.tar.gz",

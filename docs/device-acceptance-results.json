@@ -93,6 +93,17 @@
       "nativeContentVerified": true,
       "relatedNativeRegressionPassed": 59,
       "report": "performance-windows-witness-results.json"
+    },
+    "ordinaryDeliveryFollowup": {
+      "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+      "installedBinarySha256": "d01c08d6880683ba5c85e9376505d743074d2d698fde649c8ada9857b76110a4",
+      "installerSha256": "9bfc7cb3b3aea9dc385714c3f326213c1dc1a7c74b8af609f117802df88d83b7",
+      "toolContextInstallationExitCode": 0,
+      "cacheFilesPreserved": 283,
+      "ordinaryLibraryInitializationPassed": false,
+      "failure": "Publishing app preferences returned Windows error 17. GetFinalPathNameByHandle showed AppData redirection into Codex LocalCache in the tool-launched environment.",
+      "independentUserLaunch": "pending; user could not find a Start Menu entry; verified installer copied to D drive for user launch",
+      "scope": "Tool-context install/start is not independent user installation acceptance. No copy/delete fallback or production path fix applied."
     }
   },
   "mac": {
@@ -164,6 +175,15 @@
       "resourceTestsPassed": 47,
       "fullQ51Passed": false,
       "focusInterruption": "Unexplained; user confirms no Mac interaction. Failure-only window/document observations added."
+    },
+    "quitAndMatrixFollowup": {
+      "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+      "fullMatrixPassed": false,
+      "metricSamples": 457,
+      "ordinarySaveP95Ms": 3076.0900840759277,
+      "nativeQuitProtectionPassed": false,
+      "latestEditLostInSyntheticQuit": true,
+      "report": "performance-macos-matrix6-results.json"
     }
   },
   "cases": [

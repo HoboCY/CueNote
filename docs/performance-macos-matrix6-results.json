@@ -1,0 +1,335 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+  "applicationSha256": "b415e4b3a22742af95718355a7371ced38cca232b4282924bbca8e395315edfe",
+  "driverSourceCommit": "d772644ac60e8fc6285ffbd4e8c7d5cb0686eb77",
+  "driverSha256": "f698563237807955dd6c4d5aa3bbeb81bee2b2f35a592d5177876561aa6795bb",
+  "matrix": {
+    "completed": false,
+    "timingGatesPassed": false,
+    "metricSamples": 457,
+    "passedGates": 9,
+    "failedGates": [
+      "ordinary-save"
+    ],
+    "unmeasuredGates": [
+      "startup"
+    ],
+    "metrics": [
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 3000,
+        "metric": "startup",
+        "minimumCount": 10,
+        "passed": false,
+        "rule": "maximum"
+      },
+      {
+        "count": 3,
+        "groups": {
+          "first": {
+            "count": 3,
+            "maxMs": 54190.298750162125,
+            "p95Ms": 54190.298750162125
+          }
+        },
+        "limitMs": 60000,
+        "maxMs": 54190.298750162125,
+        "metric": "initial-index",
+        "minimumCount": 3,
+        "p95Ms": 54190.298750162125,
+        "passed": true,
+        "rule": "maximum"
+      },
+      {
+        "count": 60,
+        "groups": {
+          "cached": {
+            "count": 30,
+            "maxMs": 325.9207088947296,
+            "p95Ms": 301.87487506866455
+          },
+          "first": {
+            "count": 30,
+            "maxMs": 2035.2882499694824,
+            "p95Ms": 647.6593329906464
+          }
+        },
+        "limitMs": 1000,
+        "maxMs": 2035.2882499694824,
+        "metric": "ordinary-open",
+        "minimumCount": 60,
+        "p95Ms": 345.0512502193451,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 40,
+        "groups": {
+          "cached": {
+            "count": 30,
+            "maxMs": 830.4364998340607,
+            "p95Ms": 733.1697499752045
+          },
+          "first": {
+            "count": 10,
+            "maxMs": 983.2019579410553,
+            "p95Ms": 983.2019579410553
+          }
+        },
+        "limitMs": 5000,
+        "maxMs": 983.2019579410553,
+        "metric": "stress-open",
+        "minimumCount": 40,
+        "p95Ms": 828.7339580059052,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 32,
+        "groups": {
+          "cached": {
+            "count": 28,
+            "maxMs": 3194.959459066391,
+            "p95Ms": 3076.0900840759277
+          },
+          "first": {
+            "count": 1,
+            "maxMs": 3000.0085830688477,
+            "p95Ms": 3000.0085830688477
+          },
+          "rotation": {
+            "count": 3,
+            "maxMs": 2066.497167110443,
+            "p95Ms": 2066.497167110443
+          }
+        },
+        "limitMs": 2000,
+        "maxMs": 3194.959459066391,
+        "metric": "ordinary-save",
+        "minimumCount": 32,
+        "p95Ms": 3076.0900840759277,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 32,
+        "groups": {
+          "cached": {
+            "count": 28,
+            "maxMs": 6340.385666847229,
+            "p95Ms": 6192.797333955765
+          },
+          "first": {
+            "count": 1,
+            "maxMs": 3949.5765829086304,
+            "p95Ms": 3949.5765829086304
+          },
+          "rotation": {
+            "count": 3,
+            "maxMs": 8731.334500074387,
+            "p95Ms": 8731.334500074387
+          }
+        },
+        "limitMs": 10000,
+        "maxMs": 8731.334500074387,
+        "metric": "stress-save",
+        "minimumCount": 32,
+        "p95Ms": 7558.7995409965515,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 30,
+        "groups": {
+          "cached": {
+            "count": 24,
+            "maxMs": 179.96079111099243,
+            "p95Ms": 168.0500419139862
+          },
+          "first": {
+            "count": 6,
+            "maxMs": 211.43170809745789,
+            "p95Ms": 211.43170809745789
+          }
+        },
+        "limitMs": 300,
+        "maxMs": 211.43170809745789,
+        "metric": "search",
+        "minimumCount": 30,
+        "p95Ms": 184.39591717720032,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 30,
+        "groups": {
+          "cached": {
+            "count": 29,
+            "maxMs": 214.986958026886,
+            "p95Ms": 180.5364170074463
+          },
+          "first": {
+            "count": 1,
+            "maxMs": 198.8431670665741,
+            "p95Ms": 198.8431670665741
+          }
+        },
+        "limitMs": 1000,
+        "maxMs": 214.986958026886,
+        "metric": "ordinary-map",
+        "minimumCount": 30,
+        "p95Ms": 198.8431670665741,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 30,
+        "groups": {
+          "cached": {
+            "count": 29,
+            "maxMs": 403.6417498588562,
+            "p95Ms": 332.1397500038147
+          },
+          "first": {
+            "count": 1,
+            "maxMs": 276.27966690063477,
+            "p95Ms": 276.27966690063477
+          }
+        },
+        "limitMs": 3000,
+        "maxMs": 403.6417498588562,
+        "metric": "stress-map",
+        "minimumCount": 30,
+        "p95Ms": 332.1397500038147,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 100,
+        "groups": {
+          "cached": {
+            "count": 100,
+            "maxMs": 132.56329083442688,
+            "p95Ms": 67.60816693305969
+          }
+        },
+        "limitMs": 100,
+        "maxMs": 132.56329083442688,
+        "metric": "ordinary-input",
+        "minimumCount": 100,
+        "p95Ms": 67.60816693305969,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 100,
+        "groups": {
+          "cached": {
+            "count": 100,
+            "maxMs": 119.2667498588562,
+            "p95Ms": 56.78591704368591
+          }
+        },
+        "limitMs": 200,
+        "maxMs": 119.2667498588562,
+        "metric": "stress-input",
+        "minimumCount": 100,
+        "p95Ms": 56.78591704368591,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      }
+    ],
+    "failure": "Application disappeared during request-close-during-save; original matrix did not retain the exit status.",
+    "nativePackageCheck": {
+      "passed": false,
+      "notesChecked": 1000,
+      "unchangedNotesByteExact": 998,
+      "notebooksByteExact": 10,
+      "savedOrdinaryTitle": "普通样本 32 · SHARED-Q51-ORDINARY",
+      "savedStressTitle": "压力样本 41 · SHARED-Q51-STRESS",
+      "expectedStressTitle": "压力样本 42 · SHARED-Q51-STRESS",
+      "otherContentIdentityAssetsExact": true,
+      "latestStressEditInRecovery": false,
+      "scope": "Read-only comparison after the failed run. The prior saved package survived; the final edit was not persisted to the note or a complete recovery package."
+    }
+  },
+  "nativeQuitDiagnosis": {
+    "routes": [
+      {
+        "route": "cmd-q",
+        "requestWhileSaving": true,
+        "intervalAfterSavingObservationMs": 0.04008293151855469,
+        "closeWaitObserved": false,
+        "processAfterRequest": {
+          "pid": 85265,
+          "running": false,
+          "status": 0,
+          "terminationReason": 1
+        },
+        "cancelAndSaveCompleted": false,
+        "normalReopenVerified": false
+      },
+      {
+        "route": "red-window",
+        "requestWhileSaving": true,
+        "intervalAfterSavingObservationMs": 140.18854093551636,
+        "closeWaitObserved": true,
+        "processAfterRequest": {
+          "pid": 85390,
+          "running": true
+        },
+        "cancelAndSaveCompleted": true,
+        "normalReopenVerified": true,
+        "exitAfterSaved": {
+          "pid": 85390,
+          "running": false,
+          "status": 0,
+          "terminationReason": 1
+        }
+      },
+      {
+        "route": "external-terminate",
+        "requestWhileSaving": true,
+        "intervalAfterSavingObservationMs": 17.695167064666748,
+        "closeWaitObserved": false,
+        "processAfterRequest": {
+          "pid": 85566,
+          "running": false,
+          "status": 0,
+          "terminationReason": 1
+        },
+        "cancelAndSaveCompleted": false,
+        "normalReopenVerified": false
+      }
+    ],
+    "diagnosticOnly": true,
+    "redWindowInput": "AXPress on the owned native AXCloseButton",
+    "cause": "Locked Tao delegate does not implement applicationShouldTerminate:. AppKit terminate: bypasses the existing CloseRequested/ExitRequested gate.",
+    "interpretation": "Cmd+Q and external normal quit each exited with status 0 while saving, without a close-wait UI; these were not crashes.",
+    "harnessAttempt1": "Rejected input before editing because the diagnostic omitted NSApplication initialization; preserved separately, not counted as product failure."
+  },
+  "fix": {
+    "status": "implemented-awaiting-macos-build-and-runtime-verification",
+    "path": "src-tauri/src/macos_quit.rs",
+    "scope": "Keep Tao delegate identity and layout; install only its missing termination query, cancel native quit and notify the existing frontend close flow. Unknown delegates/existing handlers fail setup."
+  },
+  "evidence": [
+    {
+      "archive": "mac-matrix-6-evidence-20261018.tar.gz",
+      "sha256": "10434e5d18558599355e7312cb7a7ea0e072f9d82544db4dc95478c3db06534c",
+      "rawFiles": 90,
+      "allHashesVerified": true
+    },
+    {
+      "archive": "mac-quit-diagnostics-20261018.tar.gz",
+      "sha256": "d5da8fa59a1f88a329de48d4de6236f2cebb5fa3a2d238c38ea0ad81b0ea5832",
+      "rawFiles": 87,
+      "allHashesVerified": true
+    }
+  ],
+  "dailyUseApproved": false
+}

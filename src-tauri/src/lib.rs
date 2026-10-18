@@ -1,5 +1,7 @@
 mod commands;
 mod file_watch;
+#[cfg(target_os = "macos")]
+mod macos_quit;
 pub mod note_format;
 #[cfg(feature = "perf-acceptance")]
 mod performance;
@@ -90,6 +92,8 @@ pub fn run() {
             ));
             let workspace = commands::WorkspaceState::new(workspace);
             app.manage(workspace);
+            #[cfg(target_os = "macos")]
+            macos_quit::install(app.handle())?;
             #[cfg(all(feature = "perf-acceptance", target_os = "macos"))]
             performance::macos::attach(app.handle())?;
             Ok(())
@@ -164,8 +168,8 @@ pub fn run() {
         .build(context)
         .expect("error while building CueNote")
         .run(|app, event| {
-            // Includes application-level quit (for example macOS Cmd+Q), which
-            // does not have to arrive as a window close request.
+            // Runtime exit requests share the gate. AppKit's native terminate:
+            // route is separately intercepted by macos_quit before termination.
             if let tauri::RunEvent::ExitRequested { api, .. } = event {
                 if app.state::<CloseGate>().needs_confirmation() {
                     api.prevent_exit();

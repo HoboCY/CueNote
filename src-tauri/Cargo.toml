@@ -15,7 +15,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 # these controls, even if this feature is accidentally enabled during a build.
 storage-fault-injection = []
 # Optimized acceptance runs use an explicit isolated root. Never enabled in packages.
-perf-acceptance = ["dep:block2", "dep:objc2", "dep:objc2-app-kit", "dep:objc2-foundation", "dep:objc2-web-kit"]
+perf-acceptance = ["dep:block2", "dep:objc2-foundation", "dep:objc2-web-kit"]
 
 [[example]]
 name = "storage_fault_probe"
@@ -61,7 +61,7 @@ sha2 = { version = "=0.10.9", features = ["asm"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 block2 = { version = "=0.6.2", optional = true }
-objc2 = { version = "=0.6.5", optional = true }
-objc2-app-kit = { version = "=0.3.2", optional = true, default-features = false, features = ["std", "NSView", "NSWindow", "NSScreen", "NSResponder"] }
+objc2 = { version = "=0.6.5" }
+objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSView", "NSWindow", "NSScreen", "NSResponder"] }
 objc2-foundation = { version = "=0.3.2", optional = true, default-features = false, features = ["std", "NSArray", "NSDictionary", "NSError", "NSString", "NSGeometry", "NSProcessInfo"] }
 objc2-web-kit = { version = "=0.3.2", optional = true, default-features = false, features = ["std", "objc2-app-kit", "WKWebView", "WKContentWorld", "WKFrameInfo", "block2"] }
