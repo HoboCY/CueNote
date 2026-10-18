@@ -1,0 +1,118 @@
+{
+  "format": 1,
+  "issue": 33,
+  "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+  "binarySha256": "badf21b8e530e800461a2dc16e963f9c65b6a9370aba3a89b0fce904fdc0959d",
+  "scope": "Diagnosis only; does not replace frozen Q51/Q52 acceptance.",
+  "dailyUseApproved": false,
+  "formalMacStartupStillFailed": true,
+  "minimized": {
+    "operations": "Select pressure note; perform frozen saves 01 and 32 only; return to ordinary note; exit; restart twice.",
+    "traceEnabled": false,
+    "timingsMs": [
+      3110.0609171390533,
+      2597.8802921772003
+    ],
+    "thresholdMs": 3000,
+    "normalExits": 3,
+    "phases": [
+      {
+        "activationReturnedMs": 866.6230421066284,
+        "documentFocusedMs": 1135.5052921772003,
+        "driverInitializedMs": 966.9643330574036,
+        "firstSnapshotReturnedMs": 1117.106791973114,
+        "foregroundReadyMs": 868.7092921733856,
+        "observerEndpointReadyMs": 853.4737501144409,
+        "processRunReturnedMs": 2.5329580307006836,
+        "readyMs": 3110.0609171390533
+      },
+      {
+        "activationReturnedMs": 406.57487511634827,
+        "documentFocusedMs": 730.8830840587616,
+        "driverInitializedMs": 439.9433751106262,
+        "firstSnapshotReturnedMs": 543.7675001621246,
+        "foregroundReadyMs": 406.84333419799805,
+        "observerEndpointReadyMs": 391.7612090110779,
+        "processRunReturnedMs": 0.8997499942779541,
+        "readyMs": 2597.8802921772003
+      }
+    ],
+    "wrapperExit": "Failure retained: old full-matrix content validator expected title 42, while reduced sequence ends at 32.",
+    "supplementalNativeVerification": {
+      "notes": 1000,
+      "notebooks": 10,
+      "assets": 15,
+      "otherEditedDocumentFieldsExact": true,
+      "reportSha256": "ac7953d03d70cd5cacbdf248c06da0fffa9dce5b5d5f0ce689bf28d6785fd095"
+    },
+    "priorAttempts": [
+      {
+        "version": 1,
+        "reason": "Prelaunch guard incorrectly expected 50 stress-save plans instead of 32."
+      },
+      {
+        "version": 2,
+        "reason": "Clear-search control absent because search was already clear; stopped and normally closed."
+      }
+    ],
+    "evidence": {
+      "utc": "2026-10-18T15:51:30.019562+00:00",
+      "archive": "startup-minimal-save-20261018-evidence.tar.gz",
+      "sha256": "28e2492c78cd757ae6a5308d1967a2e78808f7dfaba51a331a823b35faf9eba9",
+      "bytes": 5610612,
+      "files": 67,
+      "manifestSha256": "b4e1890b60c8a6777ffea36b8109a7d377f1a3a03b316a84e82f94f1390f7b16",
+      "observerSecretsExcluded": true
+    }
+  },
+  "profile": {
+    "traceEnabled": true,
+    "processSampleEnabled": true,
+    "timingMs": 5391.936999797821,
+    "acceptanceMeasurement": false,
+    "normalExits": 2,
+    "observations": {
+      "initialWorkspaceMs": 1459.945875,
+      "initialFullScanMs": 1363.62,
+      "fullProbeDeferredMs": 294,
+      "fullProbeRetryMs": 1521,
+      "processSample": "The early sample includes Tauri window/WebKit construction and loader/graphics work. This alone does not isolate an OS cause."
+    },
+    "evidence": {
+      "utc": "2026-10-18T15:14:28.691648+00:00",
+      "archive": "startup-profile-v3-20261018-evidence.tar.gz",
+      "sha256": "07fe6f032e5bd7381e08e93ad2de36e0e77490b0c9bd8564b0a7915107c5d108",
+      "bytes": 5891484,
+      "files": 53,
+      "manifestSha256": "cfdd0fbb9904962f41c63224593e58ddc5d4f41b7ff89f523b276c9faf7336e2",
+      "observerSecretsExcluded": true
+    },
+    "interruptedPriorRun": {
+      "reason": "Codex became foreground during stress save; test stopped safely before process sampling.",
+      "evidence": {
+        "utc": "2026-10-18T15:14:28.327944+00:00",
+        "archive": "startup-profile-v2-20261018-evidence.tar.gz",
+        "sha256": "9964f9afd7aba96b536ce07e846ac4314edc51db2af897a49352d50c039ed4f8",
+        "bytes": 512146,
+        "files": 32,
+        "manifestSha256": "f55793517dbfed88a6e31661b898d1d1d9b0eb5a7e69f8c145a8d1dd41c2cbf0",
+        "observerSecretsExcluded": true
+      }
+    }
+  },
+  "rankedHypotheses": [
+    {
+      "rank": 1,
+      "prediction": "If initial full-library scan blocks current-note readiness, verified-current-note-first startup should reduce trace-OFF startup time."
+    },
+    {
+      "rank": 2,
+      "prediction": "If repeated background probes compete with first image, retaining but scheduling them after initialization should reduce startup contention."
+    },
+    {
+      "rank": 3,
+      "prediction": "If WebKit initialization dominates after the scan changes, launch phases will retain that delay independently of full-library scan."
+    }
+  ],
+  "next": "Keep complete snapshot semantics, add explicitly pending current-note startup projection, retain durable source verification and mandatory interruptible full probe; rerun original trace-OFF frozen matrix."
+}

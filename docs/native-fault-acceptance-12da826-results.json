@@ -1,0 +1,152 @@
+{
+  "format": 1,
+  "issue": 33,
+  "sourceCommit": "12da826e904acf4d14dfdf0077ab75acf3c65598",
+  "productBaseline": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+  "scope": "Debug native fault-injection harnesses on actual Windows and M1 devices, isolated fresh test roots. No user data, GUI actions, clock change or performance measurement.",
+  "dailyUseApproved": false,
+  "ci": {
+    "runId": 39140866631,
+    "url": "https://github.com/HoboCY/CueNote/actions/runs/39140866631",
+    "role": "Build and encrypt portable arm64 harnesses; CI is not actual device acceptance."
+  },
+  "mac": {
+    "os": "macOS 26.6.2 (25G83)",
+    "cpu": "Apple M1 Pro",
+    "architecture": "arm64",
+    "memoryBytes": 17179869184,
+    "passed": 83,
+    "failed": 0,
+    "ignored": 0,
+    "suites": [
+      {
+        "suite": "storage_interruptions",
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0,
+        "exitCode": 0,
+        "logSha256": "6e6fbc51950eae82679485c8e7080f4f1d917e194c117d1b1120f5c4090b8c0e"
+      },
+      {
+        "suite": "backup_failures",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "exitCode": 0,
+        "logSha256": "0f730b2402f8d5af2a339ec7beee2c4581f0d64120d632d931321a4298ec786a"
+      },
+      {
+        "suite": "backup_restore_failures",
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "exitCode": 0,
+        "logSha256": "1e7c334de7c3e1780d85ec3b3fa8fbb444ec00c044a2cd534de04410c93c0696"
+      },
+      {
+        "suite": "library_restore_failures",
+        "passed": 10,
+        "failed": 0,
+        "ignored": 0,
+        "exitCode": 0,
+        "logSha256": "ff649558f4b29a7351d8aed2cbfdb82ac88dca98b4c25136a3ffc9049116a1ce"
+      },
+      {
+        "suite": "save_failures",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "exitCode": 0,
+        "logSha256": "74d5b72d0b11f6221466d4ddc7c35ca0dd8b64139b87e47a3f5adace9297ffcd"
+      },
+      {
+        "suite": "backups",
+        "passed": 11,
+        "failed": 0,
+        "ignored": 0,
+        "exitCode": 0,
+        "logSha256": "d6d2c9807ad55723f372e30dbc405d2a211fce1adbb373a58aeeb89de7642802"
+      },
+      {
+        "suite": "backup_restore",
+        "passed": 13,
+        "failed": 0,
+        "ignored": 0,
+        "exitCode": 0,
+        "logSha256": "8dbbb4789a491b577b0901ac26d54c711a77149acfae9c57db8033d12d010f47"
+      },
+      {
+        "suite": "library_restore",
+        "passed": 25,
+        "failed": 0,
+        "ignored": 0,
+        "exitCode": 0,
+        "logSha256": "396dd1bed2117201e274053807ca41dddb73136ab5327d79d6fac7d3940dcb00"
+      },
+      {
+        "suite": "storage",
+        "passed": 10,
+        "failed": 0,
+        "ignored": 0,
+        "exitCode": 0,
+        "logSha256": "18ff3004e254e3f4f87d8860b9b252d20453838c2f6cf8283374d83314f0acf6"
+      }
+    ],
+    "exitCode": 0,
+    "finishedUtc": "2026-10-18T15:47:49Z",
+    "consoleSha256": "3b7742868bca1ca3d5dcc7dd30c08d5e1619593a0805637a48e1cbfe5e75d7e1",
+    "artifact": {
+      "encryptedSha256": "c470cbe41586976bb58e71b31d49da3c06afebc4754ab622f6771801c1f4416e",
+      "verifiedPayloads": 16,
+      "archiveSha256": "85020d43638ddc9a1e7c4ffb45e855d3f4da0da43c59539b3b3b1c748a67022f",
+      "runId": 39140866631,
+      "receiptSha256": "25919ad5dcd8935c9ebbd71d24498c057b7927228782d8a39c1e343fd0b09483",
+      "suites": {
+        "backup_restore": 13,
+        "storage": 10,
+        "library_restore": 25,
+        "backup_restore_failures": 3,
+        "storage_interruptions": 7,
+        "library_restore_failures": 10,
+        "backups": 11,
+        "backup_failures": 2,
+        "save_failures": 2
+      },
+      "sourceCommit": "12da826e904acf4d14dfdf0077ab75acf3c65598"
+    },
+    "evidence": {
+      "utc": "2026-10-18T15:48:44.979762+00:00",
+      "archive": "native-macos-12da826-actual-device.tar.gz",
+      "sha256": "ae0c6100217f7e8020b0c1b1ca511c87a43bdcf28bd7de309b7a10916a6dab64",
+      "bytes": 15398,
+      "files": 21,
+      "manifestSha256": "cbce20cab483819a483527f28e5f173c4fefa2bd97e36c7a097db2ea788dfd91",
+      "root": "/Users/hobo/CueNote-native-acceptance-gWP31VC7",
+      "exitCode": 0
+    },
+    "verifiedEvidenceFiles": 21,
+    "execution": "SSH background process; no Terminal window, developer-tool installation or frontend focus required."
+  },
+  "windows": {
+    "passed": 85,
+    "failed": 0,
+    "ignored": 0,
+    "suites": 9,
+    "exitCode": 0,
+    "testsLogSha256": "0975e6025bd80c082e89743abcc04dc0a91311a471d45225c841837b8c291aec",
+    "buildLogSha256": "8616a295dd6a15d0884ec2b046cad34f8689f9e7f90369e5d8e93f4193990224",
+    "invalidRootMarker": {
+      "invalidMarkerRejected": true,
+      "testExecutable": "D:\\Projects\\notebook\\src-tauri\\target\\debug\\deps\\storage_interruptions-5b52fca4770fbcad.exe",
+      "createdFixtureDirectories": 0,
+      "exitCode": 101
+    },
+    "limitation": "Local debug test binaries were built and run before commit from its working-tree changes; individual pre-run executable hashes were not separately recorded."
+  },
+  "coverage": {
+    "A17": "Eight process-exit stages plus candidate disk-full, corruption and publication I/O faults. Restart reads intact original/new version and independently restores the durable draft. Injected-fault case passed on both devices.",
+    "A18": "Native ordinary-history rotation, 31 simulated backup dates, manual-backup preservation and retention-failure checks passed. GUI automatic scheduling substeps remain separate.",
+    "A19": "Native source mutations during copy/publication, partial-copy exit/disk-full, package/assets and separate backup-directory checks passed. Full ordinary GUI/background-edit scenario not completed on both devices.",
+    "A20": "Native single/library restore, pre-backup failures, corrupt source rejection, retained assets/organization and interrupted continue/rollback passed. Ordinary GUI confirmation and full dual-device case remain open."
+  }
+}

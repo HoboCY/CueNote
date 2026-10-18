@@ -1,0 +1,40 @@
+{
+  "format": 1,
+  "issue": 33,
+  "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+  "binarySha256": "a4520e94a0807b7f45a2ed722bd7dbce92016342a312ca6480845002846e0919",
+  "case": "A05",
+  "windows": "通过",
+  "mac": "未测",
+  "dailyUseApproved": false,
+  "scope": "Installed ordinary Windows binary; native GUI and UIA evidence in a dedicated synthetic library.",
+  "stages": [
+    "layout-new",
+    "layout-collapse",
+    "layout-expand",
+    "layout-scroll",
+    "layout-regions-collapse",
+    "layout-regions-expand"
+  ],
+  "verifiedNativeFacts": 48,
+  "unchangedOtherFacts": 7,
+  "noteId": "3cc81d0e-c18e-4704-8774-b3326f5d4b04",
+  "layout": {
+    "cueRatio": 0.2803877703206562,
+    "expandedWidth": 1340,
+    "collapsedWidth": 1610,
+    "samePageScrollPixels": 1106
+  },
+  "cursorContext": {
+    "title": "布局验收AB",
+    "body": "BODY-CONTEXT-AB",
+    "emptySelection": true,
+    "buttonOwnsFocusAfterClick": true
+  },
+  "drafts": "Three sections saved automatically across collapse/expand; native packages contain exact inputs.",
+  "evidence": {
+    "files": 75,
+    "manifestSha256": "69907f548be98e00a74b94f5f9be64e7f039072394c25a342e386ec8447e7a2a"
+  },
+  "limitations": "Button receives keyboard focus as expected; inactive editor selection is retained. Mac full A05 is untested."
+}

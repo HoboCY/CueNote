@@ -232,6 +232,18 @@
       "richExportFiles": 5,
       "allFormatsExportFiles": 18,
       "relativeReferences": 21
+    },
+    "layoutFollowup": {
+      "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+      "report": "windows-layout-9760cf6-results.json",
+      "case": "A05",
+      "passed": true
+    },
+    "nativeFaultFollowup": {
+      "sourceCommit": "12da826e904acf4d14dfdf0077ab75acf3c65598",
+      "passed": 85,
+      "report": "native-fault-acceptance-12da826-results.json",
+      "scope": "Actual-device native debug fault harnesses; other GUI/OneDrive cases remain open."
     }
   },
   "mac": {
@@ -446,6 +458,12 @@
       "over3000ms": [
         3121.4986670017242
       ]
+    },
+    "nativeFaultFollowup": {
+      "sourceCommit": "12da826e904acf4d14dfdf0077ab75acf3c65598",
+      "passed": 83,
+      "report": "native-fault-acceptance-12da826-results.json",
+      "scope": "Actual-device native debug fault harnesses; other GUI/OneDrive cases remain open."
     }
   },
   "cases": [
@@ -475,9 +493,9 @@
     },
     {
       "id": "A05",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "未测",
-      "notes": ""
+      "notes": "Ordinary Windows 9760cf6 layout, same-page scrolling, sidebar collapse/expand, draft and cursor context verified; see windows-layout-9760cf6-results.json. Mac full case remains untested."
     },
     {
       "id": "A06",
@@ -547,27 +565,27 @@
     },
     {
       "id": "A17",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": ""
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "Actual-device fault-injection case: 8 save-stage exits and 3 file-error/corruption stages with restart/readability/durable-draft recovery. See native-fault-acceptance-12da826-results.json; no physical power-cut claim."
     },
     {
       "id": "A18",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json."
     },
     {
       "id": "A19",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Windows 独立性能变体：一次真实保存触发来源检查取消，约 60 秒后原会话自动重试成功，1010 项快照与原库一致；完整 A19、普通包和 Mac 未验收。"
+      "notes": "Windows 独立性能变体：一次真实保存触发来源检查取消，约 60 秒后原会话自动重试成功，1010 项快照与原库一致；完整 A19、普通包和 Mac 未验收。 Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json."
     },
     {
       "id": "A20",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json."
     },
     {
       "id": "A21",
