@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
+mod support;
+
 struct Fixture {
     _temp: tempfile::TempDir,
     root: PathBuf,
@@ -33,21 +35,13 @@ fn reopen(root: &Path) -> Workspace {
 }
 
 fn fixture() -> Fixture {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    fs::create_dir_all(&base).unwrap();
-    let temp = tempfile::Builder::new()
-        .prefix("backup-restore-fault-")
-        .tempdir_in(base)
-        .unwrap();
+    let temp = support::tempdir("backup-restore-fault-");
     let root = temp.path().to_path_buf();
     let mut workspace = reopen(&root);
     let library = workspace.snapshot().unwrap().library.unwrap();
     workspace.create_notebook("恢复前须保护的空笔记本").unwrap();
-    let mut source = storage::open_note(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/valid-rich-v1.cuenote"),
-    )
-    .unwrap()
-    .package;
+    let fixture_path = support::fixture_file(&root, "valid-rich-v1.cuenote");
+    let mut source = storage::open_note(&fixture_path).unwrap().package;
     source.document.note_id = uuid::Uuid::new_v4().to_string();
     source.document.organization.notebook_id = library.default_notebook_id;
     source.document.organization.pinned = true;

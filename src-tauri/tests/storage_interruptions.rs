@@ -8,16 +8,13 @@ use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
+mod support;
+
 const ORIGINAL: &str = "已确认保存的原件";
 const DRAFT: &str = "中断前请求保存的新草稿 📝";
 
 fn setup() -> (tempfile::TempDir, String) {
-    let parent = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    std::fs::create_dir_all(&parent).unwrap();
-    let temp = tempfile::Builder::new()
-        .prefix("interruptions-")
-        .tempdir_in(parent)
-        .unwrap();
+    let temp = support::tempdir("interruptions-");
     let mut workspace = reopen(temp.path());
     workspace.use_default_library().unwrap();
     let session = workspace.new_note().unwrap();

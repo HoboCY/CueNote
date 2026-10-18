@@ -11,6 +11,8 @@ use std::process::{Child, Command, Output, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
+mod support;
+
 const SOURCE_NOTE_ID: &str = "11111111-1111-4111-8111-111111111111";
 const CURRENT_ONLY_NOTE_ID: &str = "22222222-2222-4222-8222-222222222222";
 
@@ -61,12 +63,7 @@ fn fixture() -> Fixture {
 }
 
 fn fixture_with_payload(payload_chars: usize) -> Fixture {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    fs::create_dir_all(&base).unwrap();
-    let temp = tempfile::Builder::new()
-        .prefix("library-restore-fault-")
-        .tempdir_in(base)
-        .unwrap();
+    let temp = support::tempdir("library-restore-fault-");
     let root = temp.path().to_path_buf();
     let library = root.join("library");
     let mut workspace = isolated_workspace(&root);
@@ -75,11 +72,8 @@ fn fixture_with_payload(payload_chars: usize) -> Fixture {
     let default_notebook_id = selected.default_notebook_id.unwrap();
     workspace.create_notebook("源备份中的空笔记本").unwrap();
 
-    let mut source_package = storage::open_note(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/valid-rich-v1.cuenote"),
-    )
-    .unwrap()
-    .package;
+    let fixture_path = support::fixture_file(&root, "valid-rich-v1.cuenote");
+    let mut source_package = storage::open_note(&fixture_path).unwrap().package;
     source_package.document.note_id = SOURCE_NOTE_ID.into();
     source_package.document.organization.notebook_id = Some(default_notebook_id);
     source_package.document.organization.pinned = true;

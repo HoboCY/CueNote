@@ -1,15 +1,11 @@
 use cuenote_lib::note_format::{Block, Inline, NoteContent, PlainText, Sections};
 use cuenote_lib::storage;
 use cuenote_lib::workspace::Workspace;
-use std::path::Path;
+
+mod support;
 
 fn setup() -> (tempfile::TempDir, Workspace, String, String) {
-    let parent = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    std::fs::create_dir_all(&parent).unwrap();
-    let temp = tempfile::Builder::new()
-        .prefix("save-failures-")
-        .tempdir_in(parent)
-        .unwrap();
+    let temp = support::tempdir("save-failures-");
     let root = temp.path();
     let mut workspace = Workspace::new(
         root.join("settings"),

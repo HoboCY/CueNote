@@ -9,13 +9,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+mod support;
+
 fn workspace_temp(prefix: &str) -> tempfile::TempDir {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    fs::create_dir_all(&base).unwrap();
-    tempfile::Builder::new()
-        .prefix(prefix)
-        .tempdir_in(base)
-        .unwrap()
+    support::tempdir(prefix)
 }
 
 fn workspace_at(root: &Path) -> Workspace {

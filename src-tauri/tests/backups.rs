@@ -3,17 +3,14 @@ use cuenote_lib::note_format::PlainText;
 use cuenote_lib::storage;
 use cuenote_lib::workspace::{BackupControl, BackupKind, Workspace};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+mod support;
+
 fn workspace_temp() -> tempfile::TempDir {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    std::fs::create_dir_all(&base).unwrap();
-    tempfile::Builder::new()
-        .prefix("backups-")
-        .tempdir_in(base)
-        .unwrap()
+    support::tempdir("backups-")
 }
 
 fn selected_workspace() -> (tempfile::TempDir, Workspace, PathBuf) {

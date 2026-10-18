@@ -6,13 +6,10 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+mod support;
+
 fn isolated_workspace() -> (tempfile::TempDir, Workspace, PathBuf) {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    fs::create_dir_all(&base).unwrap();
-    let temp = tempfile::Builder::new()
-        .prefix("library-restore-")
-        .tempdir_in(base)
-        .unwrap();
+    let temp = support::tempdir("library-restore-");
     let library = temp.path().join("Library");
     let mut workspace = Workspace::new(
         temp.path().join("settings"),

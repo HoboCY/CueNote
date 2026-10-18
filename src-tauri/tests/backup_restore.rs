@@ -5,15 +5,12 @@ use cuenote_lib::workspace::{
 };
 use sha2::{Digest, Sha256};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+
+mod support;
 
 fn workspace_temp() -> tempfile::TempDir {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    fs::create_dir_all(&base).unwrap();
-    tempfile::Builder::new()
-        .prefix("backup-restore-")
-        .tempdir_in(base)
-        .unwrap()
+    support::tempdir("backup-restore-")
 }
 
 fn selected_workspace() -> (tempfile::TempDir, Workspace, PathBuf) {
@@ -179,11 +176,10 @@ fn restore_protects_current_library_then_reopens_the_complete_selected_package()
         .unwrap()
         .default_notebook_id
         .unwrap();
-    let mut original = storage::open_note(
-        &Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/valid-rich-v1.cuenote"),
-    )
-    .unwrap()
-    .package;
+    let mut original =
+        storage::open_note(&support::fixture_file(temp.path(), "valid-rich-v1.cuenote"))
+            .unwrap()
+            .package;
     original.document.note_id = uuid::Uuid::new_v4().to_string();
     original.document.organization.notebook_id = Some(default_notebook_id);
     original.document.organization.pinned = true;
