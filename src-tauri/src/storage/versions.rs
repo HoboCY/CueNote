@@ -205,8 +205,8 @@ pub(crate) struct ObservedVersionWitness {
 /// preservation of a new source; it only lets `verify_observed_version_witness`
 /// re-check the already stored version without parsing the package again.
 ///
-/// This function reads `metadata.json` again under the existing shared
-/// store/version locks and requires it to bind exactly to the opened note
+/// This function reads `metadata.json` again under the existing shared store
+/// lock and requires it to bind exactly to the opened note
 /// identity/title, the opened source revision, the normalized origin, and an
 /// ordinary (non-conflict) version. Metadata that is unavailable or does not
 /// match is an error; no package bytes are parsed or re-encoded here.
@@ -226,7 +226,9 @@ pub(crate) fn observed_version_witness(
     let versions = ensure_child_directory(&root, VERSIONS_DIRECTORY, false)?
         .ok_or_else(|| StorageError::new("versionNotFound", "已保存版本不存在；没有跳过保留。"))?;
     let _store_lock = acquire_store_lock(&root, true)?;
-    let _version_lock = acquire_version_lock(&root, &version_id, true)?;
+    // Publication, resolution and rotation require the exclusive store lock.
+    // The cached receipt does not pin the version after this read; subsequent
+    // use must revalidate it. A per-version lock here adds a durable index write.
     let metadata = read_metadata(&versions, &version_id)?;
     if metadata.conflict
         || metadata.version_id != version_id
@@ -266,7 +268,7 @@ pub(crate) fn observed_version_witness(
 ///   acquisition failure). The caller must also fall back to the existing full
 ///   open+preserve path.
 ///
-/// The verifier only takes the existing shared store/version locks and never
+/// The verifier only takes the existing shared store lock and never
 /// writes, deletes, rotates, or re-permissions version data. The stored
 /// revision may differ from the source revision because preservation may
 /// re-encode the package; the stored package is hashed against its own stored
@@ -299,7 +301,8 @@ pub(crate) fn verify_observed_version_witness(
         return Ok(false);
     };
     let _store_lock = acquire_store_lock(&root, true)?;
-    let _version_lock = acquire_version_lock(&root, &witness.version_id, true)?;
+    // Like open_version, this excludes cooperating version-store writers for
+    // the whole read. VersionLease keeps its separate lock beyond that scope.
 
     let metadata = match read_metadata(&versions, &witness.version_id) {
         Ok(metadata) => metadata,
@@ -1945,6 +1948,64 @@ mod tests {
         assert!(list.versions[0].title.ends_with('…'));
         let preserved = open_version(&root, &list.versions[0].version_id)?;
         assert_eq!(preserved.opened.package.document.title, full_title);
+        Ok(())
+    }
+
+    #[test]
+    fn witness_readers_wait_for_version_store_maintenance() -> Result<(), StorageError> {
+        use std::sync::mpsc::{self, RecvTimeoutError};
+        use std::time::Duration;
+
+        let directory = version_temp();
+        let source = directory.path().join("origin.cuenote");
+        let root = directory.path().join("preserved");
+        let origin = "external note";
+        write_package_file(&source, &plain("Protected receipt", "original content")).unwrap();
+        let opened = crate::storage::open_note(&source)?;
+        preserve_observed_version(&root, &opened, origin, "observed")?;
+        let witness = super::observed_version_witness(&root, &opened, origin)?;
+        let metadata = root
+            .join(super::VERSIONS_DIRECTORY)
+            .join(&witness.version_id)
+            .join(super::METADATA_NAME);
+        let original = fs::read(&metadata).unwrap();
+
+        for verify_cached in [false, true] {
+            let store_lock = super::acquire_store_lock(&root, false)?;
+            // An exclusive writer may temporarily leave unreadable state.
+            // Neither receipt reader may observe it before the writer finishes.
+            fs::write(&metadata, b"in-flight maintenance").unwrap();
+            let (started_tx, started_rx) = mpsc::channel();
+            let (result_tx, result_rx) = mpsc::channel();
+            let reader_root = root.clone();
+            let reader_source = source.clone();
+            let reader_witness = witness.clone();
+            let reader = std::thread::spawn(move || {
+                let opened = crate::storage::open_note(&reader_source).unwrap();
+                started_tx.send(()).unwrap();
+                let result = if verify_cached {
+                    super::verify_observed_version_witness(
+                        &reader_root,
+                        &reader_witness,
+                        &opened.revision,
+                        origin,
+                        &opened.package.document.note_id,
+                        &opened.package.document.title,
+                    )
+                } else {
+                    super::observed_version_witness(&reader_root, &opened, origin).map(|_| true)
+                };
+                result_tx.send(result).unwrap();
+            });
+            started_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+            let premature = result_rx.recv_timeout(Duration::from_millis(200));
+            fs::write(&metadata, &original).unwrap();
+            drop(store_lock);
+            assert!(matches!(premature, Err(RecvTimeoutError::Timeout)));
+            assert!(result_rx.recv_timeout(Duration::from_secs(5)).unwrap()?);
+            reader.join().unwrap();
+        }
+        assert_eq!(fs::read(metadata).unwrap(), original);
         Ok(())
     }
 

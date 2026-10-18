@@ -65,5 +65,6 @@ return JSON.stringify({rect:r,containers,viewport:{width:innerWidth,height:inner
   hovered:el.matches(':hover'),
   textFocus:textTarget ? {focused:document.activeElement===textTarget} : null,
   visible:!el.disabled && r.width>0 && r.height>0 && x>=0 && y>=0 && x<innerWidth && y<innerHeight && el.contains(document.elementFromPoint(x,y)),
+  id:el.id,tagName:el.tagName,value:typeof el.value==='string'?el.value:null,
   focused:document.activeElement===el,selection:el.selectionStart===undefined?null:{start:el.selectionStart,end:el.selectionEnd},
   text:el.textContent?.slice(0,1024)});

@@ -246,6 +246,16 @@ final class Driver {
     }
     func key(_ value: Object) throws {
         let name = text(value["code"]), modifiers = Int(number(value["modifiers"]))
+        // Native select-all dispatch can complete after the next Unicode event.
+        // Observe its actual text-field selection before sending replacement
+        // text, including when a repeated click targets an already focused field.
+        var selectAllField: Object?
+        if name == "KeyA", modifiers == 2 {
+            let field=try object(request("element",selector:":focus")["value"])
+            guard yes(field["focused"]), !text(field["id"]).isEmpty, field["selection"] is Object,
+                  let content=field["value"] as? String else {throw Failure("Select-all requires a focused text field")}
+            selectAllField=["id":text(field["id"]),"tagName":text(field["tagName"]),"value":content]
+        }
         var flags: CGEventFlags = []
         if modifiers & 2 != 0 { flags.insert(.maskCommand) }
         if modifiers & 8 != 0 { flags.insert(.maskShift) }
@@ -255,6 +265,26 @@ final class Driver {
         if name == "End" { codes[name] = 124; flags.insert(.maskCommand) }
         guard let code = codes[name] else { throw Failure("Unsupported native key: \(name)") }
         for down in [true,false] { let event = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down); event?.flags = flags; try post(event) }
+        if let expected=selectAllField {
+            let content=text(expected["value"])
+            let start=monotonicMs(), deadline=start+5000
+            while true {
+                try foreground()
+                let response=try request("element",selector:":focus",paint:true), field=try object(response["value"])
+                guard monotonicMs()<deadline else {throw Failure("Native select-all did not select the complete field in time")}
+                guard yes(field["focused"]), text(field["id"])==text(expected["id"]),
+                      text(field["tagName"])==text(expected["tagName"]), text(field["value"])==content,
+                      let selection=field["selection"] as? Object,
+                      let selectionStart=selection["start"] as? NSNumber,
+                      let selectionEnd=selection["end"] as? NSNumber,
+                      selectionStart.doubleValue.isFinite, selectionEnd.doubleValue.isFinite else {throw Failure("Text field changed during native select-all")}
+                if selectionStart.doubleValue==0, selectionEnd.doubleValue==Double(content.utf16.count) {
+                    try append(run+"/native-selection.jsonl",["elapsedMs":monotonicMs()-start,"field":field])
+                    break
+                }
+                pause(5)
+            }
+        }
     }
     func action(_ value: Object) throws {
         try foreground()
