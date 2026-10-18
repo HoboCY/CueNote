@@ -199,6 +199,14 @@
     "savePerformanceDiagnosis": {
       "formalOrdinarySavePassed": false,
       "report": "performance-macos-save-diagnosis.md"
+    },
+    "matrix7Followup": {
+      "sourceCommit": "f6997c1fcfba2fc3056c22b9e24eb6d435a02902",
+      "fullMatrixPassed": false,
+      "metricSamples": 265,
+      "normalExitsIncludingCalibration": 5,
+      "nativeResourceTestsPassed": 47,
+      "report": "performance-macos-matrix7-results.json"
     }
   },
   "cases": [

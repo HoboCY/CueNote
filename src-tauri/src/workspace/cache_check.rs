@@ -2,9 +2,10 @@ use super::*;
 use std::sync::{atomic::AtomicBool, mpsc, Mutex};
 use std::thread::JoinHandle;
 
-// Only sixteen directory entries may be observed ahead of serial consumption.
+// At most sixty-four directory entries may be observed ahead of serial consumption.
 // Up to eight workers stream bytes; native decoding stays on the scanner thread.
-const WINDOW: usize = 16;
+// Keep enough small jobs queued while a large package holds up sorted consumption.
+const WINDOW: usize = 64;
 
 struct Job {
     index: usize,

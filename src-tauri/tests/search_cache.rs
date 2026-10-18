@@ -191,3 +191,80 @@ fn local_search_cache_is_disposable_and_never_changes_saved_notes() {
     assert!(!results.incomplete);
     assert_eq!(fs::read(note_path).unwrap(), original);
 }
+
+#[test]
+fn warm_large_library_checks_changed_sources_and_damaged_witnesses_across_batches() {
+    use cuenote_lib::note_format::{write_package, NotePackage};
+    let temp = test_root();
+    let root = temp.path();
+    let mut app = workspace(root);
+    let notebook = app
+        .select_library(root.join("Library"))
+        .unwrap()
+        .library
+        .unwrap()
+        .default_notebook_id
+        .unwrap();
+    let mut packages = Vec::new();
+    for index in 0..129 {
+        let mut package = NotePackage::new_plain(
+            notebook.clone(),
+            PlainText {
+                title: format!("Large cache {index}"),
+                cue: String::new(),
+                content: "batch-baseline-token".into(),
+                summary: String::new(),
+            },
+        );
+        package.document.note_id = format!("00000000-0000-4000-8000-{index:012x}");
+        let path = root
+            .join("Library/notes")
+            .join(format!("{}.cuenote", package.document.note_id));
+        write_package(&mut fs::File::create(&path).unwrap(), &package).unwrap();
+        packages.push((package, path));
+    }
+    app.snapshot().unwrap();
+    assert_eq!(
+        app.search_notes("batch-baseline-token", None, 0)
+            .unwrap()
+            .total,
+        129
+    );
+    let witness = app
+        .list_preserved_versions()
+        .unwrap()
+        .versions
+        .into_iter()
+        .find(|version| version.note_id == packages[64].0.document.note_id && !version.conflict)
+        .unwrap();
+    drop(app);
+    // Exercise early, middle and final entries without relying on completion
+    // order or timestamps to authorize a cached search result.
+    for index in [0, 63, 128] {
+        let (package, path) = &mut packages[index];
+        package.document.title = "batch-changed-token".into();
+        write_package(&mut fs::File::create(path).unwrap(), package).unwrap();
+    }
+    let damaged = root
+        .join("recovery/versions")
+        .join(witness.version_id)
+        .join("note.cuenote");
+    fs::write(&damaged, b"damaged batch witness").unwrap();
+    let untouched_source = fs::read(&packages[64].1).unwrap();
+    let mut reopened = workspace(root);
+    reopened.snapshot().unwrap();
+    let changed = reopened
+        .search_notes("batch-changed-token", None, 0)
+        .unwrap();
+    assert_eq!(changed.total, 3);
+    assert!(changed.incomplete);
+    assert_eq!(
+        reopened
+            .search_notes("batch-baseline-token", None, 0)
+            .unwrap()
+            .total,
+        128
+    );
+    assert_eq!(fs::read(&damaged).unwrap(), b"damaged batch witness");
+    assert_eq!(fs::read(&packages[64].1).unwrap(), untouched_source);
+}

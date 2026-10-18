@@ -1,0 +1,233 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "sourceCommit": "f6997c1fcfba2fc3056c22b9e24eb6d435a02902",
+  "applicationSha256": "64315b10e008ef06e568afdcd53f23d21a03771931c29f5678a27e3d0fc6b118",
+  "driverSha256": "21e492fbd837cf5b9d122c42537288a335fbcc4b1bfccf88588ec7cde2581c23",
+  "matrix": {
+    "completed": false,
+    "timingGatesPassed": false,
+    "metricSamples": 265,
+    "allRunsClosed": true,
+    "normalExitsIncludingCalibration": 5,
+    "failure": "Document lost visibility/focus during the first stress save; stopped without restoring focus or counting the interrupted operation.",
+    "failedMeasuredGates": [
+      "initial-index",
+      "ordinary-save",
+      "ordinary-input"
+    ],
+    "unmeasuredGates": [
+      "startup",
+      "stress-save",
+      "search",
+      "stress-map",
+      "stress-input"
+    ],
+    "metrics": [
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 3000,
+        "metric": "startup",
+        "minimumCount": 10,
+        "passed": false,
+        "rule": "maximum"
+      },
+      {
+        "count": 3,
+        "groups": {
+          "first": {
+            "count": 3,
+            "maxMs": 68655.25524997711,
+            "p95Ms": 68655.25524997711
+          }
+        },
+        "limitMs": 60000,
+        "maxMs": 68655.25524997711,
+        "metric": "initial-index",
+        "minimumCount": 3,
+        "p95Ms": 68655.25524997711,
+        "passed": false,
+        "rule": "maximum"
+      },
+      {
+        "count": 60,
+        "groups": {
+          "cached": {
+            "count": 30,
+            "maxMs": 448.9626250267029,
+            "p95Ms": 383.9629170894623
+          },
+          "first": {
+            "count": 30,
+            "maxMs": 3607.6893751621246,
+            "p95Ms": 433.3899579048157
+          }
+        },
+        "limitMs": 1000,
+        "maxMs": 3607.6893751621246,
+        "metric": "ordinary-open",
+        "minimumCount": 60,
+        "p95Ms": 430.92729115486145,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 40,
+        "groups": {
+          "cached": {
+            "count": 30,
+            "maxMs": 1732.5012500286102,
+            "p95Ms": 1679.997750043869
+          },
+          "first": {
+            "count": 10,
+            "maxMs": 1853.3942918777466,
+            "p95Ms": 1853.3942918777466
+          }
+        },
+        "limitMs": 5000,
+        "maxMs": 1853.3942918777466,
+        "metric": "stress-open",
+        "minimumCount": 40,
+        "p95Ms": 1679.997750043869,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 32,
+        "groups": {
+          "cached": {
+            "count": 28,
+            "maxMs": 6858.604291915894,
+            "p95Ms": 6856.789124965668
+          },
+          "first": {
+            "count": 1,
+            "maxMs": 3974.4219579696655,
+            "p95Ms": 3974.4219579696655
+          },
+          "rotation": {
+            "count": 3,
+            "maxMs": 5573.656584024429,
+            "p95Ms": 5573.656584024429
+          }
+        },
+        "limitMs": 2000,
+        "maxMs": 6858.604291915894,
+        "metric": "ordinary-save",
+        "minimumCount": 32,
+        "p95Ms": 6856.789124965668,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 10000,
+        "metric": "stress-save",
+        "minimumCount": 32,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 300,
+        "metric": "search",
+        "minimumCount": 30,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 30,
+        "groups": {
+          "cached": {
+            "count": 29,
+            "maxMs": 295.202999830246,
+            "p95Ms": 238.18225002288818
+          },
+          "first": {
+            "count": 1,
+            "maxMs": 249.35599994659424,
+            "p95Ms": 249.35599994659424
+          }
+        },
+        "limitMs": 1000,
+        "maxMs": 295.202999830246,
+        "metric": "ordinary-map",
+        "minimumCount": 30,
+        "p95Ms": 249.35599994659424,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 3000,
+        "metric": "stress-map",
+        "minimumCount": 30,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 100,
+        "groups": {
+          "cached": {
+            "count": 100,
+            "maxMs": 212.39891600608826,
+            "p95Ms": 129.65458416938782
+          }
+        },
+        "limitMs": 100,
+        "maxMs": 212.39891600608826,
+        "metric": "ordinary-input",
+        "minimumCount": 100,
+        "p95Ms": 129.65458416938782,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 200,
+        "metric": "stress-input",
+        "minimumCount": 100,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      }
+    ],
+    "evidenceLimitation": "Wrapper conditional subshell continued to resource tests after matrix failure and exited 0. Verdict uses the matrix summary, raw failures, measurements and close records, never wrapper exit alone."
+  },
+  "nativePackageComparison": {
+    "unchangedNotesByteExact": 998,
+    "notebooksByteExact": 10,
+    "savedOrdinaryTitle": "普通样本 32 · SHARED-Q51-ORDINARY",
+    "savedStressTitle": "压力样本 01 · SHARED-Q51-STRESS",
+    "otherContentIdentityAssetsExact": true,
+    "scope": "Post-failure comparison of 1000 notes and 10 notebooks; not final verify-edited acceptance because the matrix stopped before completing the planned edits."
+  },
+  "resources": {
+    "passed": true,
+    "tests": 47,
+    "failed": 0,
+    "ignored": 0,
+    "hostedCI": false
+  },
+  "focusEvidence": {
+    "appWindowKey": false,
+    "documentFocused": false,
+    "firstVisibility": "hidden",
+    "followingVisibility": "visible",
+    "limitation": "The synchronous driver does not service a continuous AppKit main run loop; its NSRunningApplication active/frontmost fields can lag. These fields do not rule out external activation."
+  },
+  "evidence": {
+    "archive": "mac-matrix-7-evidence-20261018.tar.gz",
+    "sha256": "94c3ec4e92ea1acb0c45d47e44ee8adccdc5a3a2bc88b02d816cbf1ea9422fd0",
+    "files": 79,
+    "allHashesVerified": true,
+    "rawStatisticsRecomputed": true
+  },
+  "dailyUseApproved": false
+}
