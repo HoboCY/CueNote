@@ -12,7 +12,7 @@ use std::{
 use block2::RcBlock;
 use objc2::{rc::Retained, runtime::AnyObject, MainThreadMarker};
 use objc2_app_kit::{NSScreen, NSView};
-use objc2_foundation::{NSError, NSProcessInfo, NSString};
+use objc2_foundation::{NSError, NSProcessInfo, NSRect, NSString};
 use objc2_web_kit::{WKContentWorld, WKWebView};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -46,11 +46,45 @@ fn geometry(webview: &WKWebView) -> Result<Value, String> {
     let rect = window.convertRectToScreen(view.convertRect_toView(view.bounds(), None));
     let screens = NSScreen::screens(mtm);
     let primary = screens.firstObject().ok_or("No primary screen")?.frame();
+    let screen_rect = |rect: NSRect| {
+        json!({
+            "x": rect.origin.x,
+            "y": primary.origin.y + primary.size.height - (rect.origin.y + rect.size.height),
+            "width": rect.size.width, "height": rect.size.height,
+        })
+    };
+    let view_rect =
+        |rect: NSRect| screen_rect(window.convertRectToScreen(view.convertRect_toView(rect, None)));
+    let safe = view.safeAreaInsets();
+    let obscured = if NSProcessInfo::processInfo()
+        .operatingSystemVersion()
+        .majorVersion
+        >= 26
+    {
+        // Public since macOS 26; this callback holds a live main-thread view.
+        let insets = unsafe { webview.obscuredContentInsets() };
+        json!({"top":insets.top,"left":insets.left,"bottom":insets.bottom,"right":insets.right})
+    } else {
+        Value::Null
+    };
     Ok(json!({
         "x": rect.origin.x,
         "y": primary.origin.y + primary.size.height - (rect.origin.y + rect.size.height),
         "width": rect.size.width, "height": rect.size.height,
         "windowNumber": window.windowNumber(), "key": window.isKeyWindow(),
+        // Keep the candidates separate: none is assumed to be the CSS viewport.
+        "nativeGeometry": {
+            "bounds": view_rect(view.bounds()),
+            "visibleRect": view_rect(view.visibleRect()),
+            "safeAreaRect": view_rect(view.safeAreaRect()),
+            "windowContentLayoutRect": screen_rect(window.convertRectToScreen(window.contentLayoutRect())),
+            "safeAreaInsets": {"top":safe.top,"left":safe.left,"bottom":safe.bottom,"right":safe.right},
+            "obscuredContentInsets": obscured,
+            "isFlipped": view.isFlipped(),
+            // Read-only WebKit properties, on the same verified main thread.
+            "pageZoom": unsafe { webview.pageZoom() },
+            "magnification": unsafe { webview.magnification() },
+        },
     }))
 }
 

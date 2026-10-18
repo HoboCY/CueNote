@@ -45,7 +45,9 @@ do {
                 }
                 let before=monotonicMs(); let painted=try driver.snapshot(true)
                 guard number(painted["observedFrames"])==2 else {throw Failure("Async observation did not await both frames")}
-                try printJSON(["invalidRequestsRejected":true,"asyncPaintReadMs":monotonicMs()-before,"paintedSnapshot":painted,"snapshot":driver.snapshot()])
+                let paintReadMs=monotonicMs()-before
+                let geometry=try object(driver.request("snapshot")["screen"])
+                try printJSON(["invalidRequestsRejected":true,"asyncPaintReadMs":paintReadMs,"paintedSnapshot":painted,"snapshot":driver.snapshot(),"screen":geometry])
             }
         } catch {try? append(args[1]+"/failures.jsonl",["command":args[0],"error":String(describing:error)]); throw error}
     default: throw Failure("Use doctor, launch, inspect, actions, close, capture or protocol-check")

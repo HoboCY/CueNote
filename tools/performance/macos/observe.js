@@ -54,6 +54,10 @@ for(let parent=el.parentElement; parent; parent=parent.parentElement) {
   }
 }
 return JSON.stringify({rect:r,containers,viewport:{width:innerWidth,height:innerHeight,devicePixelRatio},
+  documentScroll:document.scrollingElement ? {top:document.scrollingElement.scrollTop,left:document.scrollingElement.scrollLeft,
+    height:document.scrollingElement.scrollHeight,width:document.scrollingElement.scrollWidth,
+    clientHeight:document.scrollingElement.clientHeight,clientWidth:document.scrollingElement.clientWidth} : null,
+  hovered:el.matches(':hover'),
   visible:!el.disabled && r.width>0 && r.height>0 && x>=0 && y>=0 && x<innerWidth && y<innerHeight && el.contains(document.elementFromPoint(x,y)),
   focused:document.activeElement===el,selection:el.selectionStart===undefined?null:{start:el.selectionStart,end:el.selectionEnd},
   text:el.textContent?.slice(0,1024)});

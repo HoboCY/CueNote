@@ -14,6 +14,13 @@ try {
   check=JSON.parse(capture(driver,['protocol-check',launch.run]));
   if(!check.invalidRequestsRejected || check.paintedSnapshot.observedFrames!==2 ||
      !check.snapshot.text.includes('选择你的笔记库')) throw new Error('Observer check failed');
+  const geometry=check.screen.nativeGeometry;
+  for(const name of ['bounds','visibleRect','safeAreaRect','windowContentLayoutRect']) {
+    const rect=geometry[name];
+    if(!['x','y','width','height'].every(key=>Number.isFinite(rect[key])) || rect.width<=0 || rect.height<=0)
+      throw new Error(`Invalid native geometry: ${name}`);
+  }
+  if(!(geometry.pageZoom>0) || !(geometry.magnification>0)) throw new Error('Invalid WebKit scale');
 } finally { run(driver,['close',launch.run]); }
 const permissions=JSON.parse(capture(driver,['doctor']));
 const resourceRoot=path.join(process.env.HOME,'CueNote-resource-ci');
