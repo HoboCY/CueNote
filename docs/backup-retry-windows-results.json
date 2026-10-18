@@ -1,0 +1,150 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "hostedCI": false,
+  "passed": true,
+  "scope": "One real stress-note save naturally cancels automatic backup during source checking; same-session automatic retry and exact native content verification. Excluded from Q51 timing. Not repeated pressure, copy/publish race, restore or complete A19 acceptance.",
+  "implementationCommit": "00c1e3f825503939648326607882186410545985",
+  "sourceCommit": "e45668880801034746cc9b5e9d43c2bb896cda85",
+  "exeSha256": "bf93286f0b8145839953ed6a627df67cc5790590f2b542e60d076bb36386cb58",
+  "formalInstalledCandidate": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+  "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+  "session": {
+    "pid": 81220,
+    "startedUtc": "2026-10-18T03:11:08.299Z",
+    "exeSha256": "bf93286f0b8145839953ed6a627df67cc5790590f2b542e60d076bb36386cb58",
+    "targetId": "C36D80DD41AD5D80BE1BE7419DB8FB4C",
+    "targetUrl": "http://tauri.localhost/",
+    "timeOrigin": 1792293068741.5
+  },
+  "observations": 526,
+  "maxObservationGapMs": 321.648199999996,
+  "timeline": {
+    "firstAutomaticOperationUtc": "2026-10-18T03:11:36.484Z",
+    "cancelledUtc": "2026-10-18T03:11:38.708Z",
+    "finalSavedUtc": "2026-10-18T03:11:42.135Z",
+    "automaticRetryObservedUtc": "2026-10-18T03:12:38.735Z",
+    "retryStartAfterCancellationMs": 60026.8335,
+    "successfulUtc": "2026-10-18T03:12:57.290Z",
+    "successAfterCancellationMs": 78582.1502,
+    "normalExitUtc": "2026-10-18T03:13:02.5268724Z"
+  },
+  "automaticBackup": {
+    "backupId": "09b22bc5-7c97-43f5-ae95-8be454f9cdbb",
+    "kind": "automatic",
+    "newPublishedSnapshots": 1,
+    "notes": 1000,
+    "notebooks": 10,
+    "sourceManifestAndBackupExact": true,
+    "noStagingRemnants": true
+  },
+  "content": {
+    "verifiedUtc": "2026-10-18T03:17:24.5690073Z",
+    "notesChecked": 1000,
+    "untouchedNotesByteExact": 999,
+    "notebooksByteExact": 10,
+    "editedNote": "da509c0e-7713-4234-b8eb-ec5fd6f993d6",
+    "title": "压力样本 01 · SHARED-Q51-STRESS",
+    "onlyTitleAndContentTimestampChanged": true,
+    "allOtherDocumentAndIdentityExact": true,
+    "assetsAndManifestByteExact": true,
+    "packageEntriesChecked": 12,
+    "sourceUnchangedAfterBackup": true,
+    "backupRootOnlyExpectedEntries": true,
+    "scope": "One real save cancels source-check phase; same-session automatic retry. Does not cover repeated pressure, copy/publish races, recovery or full A19."
+  },
+  "normalExit": {
+    "pid": 81220,
+    "exitCode": 0,
+    "normalExit": true,
+    "utc": "2026-10-18T03:13:02.5268724Z"
+  },
+  "evidenceHashes": [
+    {
+      "file": "windows-backup-retry-1/retry-result.json",
+      "sha256": "9e3eb830b03d1f63100b45e7d68842c8e0ea74fdec157b3d0260f1ffcd0a2b90"
+    },
+    {
+      "file": "windows-backup-retry-1/content-verification.json",
+      "sha256": "ab2e616657e27734a7ead9615df981669fe4252b44bb151af6df2b2c315cc459"
+    },
+    {
+      "file": "windows-backup-retry-1/observations.jsonl",
+      "sha256": "cfb82144697e4b254b990baca4bcabc56e845e59b42ebd5d8b75f2c787e524dd"
+    },
+    {
+      "file": "windows-backup-retry-1/exit-status.json",
+      "sha256": "122e4ed4b0d764318b6f648269fc4ee1224df1c545b4a0fae632ebf524e9401b"
+    },
+    {
+      "file": "windows-backup-retry-1/session-identity.json",
+      "sha256": "ef37047d26c74fc497326d555568f87faa96fdab46bf4b56d47af06ffb48e3cb"
+    },
+    {
+      "file": "windows-backup-retry-1/baseline-inventory.json",
+      "sha256": "f34d20b13edb05e4ea2cfec1fd5c3a8ddebcab823f5d0c3c2d31670155cf2ae3"
+    },
+    {
+      "file": "windows-backup-retry-1/quiescent-inventory.json",
+      "sha256": "80b8ac815714913ed2abcb8107dbaa9f6a234fccb6fe43c2e532c9f47ff3179b"
+    },
+    {
+      "file": "windows-backup-retry-1/post-backup-inventory.json",
+      "sha256": "b6126f1e1efac4704ac0b425223755054a06121c82d711f2481490b00d36db0f"
+    },
+    {
+      "file": "windows-backup-retry-1/backup-inventory.json",
+      "sha256": "80b8ac815714913ed2abcb8107dbaa9f6a234fccb6fe43c2e532c9f47ff3179b"
+    },
+    {
+      "file": "windows-backup-retry-1/backup-manifest.json",
+      "sha256": "ff6291371317a4be3e0be2d6994ec671e60dac035dc7979f0845fc78ea7b8e7c"
+    },
+    {
+      "file": "windows-backup-retry-1/final-edit.json",
+      "sha256": "77de2c3ecd08892d29ba1a0bda03afcfe1e51488ea29d238d85c6780c2ac8ee7"
+    },
+    {
+      "file": "windows-backup-retry-1/corpus-copy.json",
+      "sha256": "b7a2ce6230419318c6b2776e9b01cd5c43985cf306de3a753dffb82fb5b587c5"
+    },
+    {
+      "file": "windows-backup-retry-1/measurements/2026-10-18T03-11-08-293Z/launcher.json",
+      "sha256": "0e7dbb9ba780c4eb393c2d4a021724d548a9ff63f7dbe7101e56dff0c7991145"
+    },
+    {
+      "file": "windows-backup-retry-1/measurements/2026-10-18T03-11-08-293Z/startup.json",
+      "sha256": "b6a5b815ac4c819a424d41a6dad599d745da589f3aa67d95583f14da1f3fca02"
+    },
+    {
+      "file": "windows-backup-retry-1/measurements/2026-10-18T03-11-08-293Z/measurements.jsonl",
+      "sha256": "138e8d3981e603d5894be5b89bf8f1835f10a29278b68480908972c8947a98fd"
+    },
+    {
+      "file": "windows-backup-retry-1/measurements/2026-10-18T03-11-08-293Z/close-attempts.jsonl",
+      "sha256": "97b9ee8f29b65831c119ad4ff00e074c3fdf04711c457580c3a4e63f6457bb4f"
+    },
+    {
+      "file": "windows-backup-retry-1/measurements/2026-10-18T03-11-08-293Z/backup-retry-success.png",
+      "sha256": "8596a3fefe7343eede535bc54c66f4297176968d011b046388e0757ee003c0e4"
+    },
+    {
+      "file": "verify-backup-retry.mjs",
+      "sha256": "27fd20c97d57483920015d1e240a2f8f76b83369d337c09dc1ff9752086be4ed"
+    },
+    {
+      "file": "verify-backup-retry-content.ps1",
+      "sha256": "70422fb894d477dcb2782f5981c5f806d4441b276f8b39eff177bfa1964bba63"
+    },
+    {
+      "file": "run-backup-retry.ps1",
+      "sha256": "9ce6aa62bf422707ce99eca9de943c64697dd1cb4a98e5121a241c637dc3b3af"
+    }
+  ],
+  "limitations": [
+    "The status is evidenced by read-only rendered DOM; the final screenshot is scrolled to note content and does not show the backup panel.",
+    "One save cancelled source checking; no claim that this run exercised repeated edits or copying/publishing races.",
+    "The ordinary installed application, full A19, restoration, Mac backup retry and OneDrive remain separately unaccepted."
+  ]
+}

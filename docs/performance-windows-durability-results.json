@@ -895,5 +895,11 @@
       "自动备份失败：笔记库发生变化，备份已取消；请重试。。稍后会重试。"
     ],
     "fullBackupAcceptancePassed": false
+  },
+  "backupRetryFollowup": {
+    "passed": true,
+    "report": "backup-retry-windows-results.json",
+    "scope": "One real stress-note save naturally cancels automatic backup during source checking; same-session automatic retry and exact native content verification. Excluded from Q51 timing. Not repeated pressure, copy/publish race, restore or complete A19 acceptance.",
+    "originalPerformanceObservationsUnchanged": true
   }
 }

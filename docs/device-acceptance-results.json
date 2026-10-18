@@ -80,8 +80,10 @@
       "normalExits": 13,
       "nativeContentVerified": true,
       "nativeResourceTestsPassed": 48,
-      "backupRetryAcceptancePassed": false,
-      "report": "performance-windows-durability-results.json"
+      "backupRetryAcceptancePassed": true,
+      "report": "performance-windows-durability-results.json",
+      "backupRetryScope": "One real stress-note save naturally cancels automatic backup during source checking; same-session automatic retry and exact native content verification. Excluded from Q51 timing. Not repeated pressure, copy/publish race, restore or complete A19 acceptance.",
+      "backupRetryReport": "backup-retry-windows-results.json"
     }
   },
   "mac": {
@@ -249,7 +251,7 @@
       "id": "A19",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Windows 独立性能变体：一次真实保存触发来源检查取消，约 60 秒后原会话自动重试成功，1010 项快照与原库一致；完整 A19、普通包和 Mac 未验收。"
     },
     {
       "id": "A20",
