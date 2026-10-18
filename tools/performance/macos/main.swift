@@ -5,6 +5,11 @@ import Foundation
 let args=Array(CommandLine.arguments.dropFirst())
 do {
     guard ProcessInfo.processInfo.operatingSystemVersion.majorVersion>=14 else {throw Failure("macOS 14 or newer is required")}
+    if ["matrix","actions"].contains(args.first ?? "") {
+        // Initialize the CLI's display-server connection before hit testing.
+        // This unbundled driver must retain its default nonactivating policy.
+        guard NSApplication.shared.activationPolicy() == .prohibited else {throw Failure("Native driver must not activate")}
+    }
     switch args.first ?? "" {
     case "doctor": try printJSON(["os":ProcessInfo.processInfo.operatingSystemVersionString,"accessibility":AXIsProcessTrusted(),"nativeInput":CGPreflightPostEventAccess(),"screenshots":CGPreflightScreenCaptureAccess()])
     case "launch":
