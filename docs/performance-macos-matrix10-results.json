@@ -1,0 +1,633 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "source": {
+    "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+    "sourceDirty": false,
+    "applicationIdentifier": "com.hobocy.cuenote.performance",
+    "version": "0.1.0",
+    "applicationSha256": "badf21b8e530e800461a2dc16e963f9c65b6a9370aba3a89b0fce904fdc0959d",
+    "kitReceiptDriverSha256": "21e492fbd837cf5b9d122c42537288a335fbcc4b1bfccf88588ec7cde2581c23",
+    "runtimeDriverSha256": "11efdc77ff12e1e2778a33542c3c24ebbd9495cf604c5409a870710d92abf557",
+    "focusRecorderSha256": "6923d72d12a82673b59a595904a235653d972a014ddbba44383a3aaee3cb76ac",
+    "matrixSwiftSha256": "223aede24d913ba0a6cdd7b1a4f6d4fae01140bb62949544c85e2bf95f4c5e8d",
+    "matrixDiffSha256": "19efcb6f86cfea5c017106310d05a7891373b98920face792b8ffd6cd73e2cd8",
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "features": [
+      "perf-acceptance",
+      "tauri/custom-protocol"
+    ],
+    "note": "The kit receipt records the driver built with the kit; the focus-matrix build-3 driver actually executed was rebuilt with the passive recorder helper, so its hash differs. launch-tooling.json records the hashes that actually executed. The wrapper only wraps launch/close/plan boundaries; timings, frozen Q51 plans, thresholds, trace-disabled formal timing and cleanup are unchanged."
+  },
+  "environment": {
+    "startedUtc": "2026-10-18T12:45:40Z",
+    "os": "Version 26.6.2 (Build 25G83)",
+    "cpu": "Apple M1 Pro",
+    "memoryBytes": 17179869184,
+    "freeBytes": 25396379648,
+    "screens": [
+      {
+        "backingScale": 2,
+        "height": 982,
+        "width": 1512,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "note": "No OS-cache clearing; first means first opening within this matrix. Automatic backups remain enabled.",
+    "toolchain": {
+      "rust": "1.99.0",
+      "node": "24.21.0",
+      "swift": "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)\nTarget: arm64-apple-macosx15.0",
+      "xcode": "Xcode 16.4\nBuild version 16F6",
+      "target": "aarch64-apple-darwin"
+    },
+    "runner": {
+      "image": "macos15",
+      "imageVersion": "20260907.0337.1",
+      "runId": "39126618427"
+    }
+  },
+  "counts": {
+    "metricSamples": 467,
+    "independentlyReconstructedSamples": 467,
+    "formalRuns": 14,
+    "calibrationRuns": 1,
+    "normalExits": 15,
+    "allRunsClosed": true,
+    "failures": 0,
+    "completed": true,
+    "timingGatesPassed": false
+  },
+  "sampleReconstruction": {
+    "declared": 467,
+    "reconstructedFromRuns": 467,
+    "matches": true,
+    "breakdown": {
+      "full-matrix-run": 454,
+      "initial-index": 3,
+      "startup": 10
+    },
+    "note": "Formal sample set rebuilt independently from each run's measurements.jsonl entries that carry a metric plus the ten startup.json samples with operation=startup. Non-gated selector/collapse/switch operations and the calibration run are excluded; diagnostics are not part of this archive."
+  },
+  "metrics": [
+    {
+      "metric": "startup",
+      "count": 10,
+      "p95Ms": 4590.584125041962,
+      "maxMs": 4590.584125041962,
+      "limitMs": 3000,
+      "minimumCount": 10,
+      "rule": "maximum",
+      "passed": false,
+      "status": "fail",
+      "groups": {
+        "indexed": {
+          "count": 10,
+          "maxMs": 4590.584125041962,
+          "p95Ms": 4590.584125041962
+        }
+      }
+    },
+    {
+      "metric": "initial-index",
+      "count": 3,
+      "p95Ms": 44353.497124910355,
+      "maxMs": 44353.497124910355,
+      "limitMs": 60000,
+      "minimumCount": 3,
+      "rule": "maximum",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "first": {
+          "count": 3,
+          "maxMs": 44353.497124910355,
+          "p95Ms": 44353.497124910355
+        }
+      }
+    },
+    {
+      "metric": "ordinary-open",
+      "count": 60,
+      "p95Ms": 268.5683341026306,
+      "maxMs": 815.909833908081,
+      "limitMs": 1000,
+      "minimumCount": 60,
+      "rule": "nearest-rank p95",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 30,
+          "maxMs": 282.19154119491577,
+          "p95Ms": 266.210000038147
+        },
+        "first": {
+          "count": 30,
+          "maxMs": 815.909833908081,
+          "p95Ms": 318.183207988739
+        }
+      }
+    },
+    {
+      "metric": "stress-open",
+      "count": 40,
+      "p95Ms": 696.531790971756,
+      "maxMs": 799.8764162063599,
+      "limitMs": 5000,
+      "minimumCount": 40,
+      "rule": "nearest-rank p95",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 30,
+          "maxMs": 648.4837079048157,
+          "p95Ms": 638.4897921085358
+        },
+        "first": {
+          "count": 10,
+          "maxMs": 799.8764162063599,
+          "p95Ms": 799.8764162063599
+        }
+      }
+    },
+    {
+      "metric": "ordinary-save",
+      "count": 32,
+      "p95Ms": 699.5457921028137,
+      "maxMs": 701.6426250934601,
+      "limitMs": 2000,
+      "minimumCount": 32,
+      "rule": "nearest-rank p95",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 28,
+          "maxMs": 500.22270822525024,
+          "p95Ms": 483.17866706848145
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 474.69637513160706,
+          "p95Ms": 474.69637513160706
+        },
+        "rotation": {
+          "count": 3,
+          "maxMs": 701.6426250934601,
+          "p95Ms": 701.6426250934601
+        }
+      }
+    },
+    {
+      "metric": "stress-save",
+      "count": 32,
+      "p95Ms": 5166.605666875839,
+      "maxMs": 5591.929790973663,
+      "limitMs": 10000,
+      "minimumCount": 32,
+      "rule": "nearest-rank p95",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 28,
+          "maxMs": 2833.3370418548584,
+          "p95Ms": 2487.314374923706
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 2299.6329169273376,
+          "p95Ms": 2299.6329169273376
+        },
+        "rotation": {
+          "count": 3,
+          "maxMs": 5591.929790973663,
+          "p95Ms": 5591.929790973663
+        }
+      }
+    },
+    {
+      "metric": "search",
+      "count": 30,
+      "p95Ms": 167.91129207611084,
+      "maxMs": 173.11912488937378,
+      "limitMs": 300,
+      "minimumCount": 30,
+      "rule": "nearest-rank p95",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 24,
+          "maxMs": 167.91129207611084,
+          "p95Ms": 167.5295422077179
+        },
+        "first": {
+          "count": 6,
+          "maxMs": 173.11912488937378,
+          "p95Ms": 173.11912488937378
+        }
+      }
+    },
+    {
+      "metric": "ordinary-map",
+      "count": 30,
+      "p95Ms": 202.51558303833008,
+      "maxMs": 215.1599998474121,
+      "limitMs": 1000,
+      "minimumCount": 30,
+      "rule": "nearest-rank p95",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 29,
+          "maxMs": 215.1599998474121,
+          "p95Ms": 202.51558303833008
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 166.00620794296265,
+          "p95Ms": 166.00620794296265
+        }
+      }
+    },
+    {
+      "metric": "stress-map",
+      "count": 30,
+      "p95Ms": 266.75045895576477,
+      "maxMs": 304.3588330745697,
+      "limitMs": 3000,
+      "minimumCount": 30,
+      "rule": "nearest-rank p95",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 29,
+          "maxMs": 304.3588330745697,
+          "p95Ms": 266.75045895576477
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 224.30200004577637,
+          "p95Ms": 224.30200004577637
+        }
+      }
+    },
+    {
+      "metric": "ordinary-input",
+      "count": 100,
+      "p95Ms": 66.42287516593933,
+      "maxMs": 114.23204112052917,
+      "limitMs": 100,
+      "minimumCount": 100,
+      "rule": "nearest-rank p95",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 100,
+          "maxMs": 114.23204112052917,
+          "p95Ms": 66.42287516593933
+        }
+      }
+    },
+    {
+      "metric": "stress-input",
+      "count": 100,
+      "p95Ms": 66.53887486457825,
+      "maxMs": 117.1322500705719,
+      "limitMs": 200,
+      "minimumCount": 100,
+      "rule": "nearest-rank p95",
+      "passed": true,
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 100,
+          "maxMs": 117.1322500705719,
+          "p95Ms": 66.53887486457825
+        }
+      }
+    }
+  ],
+  "gates": {
+    "passed": false,
+    "passedCount": 10,
+    "failedCount": 1,
+    "failed": [
+      "startup"
+    ],
+    "startup": {
+      "maxMs": 4590.584125041962,
+      "limitMs": 3000,
+      "failingSamples": [
+        {
+          "run": "index-1/measurements/849024D1-36FE-4036-B674-2ECDB0357E70",
+          "elapsedMs": 4590.584125041962,
+          "visible": true,
+          "focused": true
+        },
+        {
+          "run": "index-1/measurements/57F9BEF5-9202-41FF-98A9-3525C0518949",
+          "elapsedMs": 4101.876291036606,
+          "visible": true,
+          "focused": true
+        }
+      ],
+      "otherEightMaxMs": 2782.059833049774,
+      "note": "Two of ten restarts exceeded the limit; the remaining eight samples are <= 2782.0598 ms. Thresholds were not lowered and both failing samples are retained."
+    }
+  },
+  "content": {
+    "scope": "Exact native package content after all normal exits/restarts",
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "notesChecked": 1000,
+    "notebooksChecked": 10,
+    "unchangedNotes": 998,
+    "editedNotes": [
+      {
+        "titleBefore": "普通样本 00 · SHARED-Q51-ORDINARY",
+        "titleAfter": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "sha256": "7678fd0c733e13e65c2a749d73f012b0927d3e34989b662b4a72b1b170df0516",
+        "bytes": 5249357,
+        "assets": 5,
+        "assetsBytes": 5242880,
+        "changedMembers": [
+          "document.json"
+        ],
+        "changedFields": [
+          "/timestamps/contentModifiedAt",
+          "/title"
+        ],
+        "allOtherContentAndIdentityExact": true
+      },
+      {
+        "titleBefore": "压力样本 00 · SHARED-Q51-STRESS",
+        "titleAfter": "压力样本 42 · SHARED-Q51-STRESS",
+        "noteId": "da509c0e-7713-4234-b8eb-ec5fd6f993d6",
+        "sha256": "b53f60bbc962b11a971a13e697e8e0d45cb073111230918b23fe2fd2d615f8b3",
+        "bytes": 52456211,
+        "assets": 10,
+        "assetsBytes": 52428800,
+        "changedMembers": [
+          "document.json"
+        ],
+        "changedFields": [
+          "/timestamps/contentModifiedAt",
+          "/title"
+        ],
+        "allOtherContentAndIdentityExact": true
+      }
+    ],
+    "assetBytesPreserved": true,
+    "corpus": {
+      "bytes": 1056967189,
+      "determinismSpotChecks": 6,
+      "files": 1014,
+      "images": 565,
+      "knownQueries": 1007,
+      "notebooks": 10,
+      "notes": 1002,
+      "root": "/Users/hobo/CueNote-ui-acceptance-20261018-10/result/corpus",
+      "scale": "full",
+      "status": "ok"
+    },
+    "limitation": "Final comparison of all 1000 library notes and 10 notebooks after the planned matrix edits. The separately collected frozen manifest (matching SHA256) identifies 1000 library notes and 2 standalone sample notes. This verifies final matrix content, not all ordinary-package or OneDrive acceptance cases.",
+    "manifestSupplement": {
+      "standaloneSamples": 2,
+      "collectedSeparatelyFromArchive": true,
+      "file": "matrix10-corpus-manifest.json",
+      "libraryNotes": 1000,
+      "sha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292"
+    }
+  },
+  "focus": {
+    "recorders": 15,
+    "recordersCleanStops": 15,
+    "sessionsWithBoundaries": 5,
+    "sessionsWithoutBoundaries": 10,
+    "boundaryRecords": 40,
+    "boundaryForegroundMatches": 40,
+    "targetDeactivationsDuringSessions": 0,
+    "unresolvedCloseDeactivations": 15,
+    "workspaceEvents": 90,
+    "targetAxNotifications": 192,
+    "heartbeats": 455,
+    "samplesVisible": 467,
+    "samplesFocused": 467,
+    "stoppedReason": "stop-marker",
+    "failureFlags": {
+      "timeout": 0,
+      "overflow": 0,
+      "ioFailure": 0,
+      "axFailure": 0,
+      "parentGone": 0
+    },
+    "hostStop": {
+      "reason": "normal-close",
+      "exitStatus": 0,
+      "problems": 0,
+      "hosts": 15
+    },
+    "recorderPolicy": "prohibited",
+    "axNotificationsPerSession": 7,
+    "limitation": "All 15 recorders stopped via stop-marker with no timeout/overflow/IO/AX/parent failure flags, and all 15 hosts exited normal-close with status 0 and no problems. 40/40 plan-boundary records had the target frontmost, and 467/467 formal samples reported visible+focused state at capture time. No deactivation carrying the target PID or bundle id was recorded mid-session; each of the 15 sessions shows exactly one close-sequence deactivation with unresolved identity (eventPid -1, empty bundle id). The 10 startup-restart sessions have no plan boundaries, so per-action focus continuity is not established for them. This only shows the round itself was clean; it neither proves per-action focus continuity nor fixes or attributes the historical focus-loss cause. Separate diagnostic rounds are not part of this archive or of the formal sample set."
+  },
+  "normalExits": [
+    {
+      "run": "index-1/measurements/A6FB8F8A-F666-4846-A066-6889B2BEE3E2",
+      "pid": 61117,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-2/measurements/E85C2148-976B-461A-87EC-4F842B1CE9E2",
+      "pid": 61208,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-3/measurements/F5010098-E7A5-442C-816D-8DDFA26FA88F",
+      "pid": 61505,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/C4A5A6C1-F5B0-4325-88F6-668121431400",
+      "pid": 61546,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/849024D1-36FE-4036-B674-2ECDB0357E70",
+      "pid": 61674,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/57F9BEF5-9202-41FF-98A9-3525C0518949",
+      "pid": 61907,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/9BCBDEA3-8316-45E5-A8E3-C9A9DBBF5051",
+      "pid": 61983,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/555923BE-9C1D-47CD-BFF5-C59C451522F4",
+      "pid": 61991,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/B7B1E58C-58B7-4CB6-B95C-9AF6FB758A51",
+      "pid": 62001,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/6A956C0C-EB37-4DDD-BEA8-C1466AE96F76",
+      "pid": 62009,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/01F8370D-92FB-4E53-BD31-B276F8DBD54D",
+      "pid": 62021,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/274049A6-E816-48B6-872D-12AE27DFC454",
+      "pid": 62029,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/EEC5D056-3F67-456F-BBA8-98B033400B28",
+      "pid": 62036,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "index-1/measurements/F6F37D07-ABE6-4705-BFEC-A369AE4F029E",
+      "pid": 62048,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    },
+    {
+      "run": "calibration/measurements/343D2D8D-6D38-43D4-B392-CD5BE614CAA8",
+      "pid": 61047,
+      "status": 0,
+      "normalExit": true,
+      "quitRequested": true
+    }
+  ],
+  "resources": {
+    "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+    "passed": true,
+    "hostedCI": false,
+    "os": "Version 26.6.2 (Build 25G83)",
+    "totalPassed": 47,
+    "failed": 0,
+    "ignored": 0,
+    "suites": [
+      {
+        "suite": "format_v1",
+        "passed": 14,
+        "failed": 0,
+        "ignored": 0,
+        "sha256": "3b345363d8ddf4e0b0c78b22677992ff939849799597e84e9080580f39274f79",
+        "logSha256": "9f89429cee11db51f6e0aef72bc28db5de617a11cf0b475abc003a16727596fb"
+      },
+      {
+        "suite": "image_content",
+        "passed": 17,
+        "failed": 0,
+        "ignored": 0,
+        "sha256": "d323a8763c43f53c6faca14fb887bf831903d419e00b54e496cb4da460aae903",
+        "logSha256": "25df5a24babe8d4b024f756eb567df15359a792f87e3690e4a61ea183e95dbd0"
+      },
+      {
+        "suite": "rich_content",
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "sha256": "87db82479ed1f7bb1aaa4a37bb62648ec3225698a5a7ee8c59e2f147e9a134d0",
+        "logSha256": "43cfa1280b52f295ffcc23858508cc8c59e1a59857fe6115ca8f63ce3b795e0b"
+      },
+      {
+        "suite": "storage",
+        "passed": 10,
+        "failed": 0,
+        "ignored": 0,
+        "sha256": "bd2572a9aa798415098609a2ebed5c033fd2996f18b59ff216be55b432eef718",
+        "logSha256": "f4bfeefd7e56499a12e8db76e536fc243da7531e7b0f77f7c099f7f674f7aa69"
+      }
+    ],
+    "scope": "Native Q52 format/image/storage regressions on this host; no UI, OneDrive or power-loss claim"
+  },
+  "evidence": {
+    "archive": "mac-matrix-10-evidence-20261018.tar.gz",
+    "sha256": "38d63bd8288dc24095dca20eeb09853eac271bf723eb2e3736ef971c2ffd3e3f",
+    "files": 289,
+    "tarMembers": 290,
+    "manifest": "evidence-files.json",
+    "allHashesVerified": true,
+    "rawStatisticsRecomputed": true,
+    "p95Rule": "nearest-rank p95: sorted[ceil(0.95*n)-1]",
+    "hashes": {
+      "kit/receipt.json": "873eac5f6d9f62e38ed2aeb7da0110299f66803096ec88966ed539ea90f9d11a",
+      "matrix-10/doctor.json": "7db89f3e7ec612954b54bc512703251ff3324b84031540c72a86af0676dbb6d2",
+      "matrix-10/launch-tooling.json": "7bcefd044cd3276db7e8e7e568c6d4bf96cff1f633dbf123a81806f263e7e772",
+      "matrix-10/runtime-exit.json": "3edd82d4e49f89c30270dee752ac018539f4dc6848d7a33b1553404e6f8b58af",
+      "matrix-10/runtime.stdout": "7ef8f50b6a1f573d2636977bcaa4fa07085b680fae9359976fe772d68f393402",
+      "matrix-10/runtime.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matrix-10/result/summary.json": "adbb2f5b873db249bb3202af0407b1740a61fe2fdb3469e3523848f02290fde7",
+      "matrix-10/result/runs.json": "38e74c974ace5bb529c9bb896e40340132309e40e978eab6cbfb26bf73fb3924",
+      "matrix-10/result/environment.json": "0bf4f10aeeab1dad0df2a71e6f2b8fcce1308c131dd60580aba19484928f819b",
+      "matrix-10/result/verify.log": "c173b0b22596f47f7f63955eba3e412016d8b5fe6c8b67824ce9e5798a80ee78",
+      "matrix-10/result/calibration.json": "b11b94c1c6198d6589739738ded4aeaa9f069ef72c58c99f50fc0e35fb910cd0",
+      "matrix-10/result/content-verification.log": "41b95341e9d47264553e30a2f35a63aaa5c7dbabd6a6787b67304c36f7a0c3ff",
+      "matrix-10/result/matrix10-content-diff.json": "a6b959dcd2236e036282b023d4049bfb00d37e7f1e5b7fb5285e5fb84dd6effc",
+      "matrix-10/resource-tests/results.json": "771ba60a076671674b818f6f458003544d148e9e09bf36ea478439c20608e717",
+      "tooling/Matrix.swift": "223aede24d913ba0a6cdd7b1a4f6d4fae01140bb62949544c85e2bf95f4c5e8d",
+      "tooling/matrix.diff": "19efcb6f86cfea5c017106310d05a7891373b98920face792b8ffd6cd73e2cd8",
+      "tooling/source/Driver.swift": "1ac2f13d7c175f273b8911fdd4a0773fe65af7eac9123f918cea8bee79f1229f",
+      "tooling/source/Matrix.swift": "6811f4321840d2bbddf9bab9d1e4931907fbaa7bcfdb46931a98724702163849",
+      "tooling/source/main.swift": "e4f7aa80e91daa6f3ab9b9aa0c3c5655fafd0af1277993e18fbd389658a02d47",
+      "tooling/source/FocusRecording.swift": "edb45be36a85322c3510d7aedfdedab8e354208ac40fcb3537f707902eea178d",
+      "tooling/source/focus-recording-v1.swift": "e383b288918dd0756dbf8a1c188632bc67c3833adadf5b7af23e17a30a6ffbbf",
+      "scripts/collect-mac-matrix-10.py": "02f81e07a66666725dd79392f78744a399df3738cfd1462c4a80ff55c1f36ae4",
+      "scripts/inspect-matrix10-content.py": "83701d3342e09f4945cefd514a286ce3627f5093c10c8afc8f9ed3454d7b48d0",
+      "scripts/run-mac-matrix-image-priority-10.command": "6f7f2ecfdc81ee09bbabbfc629cdb3da69d8ac17fe75d718d28411ec098a7ae4",
+      "evidence-files.json": "c45a1f2e09da80cfab7201a815c6cd2a62b1cd4b57aa627f96344a837895ba8b"
+    }
+  },
+  "scope": "Isolated Mac performance matrix on a frozen synthetic corpus, with a passive read-only focus recorder. Does not establish ordinary-package behavior, real OneDrive, full A01-A26, or daily-use approval. Issue #33 remains open; neither A23 as a whole nor #33 is claimed to pass.",
+  "dailyUseApproved": false
+}

@@ -119,7 +119,84 @@
       "frontendRegressionPassed": 142,
       "report": "performance-windows-committed-projection-results.json",
       "scope": "Independent performance variant only; same-version ordinary packages and cross-device acceptance remain open"
-    }
+    },
+    "currentOrdinaryCandidate": {
+      "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+      "binarySha256": "a4520e94a0807b7f45a2ed722bd7dbce92016342a312ca6480845002846e0919",
+      "priorAppAndDataBackedUp": true,
+      "dataUnchangedByUpdate": true,
+      "ordinaryLaunch": "Existing Explorer window Document.Application; verified parent Explorer PID 11056",
+      "savedNoteReopened": true,
+      "scope": "Same-version candidate replacement with app and data backup; not actual version-upgrade/uninstall acceptance",
+      "updateEvidence": {
+        "file": "package-output/9760cf6-user-update/completed.json",
+        "sha256": "00459a2607fa0a9184f9cc1b907a326cf5a36f6ebbe3840fb316277d6f61c6b4",
+        "clarification": "The updater and initial direct Shell.Application launch inherited tool environment. Only the later existing Explorer Document.Application launch is established as ordinary user launch."
+      },
+      "ordinaryClose": {
+        "requestAccepted": true,
+        "processEnded": true,
+        "exitCode": null,
+        "note": "Attached process did not yield an exit code; no exit-code-zero assertion"
+      },
+      "toolEnvironmentAttempt": {
+        "pid": 89240,
+        "metadataError": 17,
+        "note": "No editor session loaded or edits entered. Exact saved synthetic note and 1153-file pre-update backup verified before ending only this blocked test process. Not a normal exit or ordinary-launch failure.",
+        "evidence": "windows-9760cf6-tool-launch-stop.json"
+      },
+      "evidenceHashes": [
+        {
+          "file": "windows-9760cf6-tool-launch-stop.json",
+          "sha256": "aa49ea2d8bd5e4557569032df6eb5db04cb5a37217412fae6b10913bd6a5bcc2"
+        },
+        {
+          "file": "windows-9760cf6-explorer-launch.json",
+          "sha256": "7f406c29f82400704662e0b52d9830702782b6bb98a3e8cc86ac85c05c36d4a4"
+        },
+        {
+          "file": "windows-9760cf6-explorer-view-v3/inspection.json",
+          "sha256": "699ab1531c0f86a3cdea2e0f05d95ba3641c0195b2dcb22ef91458c0ecc18dc3"
+        },
+        {
+          "file": "windows-9760cf6-explorer-view-v3/window.png",
+          "sha256": "2d38a7ede6988dbb516d47bcf96f8ac42a8c81396e516061ec511703eec8aa39"
+        },
+        {
+          "file": "windows-9760cf6-content-view/inspection.json",
+          "sha256": "a95809777e6fb3fbb9a49212b0587bdfba6682bb0a4c17cbfdf9b5ef9d0635ba"
+        },
+        {
+          "file": "windows-9760cf6-content-view/window.png",
+          "sha256": "ad78be4c5c78aa34d730a30b5ccb8d02735b1eb5556dcb1bd5983810306bd53c"
+        },
+        {
+          "file": "windows-9760cf6-ordinary-close.json",
+          "sha256": "a6b083890e0aded133d85bdf00cc3744ce3e4b46ac4ebe605373554e7efb4487"
+        }
+      ]
+    },
+    "imagePriorityFollowup": {
+      "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+      "report": "performance-windows-image-priority-results.json",
+      "timingMatrixPassed": true,
+      "metricSamples": 467,
+      "normalExits": 13,
+      "nativeContentVerified": true,
+      "nativeResourceTestsPassed": 48,
+      "allNativeTestsPassed": 245,
+      "fullA23Accepted": false
+    },
+    "previousOrdinaryCandidates": [
+      {
+        "sourceCommit": "cf350d8451d19583072998ce3c78cdebbf7930ea",
+        "binarySha256": "c40e70235e3b84ad843fe8a223eb4621630c5bf8f5a2063d97e1feb002ace038",
+        "priorAppAndDataBackedUp": true,
+        "dataUnchangedByUpdate": true,
+        "ordinaryLaunch": "Existing Explorer COM",
+        "scope": "Same-version candidate replacement; not actual version-upgrade/uninstall acceptance"
+      }
+    ]
   },
   "mac": {
     "reportedChip": "Apple M1 Pro",
@@ -245,6 +322,82 @@
       "recorderOverflowOrTimeout": false,
       "fullMatrix": false,
       "report": "performance-macos-focus-diagnosis.md"
+    },
+    "committedProjectionFollowup": {
+      "sourceCommit": "cf350d8451d19583072998ce3c78cdebbf7930ea",
+      "report": "performance-macos-matrix8-results.json",
+      "metricSamples": 467,
+      "timingGatesPassed": 10,
+      "timingGatesTotal": 11,
+      "allTimingGatesPassed": false,
+      "startupMaxMs": 3398.1473338603973,
+      "normalExitsIncludingCalibration": 15,
+      "nativeResourceTestsPassed": 47,
+      "scope": "Isolated performance variant; ordinary candidate acceptance remains incomplete"
+    },
+    "currentOrdinaryCandidate": {
+      "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+      "binarySha256": "ed397f9a15a99dcca159de4e0b1f4418259b622b83e1b31055f9405e4be00c08",
+      "priorAppAndDataBackedUp": true,
+      "dataUnchangedByUpdate": true,
+      "ordinaryLaunch": "Launch Services",
+      "savedNoteReopened": true,
+      "scope": "Same-version candidate replacement with app and data backup; not actual version-upgrade/uninstall acceptance",
+      "evidenceHashes": [
+        {
+          "file": "mac-9760cf6-update-completed.json",
+          "sha256": "8f59a7579c407fa0fc99eab9678fc9612493eed51e32159e2f0e8f660e5273d6"
+        },
+        {
+          "file": "mac-9760cf6-initial-view/summary.json",
+          "sha256": "7da97c6013f7466db2a1a411db6a7a3d2a45fd7ab89821293710edde13ccbbe0"
+        },
+        {
+          "file": "mac-9760cf6-initial-view/window.png",
+          "sha256": "0efb5e2cb90091efd10570e43f5b56399c90720d25ed2a2c8517f1255cdd38de"
+        },
+        {
+          "file": "mac-9760cf6-human-fixture-view/summary.json",
+          "sha256": "c4f0062a6fa70ce665629a0a7aff56ee52eba7931e72b3f83da677863b375b65"
+        },
+        {
+          "file": "mac-9760cf6-human-fixture-view/window.png",
+          "sha256": "f12540ff13f445971be50562dffa722c2e2cb7bc4661cef44d58b5e44a700e86"
+        }
+      ]
+    },
+    "previousOrdinaryCandidates": [
+      {
+        "sourceCommit": "cf350d8451d19583072998ce3c78cdebbf7930ea",
+        "binarySha256": "a672311c6baef35c63f2317b19c5ea1c2c5a5d4ab41bf5ace04318a2b7f8c3e8",
+        "priorAppAndDataBackedUp": true,
+        "dataUnchangedByUpdate": true,
+        "ordinaryLaunch": "Launch Services",
+        "scope": "Same-version candidate replacement; not actual version-upgrade/uninstall acceptance"
+      }
+    ],
+    "imagePriorityFollowup": {
+      "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+      "report": "performance-macos-matrix10-results.json",
+      "metricSamples": 467,
+      "timingGatesPassed": 10,
+      "timingGatesTotal": 11,
+      "allTimingGatesPassed": false,
+      "startupMaxMs": 4590.584125041962,
+      "startupOverLimitMs": [
+        4590.584125041962,
+        4101.876291036606
+      ],
+      "normalExitsIncludingCalibration": 15,
+      "nativeResourceTestsPassed": 47,
+      "nativeContentVerified": true,
+      "fullA23Accepted": false
+    },
+    "humanInputFollowup": {
+      "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+      "noteTitle": "Mac 输入与图片验收 · 9760cf6",
+      "status": "等待用户实际输入法与两种外部图片来源试用反馈",
+      "testAutomationStopped": true
     }
   },
   "cases": [
@@ -306,13 +459,13 @@
       "id": "A10",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "cf350d8 ordinary candidates completed one real OneDrive Windows -> Mac -> Windows -> Mac rich-note sequence. Eight snapshots and 24 files verified; only requested title, summary, root-map text, image width and content timestamp changed. Full case remains unaccepted; see onedrive-sequential-cf350d8-results.json."
     },
     {
       "id": "A11",
       "windows": "未测",
       "mac": "未测",
-      "notes": "OneDrive synthetic marker round trip verified with matching hashes in both directions; actual-note workflows remain untested."
+      "notes": "cf350d8 ordinary candidates completed one real OneDrive Windows -> Mac -> Windows -> Mac rich-note sequence. Eight snapshots and 24 files verified; only requested title, summary, root-map text, image width and content timestamp changed. Full case remains unaccepted; see onedrive-sequential-cf350d8-results.json."
     },
     {
       "id": "A12",
@@ -383,14 +536,14 @@
     {
       "id": "A23",
       "windows": "未测",
-      "mac": "未测",
-      "notes": "Windows 00c1e3f variant: 467 timing samples, 13 normal exits, native content and 48 resource checks passed; one-save same-session automatic-backup retry separately passed (not complete A19). M1 native resources 47/47; matrix 5 retains 66 metric samples, initial index failed and repeated title replacement stopped execution. New cbd9c08 runtime validation pending. Full Mac Q51 and complete A23 remain unaccepted. Windows cbd9c08 follow-up also passed 467 timing samples, 13 normal exits and exact native content comparison; 59 related native regressions passed."
+      "mac": "失败",
+      "notes": "9760cf6 Windows full Q51 11/11 with 467 samples, 13 normal exits and 48 native resource tests. Mac matrix10 complete 467 samples, 10/11 timing gates, startup 4590.58/4101.88 ms above 3000ms; 15 normal exits and 47 resource tests. Full A23 remains unaccepted."
     },
     {
       "id": "A24",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Windows installation/start and Mac installation/signature/process/window substeps passed. Interactive prompts, editing, actual upgrade and uninstall remain untested."
+      "notes": "Both ordinary installed candidates updated to 9760cf6 with full prior application and app-specific data backups and unchanged-data hashes. Saved note reopened on both; Windows normal close request/process disappearance confirmed, attached exit code unavailable. Same-version replacement does not establish actual upgrade/uninstall."
     },
     {
       "id": "A25",
@@ -406,9 +559,9 @@
     }
   ],
   "pending": [
-    "Mac ordinary-save performance and complete frozen Q51 matrix; native quit bypass fixed and actual-device normal/dirty/failure regressions passed",
-    "Real IME and cross-application clipboard on both target devices",
-    "Same-account real OneDrive round trips and conflict scenarios",
+    "Mac9760cf6 matrix10 startup failed at 4590.58/4101.88ms, other 10 timing gates passed. Short untraced diagnostic reproduced first startup3149.52ms. Additional trace diagnostic did not exceed3000ms; remaining pre-readiness and initial-load cost still under investigation.",
+    "Mac actual IME and two external clipboard sources on9760cf6 awaiting user; earlier Windows user-confirmed IME/clipboard evidence remains scoped to its candidate, with remaining A06/A07 cases open.",
+    "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and late organization metadata; one ordinary rich-note sequential round trip has passed.",
     "Full A01-A26, Q51/Q52 target-device evidence",
     "Interactive installation, actual upgrade/uninstall data retention and remaining formal-candidate UI cases on both devices"
   ],
@@ -425,5 +578,15 @@
     "method": "New synthetic marker files written at each endpoint and observed through OneDrive. No scp or direct copy into the other endpoint sync root.",
     "scope": "Transport readiness only, not native-note round trip, concurrent editing, offline reconnect or full A10/A11 acceptance.",
     "report": "device-macos-results.json"
+  },
+  "sequentialNoteSync": {
+    "sourceCommit": "cf350d8451d19583072998ce3c78cdebbf7930ea",
+    "report": "onedrive-sequential-cf350d8-results.json",
+    "direction": "Windows -> Mac -> Windows -> Mac",
+    "snapshots": 8,
+    "copiedFilesVerified": 24,
+    "imageBytesUnchanged": true,
+    "codeAndFormulaSourceUnchanged": true,
+    "fullA10A11Accepted": false
   }
 }

@@ -1,0 +1,537 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "source": {
+    "sourceCommit": "cf350d8451d19583072998ce3c78cdebbf7930ea",
+    "sourceDirty": false,
+    "applicationIdentifier": "com.hobocy.cuenote.performance",
+    "version": "0.1.0",
+    "applicationSha256": "9c74c17c75a493de6195dc509a103b50455a7c0c15b56c68acafca4d6f2e7822",
+    "kitReceiptDriverSha256": "21e492fbd837cf5b9d122c42537288a335fbcc4b1bfccf88588ec7cde2581c23",
+    "runtimeDriverSha256": "11efdc77ff12e1e2778a33542c3c24ebbd9495cf604c5409a870710d92abf557",
+    "focusRecorderSha256": "6923d72d12a82673b59a595904a235653d972a014ddbba44383a3aaee3cb76ac",
+    "matrixSwiftSha256": "223aede24d913ba0a6cdd7b1a4f6d4fae01140bb62949544c85e2bf95f4c5e8d",
+    "matrixDiffSha256": "19efcb6f86cfea5c017106310d05a7891373b98920face792b8ffd6cd73e2cd8",
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "features": [
+      "perf-acceptance",
+      "tauri/custom-protocol"
+    ],
+    "note": "The kit receipt driver hash and the runtime focus-matrix build-3 driver hash differ because the focus-observed driver was rebuilt with the passive recorder helper; launch-tooling.json records the hashes that actually executed. The wrapper only wraps launch/close/plan boundaries; timings, frozen plans, thresholds and cleanup are unchanged."
+  },
+  "environment": {
+    "startedUtc": "2026-10-18T11:11:39Z",
+    "os": "Version 26.6.2 (Build 25G83)",
+    "cpu": "Apple M1 Pro",
+    "memoryBytes": 17179869184,
+    "freeBytes": 22080094208,
+    "screens": [
+      {
+        "width": 1512,
+        "height": 982,
+        "backingScale": 2,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "note": "No OS-cache clearing; first means first opening within this matrix. Automatic backups remain enabled.",
+    "toolchain": {
+      "rust": "1.99.0",
+      "node": "24.21.0",
+      "swift": "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)",
+      "xcode": "Xcode 16.4 (Build 16F6)",
+      "target": "aarch64-apple-darwin"
+    },
+    "runner": {
+      "image": "macos15",
+      "imageVersion": "20260907.0337.1",
+      "runId": "39121007746"
+    }
+  },
+  "counts": {
+    "metricSamples": 467,
+    "formalRuns": 14,
+    "calibrationRuns": 1,
+    "normalExits": 15,
+    "allRunsClosed": true,
+    "failures": 0,
+    "completed": true,
+    "timingGatesPassed": false
+  },
+  "metrics": [
+    {
+      "metric": "startup",
+      "count": 10,
+      "p95Ms": 3398.1473338603973,
+      "maxMs": 3398.1473338603973,
+      "limitMs": 3000,
+      "minimumCount": 10,
+      "rule": "maximum",
+      "status": "fail",
+      "groups": {
+        "indexed": {
+          "count": 10,
+          "maxMs": 3398.1473338603973,
+          "p95Ms": 3398.1473338603973
+        }
+      }
+    },
+    {
+      "metric": "initial-index",
+      "count": 3,
+      "p95Ms": 48869.88254213333,
+      "maxMs": 48869.88254213333,
+      "limitMs": 60000,
+      "minimumCount": 3,
+      "rule": "maximum",
+      "status": "pass",
+      "groups": {
+        "first": {
+          "count": 3,
+          "maxMs": 48869.88254213333,
+          "p95Ms": 48869.88254213333
+        }
+      }
+    },
+    {
+      "metric": "ordinary-open",
+      "count": 60,
+      "p95Ms": 265.69208312034607,
+      "maxMs": 945.8341250419617,
+      "limitMs": 1000,
+      "minimumCount": 60,
+      "rule": "nearest-rank p95",
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 30,
+          "maxMs": 265.69208312034607,
+          "p95Ms": 256.55420899391174
+        },
+        "first": {
+          "count": 30,
+          "maxMs": 945.8341250419617,
+          "p95Ms": 315.6492919921875
+        }
+      }
+    },
+    {
+      "metric": "stress-open",
+      "count": 40,
+      "p95Ms": 798.2012088298798,
+      "maxMs": 982.4383749961853,
+      "limitMs": 5000,
+      "minimumCount": 40,
+      "rule": "nearest-rank p95",
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 30,
+          "maxMs": 982.4383749961853,
+          "p95Ms": 880.4441659450531
+        },
+        "first": {
+          "count": 10,
+          "maxMs": 689.0625,
+          "p95Ms": 689.0625
+        }
+      }
+    },
+    {
+      "metric": "ordinary-save",
+      "count": 32,
+      "p95Ms": 683.367583990097,
+      "maxMs": 683.493332862854,
+      "limitMs": 2000,
+      "minimumCount": 32,
+      "rule": "nearest-rank p95",
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 28,
+          "maxMs": 398.8370840549469,
+          "p95Ms": 383.120707988739
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 440.29154086112976,
+          "p95Ms": 440.29154086112976
+        },
+        "rotation": {
+          "count": 3,
+          "maxMs": 683.493332862854,
+          "p95Ms": 683.493332862854
+        }
+      }
+    },
+    {
+      "metric": "stress-save",
+      "count": 32,
+      "p95Ms": 4942.523416996002,
+      "maxMs": 5224.244499921799,
+      "limitMs": 10000,
+      "minimumCount": 32,
+      "rule": "nearest-rank p95",
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 28,
+          "maxMs": 2374.308000087738,
+          "p95Ms": 2306.68745803833
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 2325.6193749904633,
+          "p95Ms": 2325.6193749904633
+        },
+        "rotation": {
+          "count": 3,
+          "maxMs": 5224.244499921799,
+          "p95Ms": 5224.244499921799
+        }
+      }
+    },
+    {
+      "metric": "search",
+      "count": 30,
+      "p95Ms": 167.49441695213318,
+      "maxMs": 190.28608417510986,
+      "limitMs": 300,
+      "minimumCount": 30,
+      "rule": "nearest-rank p95",
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 24,
+          "maxMs": 167.49441695213318,
+          "p95Ms": 167.32558393478394
+        },
+        "first": {
+          "count": 6,
+          "maxMs": 190.28608417510986,
+          "p95Ms": 190.28608417510986
+        }
+      }
+    },
+    {
+      "metric": "ordinary-map",
+      "count": 30,
+      "p95Ms": 165.8448748588562,
+      "maxMs": 198.35466694831848,
+      "limitMs": 1000,
+      "minimumCount": 30,
+      "rule": "nearest-rank p95",
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 29,
+          "maxMs": 198.35466694831848,
+          "p95Ms": 165.8448748588562
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 165.60370802879333,
+          "p95Ms": 165.60370802879333
+        }
+      }
+    },
+    {
+      "metric": "stress-map",
+      "count": 30,
+      "p95Ms": 267.42700004577637,
+      "maxMs": 285.94429206848145,
+      "limitMs": 3000,
+      "minimumCount": 30,
+      "rule": "nearest-rank p95",
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 29,
+          "maxMs": 285.94429206848145,
+          "p95Ms": 267.42700004577637
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 244.74079179763794,
+          "p95Ms": 244.74079179763794
+        }
+      }
+    },
+    {
+      "metric": "ordinary-input",
+      "count": 100,
+      "p95Ms": 66.92754197120667,
+      "maxMs": 104.23012495040894,
+      "limitMs": 100,
+      "minimumCount": 100,
+      "rule": "nearest-rank p95",
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 100,
+          "maxMs": 104.23012495040894,
+          "p95Ms": 66.92754197120667
+        }
+      }
+    },
+    {
+      "metric": "stress-input",
+      "count": 100,
+      "p95Ms": 66.6819999217987,
+      "maxMs": 100.0384590625763,
+      "limitMs": 200,
+      "minimumCount": 100,
+      "rule": "nearest-rank p95",
+      "status": "pass",
+      "groups": {
+        "cached": {
+          "count": 100,
+          "maxMs": 100.0384590625763,
+          "p95Ms": 66.6819999217987
+        }
+      }
+    }
+  ],
+  "gates": {
+    "passed": false,
+    "passedCount": 10,
+    "failedCount": 1,
+    "failed": [
+      "startup"
+    ],
+    "startup": {
+      "maxMs": 3398.1473338603973,
+      "limitMs": 3000,
+      "slowestRun": "index-1/measurements/E16C0FC4-06F3-4451-8588-CBDE2797DA9D",
+      "otherNineMaxMs": 2616.53141689301,
+      "note": "The first of ten restarts exceeded the limit; the other nine samples are <= 2616.5314169 ms. Thresholds were not lowered."
+    }
+  },
+  "content": {
+    "scope": "Exact native package content after all normal exits/restarts",
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "notesChecked": 1000,
+    "notebooksChecked": 10,
+    "corpus": {
+      "notes": 1002,
+      "notebooks": 10,
+      "files": 1014,
+      "images": 565,
+      "bytes": 1055995416,
+      "knownQueries": 1007,
+      "determinismSpotChecks": 6,
+      "scale": "full",
+      "status": "ok"
+    },
+    "editedNotes": [
+      {
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "heading": "内容区 · 普通样本 00",
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "sha256": "29dac83eb58c8d8b1510b318492f29b026e6aab3e5c803adb69652c996fb3561",
+        "bytes": 5249357,
+        "allOtherContentAndIdentityExact": true
+      },
+      {
+        "title": "压力样本 42 · SHARED-Q51-STRESS",
+        "heading": "内容区 · 压力样本 00",
+        "noteId": "da509c0e-7713-4234-b8eb-ec5fd6f993d6",
+        "sha256": "2d4d7aaebdc566b848a4d51050d13e7457f4c27044ac4a99d57a352af667806c",
+        "bytes": 52456211,
+        "allOtherContentAndIdentityExact": true
+      }
+    ],
+    "limitation": "Post-run comparison of the 1000 checked notes and 10 notebooks; not final verify-edited acceptance for every planned edit, and not ordinary-package or OneDrive acceptance."
+  },
+  "focus": {
+    "recorders": 15,
+    "recordersCleanStops": 15,
+    "sessionsWithBoundaries": 5,
+    "boundaryRecords": 40,
+    "boundaryForegroundMatches": 40,
+    "targetDeactivationsDuringSessions": 0,
+    "samplesVisible": 467,
+    "samplesFocused": 467,
+    "stoppedReason": "stop-marker",
+    "failureFlags": {
+      "timeout": 0,
+      "overflow": 0,
+      "ioFailure": 0,
+      "axFailure": 0,
+      "parentGone": 0
+    },
+    "hostStop": {
+      "reason": "normal-close",
+      "exitStatus": 0,
+      "problems": 0
+    },
+    "recorderPolicy": "prohibited",
+    "axNotificationsPerSession": 7,
+    "limitation": "No focus loss was recorded in this round (all 15 recorders stopped cleanly, 40/40 plan boundaries had the target frontmost, 467/467 samples were visible and focused). This only shows the round itself was clean; it does not attribute or fix the historical focus-loss cause, which remains undetermined. The archive was sealed before the later focus diagnosis, and that diagnosis is not part of this matrix."
+  },
+  "normalExits": [
+    {
+      "run": "calibration/measurements/0E8C32AE-780D-4CF7-B997-74D6F2702AD1",
+      "pid": 38010,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/276A5DA1-D026-4F23-8B8B-6FA5688F5689",
+      "pid": 38092,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-2/measurements/8C38035D-77AF-48E3-8064-35FA072BEA7D",
+      "pid": 38189,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-3/measurements/3F327DE9-7E32-45EE-9DD2-D431923E7AE4",
+      "pid": 38250,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/DBD20AAB-315C-444A-94C9-615D33979FBA",
+      "pid": 38291,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/E16C0FC4-06F3-4451-8588-CBDE2797DA9D",
+      "pid": 38449,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/5AAE8124-B941-4366-93E8-88A4E696FFE6",
+      "pid": 38462,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/C3CBB244-49D6-498E-9207-09B8BB131962",
+      "pid": 38477,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/970CBF82-4999-4D96-8CC5-ABAD9A2C0DD1",
+      "pid": 38487,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/ECE7F09C-CCE2-4775-9772-D099613D1CF6",
+      "pid": 38499,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/68C8E938-F517-46DE-8285-CF8BD00C5B09",
+      "pid": 38505,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/9A516E0C-034E-4F39-95A1-3626BC6C39FC",
+      "pid": 38511,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/9BE78EDF-9259-42DB-A57F-72042E12756B",
+      "pid": 38526,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/974EE1FE-EACA-480D-8093-CE848793C5B9",
+      "pid": 38540,
+      "status": 0,
+      "normalExit": true
+    },
+    {
+      "run": "index-1/measurements/ABB9A592-E93A-4FF6-A86F-56AB83D21B2E",
+      "pid": 38551,
+      "status": 0,
+      "normalExit": true
+    }
+  ],
+  "resources": {
+    "sourceCommit": "cf350d8451d19583072998ce3c78cdebbf7930ea",
+    "passed": true,
+    "hostedCI": false,
+    "os": "Version 26.6.2 (Build 25G83)",
+    "totalPassed": 47,
+    "failed": 0,
+    "ignored": 0,
+    "suites": [
+      {
+        "suite": "format_v1",
+        "passed": 14,
+        "failed": 0,
+        "ignored": 0,
+        "sha256": "3e98afc484936731befeb3f35549919ed1b60bdc727a6c736410c2c1181e6b15",
+        "logSha256": "a57b0ebbd29896d55d5aa95fb6503662ed7505164e4df9d373de705e83fba86c"
+      },
+      {
+        "suite": "image_content",
+        "passed": 17,
+        "failed": 0,
+        "ignored": 0,
+        "sha256": "6ed21194cf123b529d114898d24f808b6182c2b45482b979150254c5db247f36",
+        "logSha256": "8ec5ecc732960994b2fe995c0634f6e01e8791c059a17ac3e9090d602fceb952"
+      },
+      {
+        "suite": "rich_content",
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "sha256": "8e03e8bde956478b5e470347dbcba2bf37089ef8520d4a6193c631f57d3f120f",
+        "logSha256": "cad29a0c4bec34a8ad9e812391891b20f8e5b34b8ceac43949e264c63a4ef213"
+      },
+      {
+        "suite": "storage",
+        "passed": 10,
+        "failed": 0,
+        "ignored": 0,
+        "sha256": "96c36272e6e5fe1c33c45d419f797ca48c756a4dac7b4be56a52510cf1b3e88e",
+        "logSha256": "840e64abe23f05bc771ca029b8d0ce68138bcb99cc7f1a8fd17b114660912fb5"
+      }
+    ],
+    "scope": "Native Q52 format/image/storage regressions on this host; no UI, OneDrive or power-loss claim."
+  },
+  "evidence": {
+    "archive": "mac-matrix-8-evidence-20261018.tar.gz",
+    "sha256": "cb3fd9b782eba30b874640eda4210d295acb90d6834844e1ce30bdb01a19d8a7",
+    "files": 287,
+    "tarMembers": 288,
+    "manifest": "evidence-files.json",
+    "allHashesVerified": true,
+    "rawStatisticsRecomputed": true,
+    "p95Rule": "nearest-rank p95: sorted[ceil(0.95*n)-1]",
+    "hashes": {
+      "kit/receipt.json": "159c5e074d329f648f91a3437ad9ba0678ab150b7f8c4b709d534b138d90e93d",
+      "matrix-8/doctor.json": "7db89f3e7ec612954b54bc512703251ff3324b84031540c72a86af0676dbb6d2",
+      "matrix-8/launch-tooling.json": "802aa73fceacb834346dced4e581641777d073383ae2c4cf6cb5c94d985ddf28",
+      "matrix-8/runtime-exit.json": "3edd82d4e49f89c30270dee752ac018539f4dc6848d7a33b1553404e6f8b58af",
+      "matrix-8/runtime.stdout": "6eaf1d7adb71051143eb811ba7586dcd71aec66508379e3e634b883560f38d3f",
+      "matrix-8/runtime.stderr": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "matrix-8/result/summary.json": "cf07ef991aa7abb89770aeeaa76622d65ebc10f811b562e447fbb85cdd70b34d",
+      "matrix-8/result/runs.json": "7b4b78a92d5525146080217ad261a73dc7262849c27cf5b3a2b2f743812b2f41",
+      "matrix-8/result/environment.json": "95f768907deda2229dd8e3ba1286803e03ca13a27010226918d75524352cffa4",
+      "matrix-8/result/content-verification.log": "217cb335d94d1afb882920d4f2925f5cf8de01dff51177db2244f8d753233689",
+      "matrix-8/resource-tests/results.json": "65d703a4185205a66476c102c49ef7602a7f7458e80099ed93c6dc5851e98887",
+      "tooling/Matrix.swift": "223aede24d913ba0a6cdd7b1a4f6d4fae01140bb62949544c85e2bf95f4c5e8d",
+      "tooling/matrix.diff": "19efcb6f86cfea5c017106310d05a7891373b98920face792b8ffd6cd73e2cd8",
+      "scripts/collect-mac-matrix-8.py": "4b77c2d328b439e1f376f5c8b36e5c3fd8f4835870679eb4eed4765ad26ca15f"
+    }
+  },
+  "scope": "Isolated Mac performance matrix on a frozen synthetic corpus. Does not establish ordinary-package behavior, real OneDrive, full A01-A26, or daily-use approval. Issue #33 remains open.",
+  "dailyUseApproved": false
+}

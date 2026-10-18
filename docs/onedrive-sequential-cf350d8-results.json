@@ -1,0 +1,344 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "title": "OneDrive 顺序双端同步复核（cf350d8 普通候选）",
+  "evidenceVerification": "passed",
+  "acceptanceClaimed": false,
+  "source": "C:/Users/Hobo/.codex/visualizations/2026/10/10/01a12393-3b57-76e3-afff-50bd8ef5f539/implementation-execution/issue-33",
+  "scope": "仅复核 Windows→Mac→Windows→Mac 顺序单笔记同步的既有证据：8 个本地快照的源记录 SHA 与拷贝字节、原生 ZIP 文档与资产条目字节、阶段间文档差异，以及 3 个 GUI 视图的 AX/摘要。不代表完整 A10/A11/A06/A08 或 Q51，不含人工 IME、外部程序剪贴板、离线/冲突或 9760cf6 验证。",
+  "method": {
+    "endpoints": {
+      "windows": "E:/OneDrive/CueNote-Acceptance-20261018/library-cf350d8",
+      "mac": "/Users/hobo/Library/CloudStorage/OneDrive-个人/CueNote-Acceptance-20261018/library-cf350d8"
+    },
+    "transfer": "应用保存后由 OneDrive 传输；各端建立只读快照，Mac 证据经 SCP 回收，Windows 证据本地复制。接收端实际文件和应用读取证明到达；快照未注入同步库。各端时钟未校准，快照时间不等于云传输完成时间。",
+    "snapshotSelfDescription": "Read-only snapshot of fully local files received via OneDrive; no direct transfer into cloud folder"
+  },
+  "candidates": {
+    "windows": {
+      "sourceCommit": "cf350d8451d19583072998ce3c78cdebbf7930ea",
+      "binarySha256": "c40e70235e3b84ad843fe8a223eb4621630c5bf8f5a2063d97e1feb002ace038",
+      "evidence": "docs/device-acceptance-results.json previousOrdinaryCandidates 中保留的 cf350d8 记录；windows-cf350d8-current-view/inspection.json 一致（pid 99764）"
+    },
+    "mac": {
+      "sourceCommit": "cf350d8451d19583072998ce3c78cdebbf7930ea",
+      "binarySha256": "a672311c6baef35c63f2317b19c5ea1c2c5a5d4ab41bf5ace04318a2b7f8c3e8",
+      "evidence": "docs/device-acceptance-results.json previousOrdinaryCandidates 中保留的 cf350d8 记录；mac 两个视图 summary.sha256 一致（pid 40427）"
+    }
+  },
+  "note": {
+    "id": "d2732090-8d20-4a37-9177-e132d7018126",
+    "notebookId": "bfff6ac7-6b68-4c19-9121-0ac9f8485723",
+    "assetId": "264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+    "mapId": "32ead5f2-466e-4278-9ef3-4f6807b2b2a3",
+    "rootId": "e3dc8164-ed8a-4072-93c3-5ab691bef847",
+    "childId": "b8affbb2-1d41-45e2-89b6-6946831716cb",
+    "baselineTitle": "双端同步验收 · CueNote cf350d8",
+    "macTitle": "双端同步验收 · Mac 已接续",
+    "baselineSummary": "WIN-SUMMARY-001：三分区内容应完整同步。",
+    "macSummary": "MAC-SUMMARY-002：Mac 已接续，图片、公式、代码和导图均可见。",
+    "mapRootBaseline": "双端知识地图",
+    "mapRootMac": "双端知识地图 · Mac 续写",
+    "mapChild": "Windows 节点：验证公式与代码",
+    "cue": "WIN-CUE-001：如何把问题、记录和结论分开？",
+    "content": "WIN-CONTENT-001：Windows 已保存，等待 Mac 接续。English 123，中文标点与 emoji 🌿。"
+  },
+  "stages": [
+    {
+      "id": "S1",
+      "dir": "sync-cf350d8/windows-rich-baseline",
+      "side": "windows",
+      "utc": "2026-10-18T11:58:02.9373081Z",
+      "noteSha256": "bb42de5e3eff311baa923d50e1a15671b2c2eb2dbbcadba0e60d376f987dc004",
+      "noteBytes": 5893,
+      "documentSha256": "792b6e5b4561c391c4f147580f8bf58e5df2b913ee111f3da432e835f182adda",
+      "documentBytes": 1590,
+      "title": "双端同步验收 · CueNote cf350d8",
+      "summary": "WIN-SUMMARY-001：三分区内容应完整同步。",
+      "mapRootText": "双端知识地图",
+      "imageDisplayWidthPx": 360,
+      "contentModifiedAt": "2026-10-18T11:57:25.341Z"
+    },
+    {
+      "id": "S2",
+      "dir": "mac-sync-cf350d8-received-windows",
+      "side": "mac",
+      "utc": "2026-10-18T20:04:08.695545+08:00",
+      "noteSha256": "bb42de5e3eff311baa923d50e1a15671b2c2eb2dbbcadba0e60d376f987dc004",
+      "noteBytes": 5893,
+      "documentSha256": "792b6e5b4561c391c4f147580f8bf58e5df2b913ee111f3da432e835f182adda",
+      "documentBytes": 1590,
+      "title": "双端同步验收 · CueNote cf350d8",
+      "summary": "WIN-SUMMARY-001：三分区内容应完整同步。",
+      "mapRootText": "双端知识地图",
+      "imageDisplayWidthPx": 360,
+      "contentModifiedAt": "2026-10-18T11:57:25.341Z"
+    },
+    {
+      "id": "S3",
+      "dir": "mac-sync-cf350d8-title-written-v2",
+      "side": "mac",
+      "utc": "2026-10-18T20:10:34.401939+08:00",
+      "noteSha256": "d9a2a6bfb94a4e02bc75f42348a74db2f1a926d3f400a993c9e7556b8099cad4",
+      "noteBytes": 5890,
+      "documentSha256": "fec21d6a488991e4900008f4b5c220d1b94df16f84ba9d5ccbc6efa0a7d9ce06",
+      "documentBytes": 1588,
+      "title": "双端同步验收 · Mac 已接续",
+      "summary": "WIN-SUMMARY-001：三分区内容应完整同步。",
+      "mapRootText": "双端知识地图",
+      "imageDisplayWidthPx": 360,
+      "contentModifiedAt": "2026-10-18T12:09:53.296Z"
+    },
+    {
+      "id": "S4",
+      "dir": "sync-cf350d8/windows-received-mac-title",
+      "side": "windows",
+      "utc": "2026-10-18T12:15:22.8630744Z",
+      "noteSha256": "d9a2a6bfb94a4e02bc75f42348a74db2f1a926d3f400a993c9e7556b8099cad4",
+      "noteBytes": 5890,
+      "documentSha256": "fec21d6a488991e4900008f4b5c220d1b94df16f84ba9d5ccbc6efa0a7d9ce06",
+      "documentBytes": 1588,
+      "title": "双端同步验收 · Mac 已接续",
+      "summary": "WIN-SUMMARY-001：三分区内容应完整同步。",
+      "mapRootText": "双端知识地图",
+      "imageDisplayWidthPx": 360,
+      "contentModifiedAt": "2026-10-18T12:09:53.296Z"
+    },
+    {
+      "id": "S5",
+      "dir": "mac-sync-cf350d8-content-written",
+      "side": "mac",
+      "utc": "2026-10-18T20:22:59.132323+08:00",
+      "noteSha256": "b783e0b3a463c361f25b473d28a7258ea0a73a7bc662aeff2b103037f1fa605c",
+      "noteBytes": 5919,
+      "documentSha256": "ee5427be372ea1a246ce554a08acbed5dd5c527725b19eb44da69b30716907cf",
+      "documentBytes": 1630,
+      "title": "双端同步验收 · Mac 已接续",
+      "summary": "MAC-SUMMARY-002：Mac 已接续，图片、公式、代码和导图均可见。",
+      "mapRootText": "双端知识地图 · Mac 续写",
+      "imageDisplayWidthPx": 360,
+      "contentModifiedAt": "2026-10-18T12:22:26.851Z"
+    },
+    {
+      "id": "S6",
+      "dir": "sync-cf350d8/windows-received-mac-content",
+      "side": "windows",
+      "utc": "2026-10-18T12:22:58.0895909Z",
+      "noteSha256": "b783e0b3a463c361f25b473d28a7258ea0a73a7bc662aeff2b103037f1fa605c",
+      "noteBytes": 5919,
+      "documentSha256": "ee5427be372ea1a246ce554a08acbed5dd5c527725b19eb44da69b30716907cf",
+      "documentBytes": 1630,
+      "title": "双端同步验收 · Mac 已接续",
+      "summary": "MAC-SUMMARY-002：Mac 已接续，图片、公式、代码和导图均可见。",
+      "mapRootText": "双端知识地图 · Mac 续写",
+      "imageDisplayWidthPx": 360,
+      "contentModifiedAt": "2026-10-18T12:22:26.851Z"
+    },
+    {
+      "id": "S7",
+      "dir": "sync-cf350d8/windows-image-width-written",
+      "side": "windows",
+      "utc": "2026-10-18T12:24:28.280515Z",
+      "noteSha256": "2745e7db51978b1dc780bb82db21441032a06f5464468579feaa855d8d98a728",
+      "noteBytes": 5919,
+      "documentSha256": "1f183463ef3cf9dcb8659efca7777ea034f338952053a38d30efd0c38924f023",
+      "documentBytes": 1630,
+      "title": "双端同步验收 · Mac 已接续",
+      "summary": "MAC-SUMMARY-002：Mac 已接续，图片、公式、代码和导图均可见。",
+      "mapRootText": "双端知识地图 · Mac 续写",
+      "imageDisplayWidthPx": 420,
+      "contentModifiedAt": "2026-10-18T12:24:26.206Z"
+    },
+    {
+      "id": "S8",
+      "dir": "mac-sync-cf350d8-received-width",
+      "side": "mac",
+      "utc": "2026-10-18T20:24:56.634189+08:00",
+      "noteSha256": "2745e7db51978b1dc780bb82db21441032a06f5464468579feaa855d8d98a728",
+      "noteBytes": 5919,
+      "documentSha256": "1f183463ef3cf9dcb8659efca7777ea034f338952053a38d30efd0c38924f023",
+      "documentBytes": 1630,
+      "title": "双端同步验收 · Mac 已接续",
+      "summary": "MAC-SUMMARY-002：Mac 已接续，图片、公式、代码和导图均可见。",
+      "mapRootText": "双端知识地图 · Mac 续写",
+      "imageDisplayWidthPx": 420,
+      "contentModifiedAt": "2026-10-18T12:24:26.206Z"
+    }
+  ],
+  "invariants": {
+    "notebookFiles": [
+      {
+        "path": "notebooks/74af4d2a-61c9-475f-bf78-f0bc5491a6d2.json",
+        "sha256": "f9a817d57704df2dd1d95f3a2a4fc549de3a564f02fd8ac17a19d0bc10994c93",
+        "bytes": 197
+      },
+      {
+        "path": "notebooks/bfff6ac7-6b68-4c19-9121-0ac9f8485723.json",
+        "sha256": "ebfe9c7283ebd26ccd046562661fa8f5235d68523e27341e7b00897cedf67f32",
+        "bytes": 195
+      }
+    ],
+    "assetEntries": [
+      {
+        "path": "assets/manifest.json",
+        "sha256": "253e6f8ea6818d22a401636223b1aba978cb3cf0ab382d3dcfc8d406ce260532",
+        "bytes": 219
+      },
+      {
+        "path": "assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+        "sha256": "48f5e3c6b7717d06b0996cf5432b7622e0ba989456e70c5733f21aaf13c443c5",
+        "bytes": 4329
+      }
+    ],
+    "unchangedPaths": [
+      "schemaVersion",
+      "noteId",
+      "organization.notebookId",
+      "organization.pinned",
+      "organization.trashedAt",
+      "timestamps.createdAt",
+      "timestamps.organizationModifiedAt",
+      "sections.cue",
+      "sections.content[0]",
+      "sections.content[2].assetId",
+      "sections.content[4].mapId/rootId/nodes[0].id/nodes[1]",
+      "sections.content[5].codeBlock(language,code)",
+      "sections.content[6].mathBlock.latex"
+    ]
+  },
+  "checks": {
+    "fileHashMatches": "24/24",
+    "fileBytesMatch": "24/24",
+    "zipEntriesPerStage": 3,
+    "zipEntrySet": [
+      "document.json",
+      "assets/manifest.json",
+      "assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1"
+    ],
+    "snapshotDocumentEqualsZipDocument": "8/8",
+    "transitions": [
+      {
+        "from": "S1",
+        "to": "S2",
+        "changes": 0
+      },
+      {
+        "from": "S2",
+        "to": "S3",
+        "changes": 2,
+        "fields": [
+          "title",
+          "timestamps.contentModifiedAt"
+        ]
+      },
+      {
+        "from": "S3",
+        "to": "S4",
+        "changes": 0
+      },
+      {
+        "from": "S4",
+        "to": "S5",
+        "changes": 3,
+        "fields": [
+          "sections.content[4].nodes[0].text",
+          "sections.summary[0].children[0].text",
+          "timestamps.contentModifiedAt"
+        ]
+      },
+      {
+        "from": "S5",
+        "to": "S6",
+        "changes": 0
+      },
+      {
+        "from": "S6",
+        "to": "S7",
+        "changes": 2,
+        "fields": [
+          "sections.content[2].displayWidthPx",
+          "timestamps.contentModifiedAt"
+        ]
+      },
+      {
+        "from": "S7",
+        "to": "S8",
+        "changes": 0
+      }
+    ]
+  },
+  "guiEvidence": [
+    {
+      "dir": "mac-cf350d8-title-roundtrip-v2-view",
+      "appSha256": "a672311c6baef35c63f2317b19c5ea1c2c5a5d4ab41bf5ace04318a2b7f8c3e8",
+      "pid": 40427,
+      "screenshotSha256": "dda3e788790f851a212a905c72da4b4d78edbee53bb53114f2986f42de189dc2",
+      "screenshotShaVerified": true,
+      "observed": [
+        "标题编辑框与列表均为 双端同步验收 · Mac 已接续",
+        "列表行时间 20:09，摘要仍 WIN-SUMMARY-001",
+        "图片宽 360，导图根仍为 双端知识地图"
+      ]
+    },
+    {
+      "dir": "mac-cf350d8-summary-scalar-view",
+      "appSha256": "a672311c6baef35c63f2317b19c5ea1c2c5a5d4ab41bf5ace04318a2b7f8c3e8",
+      "pid": 40427,
+      "screenshotSha256": "613c65aeb56b2c12c7fbe17bc899306850386d3e7662a5733fc76c730a7a65ca",
+      "screenshotShaVerified": true,
+      "observed": [
+        "总结区为 MAC-SUMMARY-002：Mac 已接续，图片、公式、代码和导图均可见。",
+        "导图根为 双端知识地图 · Mac 续写，子节点未变",
+        "图片宽 360（宽度改动前）"
+      ]
+    },
+    {
+      "dir": "windows-cf350d8-current-view",
+      "exeSha256": "c40e70235e3b84ad843fe8a223eb4621630c5bf8f5a2063d97e1feb002ace038",
+      "pid": 99764,
+      "screenshot": "window.png",
+      "screenshotBytes": 73123,
+      "screenshotSha256Computed": "6eb51342657f05609dfb09079311c1908e05c4e299053c0fe9173fcd32f89a8e",
+      "observed": [
+        "已渲染图片（ControlType.Image 361×163）",
+        "导图根 双端知识地图 · Mac 续写 与子节点",
+        "代码含制表符与行首空格，公式为独立公式块",
+        "总结区 MAC-SUMMARY-002…，保存按钮 已保存到本地 禁用"
+      ]
+    }
+  ],
+  "guiScope": "Mac 两个视图 summary 明确 q51Claimed=false、clipboard=false、ime=false；Windows inspection 记录普通应用窗口且无业务 IPC。主执行人目视截图确认渲染及 Windows 无未保存草稿时自动刷新一致；独立复核只读 AX、摘要和哈希。均不作为人工 IME、外部程序剪贴板或 Q51 证据。",
+  "supplementarySnapshot": {
+    "dir": "mac-sync-cf350d8-partial-unicode",
+    "utc": "2026-10-18T20:19:05.949961+08:00",
+    "noteSha256": "70b5d9d119e8fae731a5cb2401ea9eb2db12495b3c25ed3c97237fa228728876",
+    "noteBytes": 5851,
+    "hashVerified": true,
+    "summaryText": "M",
+    "contentModifiedAt": "2026-10-18T12:18:19.812Z",
+    "maxDepthNote": "不属于指定 8 阶段，仅用于保留失败助手尝试"
+  },
+  "helperAttempt": {
+    "failure": "多字符 CGEvent 只把 M 写入富文本（summary）",
+    "retry": "逐字符 CGEvent 后保存出精确总结区文字",
+    "alsoWorked": "标题与文本域多字符输入正常",
+    "conclusion": "测试助手限制，不是产品 IME 缺陷证据"
+  },
+  "finderSubStep": "Mac 初始占位符保护后，Finder 执行 始终保留 并下载；仅记录为子步骤，不构成验收。",
+  "notCovered": [
+    "完整 A10/A11/A06/A08 或 Q51 验收",
+    "人工 IME 与外部程序剪贴板",
+    "离线/冲突场景",
+    "9760cf6 版本验证",
+    "完整矩阵、性能与交互安装/升级/卸载"
+  ],
+  "remaining": [
+    "两端真机人工 IME 与跨应用剪贴板",
+    "真实 OneDrive 双端离线重连、并发冲突及组织信息迟到场景",
+    "完整 A01-A26 与 Q51/Q52 真机证据",
+    "交互安装、真实升级/卸载数据保留及正式候选 UI 用例",
+    "Mac 首次启动超过 3000ms 的独立诊断",
+    "9760cf6 新版本验证"
+  ]
+}
