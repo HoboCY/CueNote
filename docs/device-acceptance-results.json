@@ -120,7 +120,7 @@
       "report": "performance-windows-committed-projection-results.json",
       "scope": "Independent performance variant only; same-version ordinary packages and cross-device acceptance remain open"
     },
-    "currentOrdinaryCandidate": {
+    "ordinaryCandidate9760cf6": {
       "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
       "binarySha256": "a4520e94a0807b7f45a2ed722bd7dbce92016342a312ca6480845002846e0919",
       "priorAppAndDataBackedUp": true,
@@ -417,7 +417,7 @@
       "nativeResourceTestsPassed": 47,
       "scope": "Isolated performance variant; ordinary candidate acceptance remains incomplete"
     },
-    "currentOrdinaryCandidate": {
+    "ordinaryCandidate9760cf6": {
       "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
       "binarySha256": "ed397f9a15a99dcca159de4e0b1f4418259b622b83e1b31055f9405e4be00c08",
       "priorAppAndDataBackedUp": true,
@@ -562,8 +562,8 @@
     {
       "id": "A05",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "Ordinary Windows 9760cf6 layout, same-page scrolling, sidebar collapse/expand, draft and cursor context verified; see windows-layout-9760cf6-results.json. Mac full case remains untested."
+      "mac": "通过",
+      "notes": "Windows9760cf6 prior layout evidence retained. Mac4f517a4: 28/72, continuous scroll, width618->747->618, title caret6, body caret4, newly typed X retained at caret5 across collapse/expand, normal save/reopen byte-exact. See image-block-focus-4f517a4-results.json."
     },
     {
       "id": "A06",
@@ -573,9 +573,9 @@
     },
     {
       "id": "A07",
-      "windows": "失败",
-      "mac": "未测",
-      "notes": "Windows079fa6e image paste/resize/move/delete and assets verified. Direct Ctrl+Z after image control deletion lost body focus; refocusing restored exact image. Fix4f517a4 passes160 frontend tests/build; installed keyboard retest pending. Full case remains open."
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "Cumulative frozen A07: prior explicit two-external-app human results (Windows cbd9c08, Mac9760cf6), native block operations and both ordinary4f517a4 direct keyboard undo plus neighbor text/reopen/assets. Earlier Windows079 resize/move evidence retained. Programmatic clipboard is identified separately. Offline is not part of A07. See image-block-focus-4f517a4.md."
     },
     {
       "id": "A08",
@@ -677,7 +677,7 @@
       "id": "A24",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Both ordinary candidates received7a11fb1 through verified backups; Mac subsequently4f517a4. Windows backup1473 files and installer exit0, app/data hash verified; Mac full prior app and seven scoped roots preserved. Same-version replacement does not establish actual upgrade/uninstall."
+      "notes": "Both ordinary candidates updated to4f517a4 with app/data backups and byte-exact data preservation. Windows1497-file backup and installer exit0; Mac prior app and seven scoped roots preserved. Same-version replacement does not establish actual upgrade/uninstall."
     },
     {
       "id": "A25",
@@ -693,9 +693,9 @@
     }
   ],
   "pending": [
-    "4f517a4 image deletion focus fix:160 frontend tests/build passed; ordinary installed direct keyboard undo regression pending. Task-marker input fix7a11fb1 passed native input/toggle/reopen on both devices.",
+    "Full A06 and Mac A08 remain open. Both ordinary4f517a4 image deletion direct-undo regression passed; cumulative A07 and Mac A05 accepted.",
     "079fa6e full Q51 passed on Windows and M1; two separate M1 immediate-startup save diagnostics while list-pending also passed. Full A23 Q52 UI boundaries remain open.",
-    "Mac 9760cf6 manual IME/clipboard/reopen substeps confirmed; complete A06/A07 format and block-operation cases remain open.",
+    "Human IME and two-external-app clipboard substeps are separately recorded; remaining A06 syntax/input coverage is incomplete.",
     "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and late organization metadata; one ordinary rich-note sequential round trip has passed.",
     "Full A01-A26, Q51/Q52 target-device evidence",
     "Interactive installation, actual upgrade/uninstall data retention and remaining formal-candidate UI cases on both devices"
@@ -726,9 +726,9 @@
   },
   "currentOrdinaryCandidates": {
     "windows": {
-      "sourceCommit": "7a11fb19e512c5db23bd26ad210396bde0850d38",
-      "sha256": "f6f3dbd868cb8d3883c308b86aec9f72f6c82dc616b0ee67c92761ba8c1b2408",
-      "backupFiles": 1473,
+      "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+      "sha256": "ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68",
+      "backupFiles": 1497,
       "installerExitCode": 0,
       "unchangedData": true
     },
@@ -738,5 +738,15 @@
       "unchangedData": true
     },
     "scope": "Same-version replacement; not full A24 upgrade/uninstall acceptance."
+  },
+  "imageFocusAndLayoutFollowup": {
+    "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+    "report": "image-block-focus-4f517a4-results.json",
+    "bothDirectKeyboardUndoPassed": true,
+    "macA05Accepted": true,
+    "bothA07Accepted": true,
+    "macOwnedTestTerminalClosed": true,
+    "remainingOriginalTerminals": 2,
+    "scope": "Cumulative evidence with platform/candidate provenance, not overall #33 acceptance."
   }
 }

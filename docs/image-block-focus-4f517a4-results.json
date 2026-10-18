@@ -1,0 +1,82 @@
+{
+  "format": 1,
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "windowsBinarySha256": "ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68",
+  "macBinarySha256": "fc323333171cefbacd3822b1fdd6a99468b8b0a8cb23ad9715c80a22b8243df0",
+  "verifiedSnapshots": 17,
+  "verifiedFactCopies": 110,
+  "verifiedPackageDocuments": 76,
+  "verifiedAssetPayloads": 24,
+  "image": {
+    "bothDirectKeyboardUndoPassed": true,
+    "bothNormalReopenExact": true,
+    "macMoveUpKeyboardAndDownPointer": true,
+    "unrelatedNotesAndBooksUnchanged": true,
+    "windowsAssetSha256": "815dbab793f7976d03612fdc923ea433c4219d9aa49034239960d706f197263a",
+    "macAssetSha256": "346d9bd433154dabe1be6cd425375d6b2127df2a5e1f7ee62338c16b64ca86dd",
+    "provenance": "Programmatic OS Bitmap/PNG clipboard in this batch; earlier two-external-app manual coverage is separate: Windows cbd9c08, Mac9760cf6. Windows earlier resize/move checks on079fa6e are reused; changed delete focus retested on4f517a4. A07 contains no offline requirement."
+  },
+  "macLayout": {
+    "titleCaret": 6,
+    "bodyCaretBeforeAfter": 4,
+    "bodyCaretAfterTyping": 5,
+    "bodyWidthExpanded": 618,
+    "bodyWidthCollapsed": 747,
+    "cueWidth": 254,
+    "contentWidth": 654,
+    "inputToCollapseMs": 299.79504203796387,
+    "beforeAfterReopenNoteSha256": "299eb8206916d139501b7f72a309e5f036bca9e538045a1ffeaa1d9072e6a873"
+  },
+  "macEvidence": {
+    "files": 368,
+    "archiveSha256": "f47d4a576d8be38088edb1dfa5f527880ab7cb6e0c9a51353c190b629a785b7f",
+    "manifestSha256": "16defc057edc35b868b9b565aa4965a45b78db2a9941f68f06b6b6d2439659e8",
+    "normalCloseObserved": true,
+    "normalAppExitCodeClaimed": false
+  },
+  "automation": {
+    "v3": "Jobs1-25; several isolated pointer clicks had no visible result and were not counted as product passes or failures.",
+    "v4": "Jobs26-43; same Terminal reused; mouse down/up separated40ms, ownership/foreground guards retained.",
+    "terminalCleanup": {
+      "closedWindow": 23436,
+      "visibleWindows": [
+        {
+          "id": 22192,
+          "tabs": [
+            {
+              "tty": "/dev/ttys072",
+              "busy": false,
+              "processes": [
+                "login",
+                "-zsh"
+              ]
+            }
+          ]
+        },
+        {
+          "id": 20782,
+          "tabs": [
+            {
+              "tty": "/dev/ttys022",
+              "busy": false,
+              "processes": [
+                "login",
+                "-zsh"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "acceptedCases": {
+    "windows": [
+      "A07"
+    ],
+    "mac": [
+      "A05",
+      "A07"
+    ]
+  },
+  "scope": "Combines explicit human substep reports with native ordinary-package tests across recorded candidates. Not complete #33, A06, Mac A08, offline/sync, recovery or upgrade acceptance."
+}
