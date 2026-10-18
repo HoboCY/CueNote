@@ -244,6 +244,17 @@
       "passed": 85,
       "report": "native-fault-acceptance-12da826-results.json",
       "scope": "Actual-device native debug fault harnesses; other GUI/OneDrive cases remain open."
+    },
+    "currentNoteStartupFollowup": {
+      "sourceCommit": "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+      "timingMatrixPassed": true,
+      "metricSamples": 467,
+      "normalExits": 13,
+      "startupMaxMs": 783.7583,
+      "nativeContentVerified": true,
+      "nativeResourceTestsPassed": 48,
+      "report": "performance-windows-startup-current-results.json",
+      "fullA23Accepted": false
     }
   },
   "mac": {
@@ -603,7 +614,7 @@
       "id": "A23",
       "windows": "未测",
       "mac": "失败",
-      "notes": "9760cf6 Windows full Q51 11/11 with 467 samples, 13 normal exits and 48 native resource tests. Mac matrix10 complete 467 samples, 10/11 timing gates, startup 4590.58/4101.88 ms above 3000ms; 15 normal exits and 47 resource tests. Full A23 remains unaccepted."
+      "notes": "079fa6e Windows full Q51 11/11 with 467 samples, 13 normal exits and 48 native resource tests; startup max 783.76 ms. Mac 9760cf6 matrix10 complete 467 samples, 10/11 timing gates, startup 4590.58/4101.88 ms above 3000ms; 15 normal exits and 47 resource tests. Mac 079fa6e retest pending. Full A23 remains unaccepted."
     },
     {
       "id": "A24",
