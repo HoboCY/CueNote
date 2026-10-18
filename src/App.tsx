@@ -494,8 +494,20 @@ function App() {
 
   if (saveCoordinatorRef.current === null) {
     saveCoordinatorRef.current = createSaveCoordinator<NoteContent, EditorSaveReceipt>({
-      save: (sessionId, snapshot) => sessionRef.current?.origin.kind === 'external'
-        ? workspaceApi.saveExternal(sessionId, snapshot) : workspaceApi.save(sessionId, snapshot),
+      save: async (sessionId, snapshot) => {
+        const externalSession = sessionRef.current?.origin.kind === 'external';
+        const receipt = externalSession
+          ? await workspaceApi.saveExternal(sessionId, snapshot)
+          : await workspaceApi.save(sessionId, snapshot);
+        if (!externalSession) {
+          // A confirmed library save may project only the committed note
+          // without a whole-library scan, so it must queue its own
+          // external-changes probe. This runs before the coordinator's stale
+          // session/generation check can skip onSaved.
+          externalChangesCoordinatorRef.current?.librarySaved();
+        }
+        return receipt;
+      },
       onSaved: (snapshot, receipt) => {
         if (sessionRef.current?.sessionId !== snapshot.sessionId) return;
         updateSessionMetadata(receipt.session);

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::note_format::{Block, Inline, NotePackage, TableRow};
+use crate::note_format::{Block, Inline, NoteContent, NotePackage, Sections, TableRow};
 
 use super::NoteSummary;
 
@@ -98,9 +98,7 @@ impl SearchIndex {
         note: NoteSummary,
         projection: &[(SearchSection, String)],
     ) -> bool {
-        let bytes = projection.iter().try_fold(0usize, |bytes, (_, text)| {
-            bytes.checked_add(text.len().checked_mul(2)?)
-        });
+        let bytes = count_text_bytes(projection.iter().map(|(_, text)| text.as_str()));
         let Some(bytes) = bytes.filter(|bytes| *bytes <= MAX_INDEX_BYTES - self.indexed_bytes)
         else {
             self.incomplete = true;
@@ -120,48 +118,94 @@ impl SearchIndex {
     }
 
     pub(crate) fn add_note(&mut self, note: NoteSummary, package: &NotePackage) -> bool {
-        let mut remaining = (MAX_INDEX_BYTES - self.indexed_bytes) / 2;
-        let mut fields = Vec::new();
-        let mut title = BoundedSegments::new(SearchSection::Title, remaining);
-        title.push_segment(|text| text.push_str(&package.document.title));
-        if title.failed {
+        let remaining = (MAX_INDEX_BYTES - self.indexed_bytes) / 2;
+        let Some(fields) = project_content(
+            &package.document.title,
+            &package.document.sections,
+            remaining,
+        ) else {
+            self.incomplete = true;
+            return false;
+        };
+        self.push_projected(note, fields)
+    }
+
+    /// Replace the single indexed entry for `note.note_id` with a projection of
+    /// `content`. Any failure leaves the whole index untouched, including
+    /// `incomplete`, so the caller can fall back to a full scan.
+    pub(super) fn replace_note(&mut self, note: &NoteSummary, content: &NoteContent) -> bool {
+        if self.incomplete {
+            return false;
+        }
+        let mut position = None;
+        let mut matches = 0usize;
+        for (index, entry) in self.entries.iter().enumerate() {
+            if entry.note.note_id == note.note_id {
+                matches += 1;
+                if matches > 1 {
+                    return false;
+                }
+                position = Some(index);
+            }
+        }
+        let Some(position) = position else {
+            return false;
+        };
+        let Some(old_bytes) = count_text_bytes(
+            self.entries[position]
+                .fields
+                .iter()
+                .map(|field| field.text.as_str()),
+        ) else {
+            return false;
+        };
+        let Some(base_bytes) = self.indexed_bytes.checked_sub(old_bytes) else {
+            return false;
+        };
+        let Some(remaining) = MAX_INDEX_BYTES
+            .checked_sub(base_bytes)
+            .map(|headroom| headroom / 2)
+        else {
+            return false;
+        };
+        let Some(fields) = project_content(&content.title, &content.sections, remaining) else {
+            return false;
+        };
+        let Some(bytes) = count_text_bytes(fields.iter().map(|(_, text)| text.as_str())) else {
+            return false;
+        };
+        let Some(indexed_bytes) = base_bytes.checked_add(bytes) else {
+            return false;
+        };
+        if indexed_bytes > MAX_INDEX_BYTES {
+            return false;
+        }
+        self.entries[position] = IndexedNote {
+            note: note.clone(),
+            fields: to_indexed_fields(fields),
+        };
+        self.indexed_bytes = indexed_bytes;
+        true
+    }
+
+    fn push_projected(&mut self, note: NoteSummary, fields: Vec<(SearchSection, String)>) -> bool {
+        let Some(bytes) = count_text_bytes(fields.iter().map(|(_, text)| text.as_str())) else {
+            self.incomplete = true;
+            return false;
+        };
+        let Some(indexed_bytes) = self.indexed_bytes.checked_add(bytes) else {
+            self.incomplete = true;
+            return false;
+        };
+        if indexed_bytes > MAX_INDEX_BYTES {
             self.incomplete = true;
             return false;
         }
-        remaining -= title.used_bytes;
-        fields.extend(title.into_fields());
-        for (section, blocks) in [
-            (SearchSection::Cue, package.document.sections.cue.as_slice()),
-            (
-                SearchSection::Content,
-                package.document.sections.content.as_slice(),
-            ),
-            (
-                SearchSection::Summary,
-                package.document.sections.summary.as_slice(),
-            ),
-        ] {
-            let mut segments = BoundedSegments::new(section, remaining);
-            project_blocks(blocks, &mut segments);
-            if segments.failed {
-                self.incomplete = true;
-                return false;
-            }
-            remaining -= segments.used_bytes;
-            fields.extend(segments.into_fields());
-        }
-        let note_bytes = fields.iter().map(|(_, text)| text.len()).sum::<usize>() * 2;
-
-        let fields = fields
-            .into_iter()
-            .map(|(section, text)| IndexedField {
-                ascii_folded: text.to_ascii_lowercase(),
-                section,
-                text,
-            })
-            .collect();
-        self.indexed_bytes += note_bytes;
-        self.entries.push(IndexedNote { note, fields });
+        self.indexed_bytes = indexed_bytes;
+        self.entries.push(IndexedNote {
+            note,
+            fields: to_indexed_fields(fields),
+        });
         true
     }
 
@@ -289,6 +333,53 @@ impl BoundedSegments {
         let section = self.section;
         self.segments.into_iter().map(move |text| (section, text))
     }
+}
+
+fn project_content(
+    title: &str,
+    sections: &Sections,
+    max_text_bytes: usize,
+) -> Option<Vec<(SearchSection, String)>> {
+    let mut remaining = max_text_bytes;
+    let mut fields = Vec::new();
+    let mut title_segments = BoundedSegments::new(SearchSection::Title, remaining);
+    title_segments.push_segment(|text| text.push_str(title));
+    if title_segments.failed {
+        return None;
+    }
+    remaining -= title_segments.used_bytes;
+    fields.extend(title_segments.into_fields());
+    for (section, blocks) in [
+        (SearchSection::Cue, sections.cue.as_slice()),
+        (SearchSection::Content, sections.content.as_slice()),
+        (SearchSection::Summary, sections.summary.as_slice()),
+    ] {
+        let mut segments = BoundedSegments::new(section, remaining);
+        project_blocks(blocks, &mut segments);
+        if segments.failed {
+            return None;
+        }
+        remaining -= segments.used_bytes;
+        fields.extend(segments.into_fields());
+    }
+    Some(fields)
+}
+
+fn to_indexed_fields(fields: Vec<(SearchSection, String)>) -> Vec<IndexedField> {
+    fields
+        .into_iter()
+        .map(|(section, text)| IndexedField {
+            ascii_folded: text.to_ascii_lowercase(),
+            section,
+            text,
+        })
+        .collect()
+}
+
+fn count_text_bytes<'a>(mut texts: impl Iterator<Item = &'a str>) -> Option<usize> {
+    texts.try_fold(0usize, |bytes, text| {
+        bytes.checked_add(text.len().checked_mul(2)?)
+    })
 }
 
 fn project_blocks(blocks: &[Block], output: &mut BoundedSegments) {

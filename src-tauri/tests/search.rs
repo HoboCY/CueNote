@@ -207,6 +207,14 @@ fn search_indexes_rich_text_code_latex_tables_lists_and_mind_map_text_only() {
 
     workspace.rebuild_search_index().unwrap();
 
+    // Exercise replacement of an existing rich note, not only initial indexing.
+    let session = workspace.open_note(&note_id).unwrap();
+    let mut revised = session.content;
+    revised.title = "Updated asset ledger".into();
+    workspace
+        .save_note_content(&session.session_id, revised)
+        .unwrap();
+
     for (query, section, matched) in [
         ("original aerial", "cue", "Original Aerial"),
         ("奈尔笔记", "content", "奈尔笔记"),
@@ -393,6 +401,222 @@ fn search_matches_actual_segments_without_joining_structural_boundaries() {
         );
         assert_eq!(results.hits[0].snippet.matched, actual_segment);
     }
+}
+
+#[test]
+fn saved_note_is_searchable_before_the_followup_probe_checks_other_files() {
+    let temp = workspace_temp();
+    let library_path = temp.path().join("Library");
+    let recovery = temp.path().join("recovery");
+    let mut workspace = Workspace::new(
+        temp.path().join("settings"),
+        recovery.clone(),
+        temp.path().join("default"),
+    );
+    workspace.select_library(library_path.clone()).unwrap();
+    let other = workspace.new_note().unwrap();
+    let other_title = other.text.title.clone();
+    workspace
+        .save_note_text(&other.session_id, other.text.clone())
+        .unwrap();
+    let note = workspace.new_note().unwrap();
+    workspace
+        .save_note_text(
+            &note.session_id,
+            PlainText {
+                title: "Previous cardinal".into(),
+                cue: "old needle".into(),
+                content: String::new(),
+                summary: String::new(),
+            },
+        )
+        .unwrap();
+    let other_path = library_path
+        .join("notes")
+        .join(format!("{}.cuenote", other.note_id));
+    let mut external = storage::open_note(&other_path).unwrap();
+    external.package.document.title = "Externally revised atlas".into();
+    storage::save_note(
+        &other_path,
+        &recovery,
+        &external.package,
+        Some(&external.revision),
+    )
+    .unwrap();
+    let cache_files = || -> std::collections::BTreeMap<_, _> {
+        std::fs::read_dir(temp.path().join("settings/search-cache-v1"))
+            .unwrap()
+            .map(|entry| {
+                let entry = entry.unwrap();
+                (entry.file_name(), std::fs::read(entry.path()).unwrap())
+            })
+            .collect()
+    };
+    let cache_before = cache_files();
+
+    let content = NotePackage::new_plain(
+        note.notebook_id.clone().unwrap(),
+        PlainText {
+            title: "Committed cardinal".into(),
+            cue: "new needle".into(),
+            content: "body".into(),
+            summary: "Saved summary".into(),
+        },
+    )
+    .content();
+    let receipt = workspace
+        .save_note_content(&note.session_id, content)
+        .unwrap();
+    let saved = receipt
+        .library
+        .notes
+        .iter()
+        .find(|item| item.note_id == note.note_id)
+        .unwrap();
+    assert_eq!(saved.title, "Committed cardinal");
+    assert_eq!(saved.excerpt, "Saved summary");
+    assert_eq!(
+        workspace.search_notes("new needle", None, 0).unwrap().total,
+        1
+    );
+    assert_eq!(
+        workspace.search_notes("old needle", None, 0).unwrap().total,
+        0
+    );
+    assert_eq!(
+        receipt
+            .library
+            .notes
+            .iter()
+            .find(|item| item.note_id == other.note_id)
+            .unwrap()
+            .title,
+        other_title,
+        "a safe save projects the committed note without waiting for unrelated files"
+    );
+    assert_eq!(
+        cache_files(),
+        cache_before,
+        "unverified library entries must not be published as a fresh disk cache"
+    );
+
+    let probe = workspace
+        .probe_external_changes(Some(&note.session_id))
+        .unwrap();
+    assert_eq!(probe.status, "unchanged");
+    assert_eq!(
+        probe
+            .library
+            .unwrap()
+            .notes
+            .iter()
+            .find(|item| item.note_id == other.note_id)
+            .unwrap()
+            .title,
+        "Externally revised atlas"
+    );
+    assert_eq!(
+        workspace
+            .search_notes("Externally revised", None, 0)
+            .unwrap()
+            .total,
+        1
+    );
+    assert_ne!(cache_files(), cache_before);
+    assert_eq!(
+        storage::open_note(&other_path).unwrap().package,
+        external.package
+    );
+}
+
+#[test]
+fn saved_note_growth_respects_the_full_search_budget_and_shrink_recovers() {
+    let temp = workspace_temp();
+    let library = temp.path().join("Library");
+    let mut workspace = Workspace::new(
+        temp.path().join("settings"),
+        temp.path().join("recovery"),
+        temp.path().join("default"),
+    );
+    let notebook = workspace
+        .select_library(library.clone())
+        .unwrap()
+        .library
+        .unwrap()
+        .default_notebook_id
+        .unwrap();
+    for (index, title) in [(1, "Budget first"), (2, "Budget second")] {
+        let mut package = NotePackage::new_plain(
+            notebook.clone(),
+            PlainText {
+                title: title.into(),
+                cue: String::new(),
+                content: "a".repeat(31 * 1024 * 1024),
+                summary: String::new(),
+            },
+        );
+        package.document.note_id = format!("00000000-0000-4000-8000-{index:012}");
+        let path = library
+            .join("notes")
+            .join(format!("{}.cuenote", package.document.note_id));
+        cuenote_lib::note_format::write_package(
+            &mut std::fs::File::create(path).unwrap(),
+            &package,
+        )
+        .unwrap();
+    }
+    workspace.rebuild_search_index().unwrap();
+    let initial = workspace.search_notes("Budget", None, 0).unwrap();
+    assert_eq!(initial.total, 2);
+    assert!(!initial.incomplete);
+    let session = workspace
+        .open_note("00000000-0000-4000-8000-000000000001")
+        .unwrap();
+    let mut content = session.content;
+    let Block::Paragraph { children } = &mut content.sections.content[0] else {
+        panic!("plain body");
+    };
+    let Inline::Text { text, .. } = &mut children[0] else {
+        panic!("plain text");
+    };
+    text.push_str(&"b".repeat(3 * 1024 * 1024));
+    workspace
+        .save_note_content(&session.session_id, content)
+        .unwrap();
+    let over_budget = workspace.search_notes("Budget", None, 0).unwrap();
+    assert!(over_budget.incomplete);
+    assert_eq!(over_budget.indexed_notes, 1);
+    assert_eq!(
+        workspace
+            .search_notes("Budget first", None, 0)
+            .unwrap()
+            .total,
+        1
+    );
+    assert_eq!(
+        workspace
+            .search_notes("Budget second", None, 0)
+            .unwrap()
+            .total,
+        0
+    );
+    let smaller = NotePackage::new_plain(
+        notebook,
+        PlainText {
+            title: "Budget first smaller".into(),
+            cue: String::new(),
+            content: "small body".into(),
+            summary: String::new(),
+        },
+    )
+    .content();
+    workspace
+        .save_note_content(&session.session_id, smaller)
+        .unwrap();
+    let recovered = workspace.search_notes("Budget", None, 0).unwrap();
+    assert!(!recovered.incomplete);
+    assert_eq!(recovered.indexed_notes, 2);
+    assert_eq!(recovered.total, 2);
 }
 
 #[test]

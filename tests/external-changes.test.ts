@@ -84,6 +84,128 @@ function changedProbe(sessionId: string | null): Probe {
   return { sessionId, status: 'changed', revision: 'rev-2', message: null, library: null };
 }
 
+test('a confirmed library save queues a full probe without any file notification', async () => {
+  const clock = new FakeClock();
+  const probed: (string | null)[] = [];
+  const coordinator = createExternalChangesCoordinator({
+    getSessionId: () => 'session-1',
+    probe: async (sessionId) => {
+      probed.push(sessionId);
+      return { ...changedProbe(sessionId), status: 'unchanged' };
+    },
+    onChanged: () => {},
+    onProbeResult: () => {},
+    setTimeout: clock.setTimeout,
+    clearTimeout: clock.clearTimeout,
+  });
+
+  assert.deepEqual(probed, [], 'nothing requested a probe yet');
+  coordinator.librarySaved();
+  clock.fire();
+  await settlePromises();
+
+  assert.deepEqual(probed, ['session-1'], 'the committed save must request its own fingerprint check');
+  coordinator.dispose();
+});
+
+test('repeated library saves coalesce into one debounced probe', async () => {
+  const clock = new FakeClock();
+  const probed: (string | null)[] = [];
+  const coordinator = createExternalChangesCoordinator({
+    getSessionId: () => 'session-1',
+    probe: async (sessionId) => {
+      probed.push(sessionId);
+      return { ...changedProbe(sessionId), status: 'unchanged' };
+    },
+    onChanged: () => {},
+    onProbeResult: () => {},
+    setTimeout: clock.setTimeout,
+    clearTimeout: clock.clearTimeout,
+  });
+
+  coordinator.librarySaved();
+  coordinator.librarySaved();
+  coordinator.librarySaved();
+  clock.fire();
+  await settlePromises();
+
+  assert.deepEqual(probed, ['session-1']);
+  clock.fire();
+  await settlePromises();
+  assert.equal(probed.length, 1, 'a burst of saves leaves exactly one trailing probe');
+  coordinator.dispose();
+});
+
+test('a library save probe waits for an in-flight save to settle before scanning', async () => {
+  const clock = new FakeClock();
+  let saving = true;
+  const probed: (string | null)[] = [];
+  const coordinator = createExternalChangesCoordinator({
+    getSessionId: () => 'session-1',
+    canProbe: () => !saving,
+    probe: async (sessionId) => {
+      probed.push(sessionId);
+      return { ...changedProbe(sessionId), status: 'unchanged' };
+    },
+    onChanged: () => {},
+    onProbeResult: () => {},
+    setTimeout: clock.setTimeout,
+    clearTimeout: clock.clearTimeout,
+  });
+
+  coordinator.librarySaved();
+  clock.fire();
+  await settlePromises();
+  assert.deepEqual(probed, [], 'the scan must not start while the write is active');
+
+  saving = false;
+  clock.fire();
+  await settlePromises();
+  assert.deepEqual(probed, ['session-1'], 'the queued save probe still runs after the write settles');
+  coordinator.dispose();
+});
+
+test('a probe deferred by an in-flight save is retried by the next confirmed save', async () => {
+  const clock = new FakeClock();
+  let saving = false;
+  let sessionId = 'session-1';
+  const probed: (string | null)[] = [];
+  let applied = 0;
+  const coordinator = createExternalChangesCoordinator({
+    getSessionId: () => sessionId,
+    canProbe: () => !saving,
+    probe: async (id) => {
+      probed.push(id);
+      if (probed.length === 1) {
+        saving = true;
+        return { ...changedProbe(id), status: 'deferred', revision: null };
+      }
+      return { ...changedProbe(id), status: 'unchanged' };
+    },
+    onChanged: () => { applied += 1; },
+    onProbeResult: () => { applied += 1; },
+    setTimeout: clock.setTimeout,
+    clearTimeout: clock.clearTimeout,
+  });
+
+  await coordinator.checkNow();
+  assert.deepEqual(probed, ['session-1']);
+  assert.equal(applied, 0, 'a deferred scan cannot install a result');
+  sessionId = 'session-2';
+  coordinator.sessionChanged();
+  saving = false;
+  coordinator.librarySaved();
+  clock.fire();
+  await settlePromises();
+
+  assert.deepEqual(probed, ['session-1', 'session-2'], 'the retry uses the session after the save');
+  assert.equal(applied, 1);
+  clock.fire();
+  await settlePromises();
+  assert.equal(probed.length, 2, 'one deferred notification does not keep looping after a save');
+  coordinator.dispose();
+});
+
 test('a host-deferred probe retries the latest session after saving without a new notification', async () => {
   const clock = new FakeClock();
   let saving = false, sessionId = 'session-1', applied = 0, errors = 0;

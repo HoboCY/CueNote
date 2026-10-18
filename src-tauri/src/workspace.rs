@@ -217,6 +217,7 @@ struct SearchSnapshot {
     index: search::SearchIndex,
     available: bool,
     incomplete: bool,
+    metadata_matches_scan: bool,
     warnings: Vec<String>,
     generation: u64,
 }
@@ -227,6 +228,7 @@ impl SearchSnapshot {
             index: search::SearchIndex::default(),
             available: false,
             incomplete: true,
+            metadata_matches_scan: false,
             warnings,
             generation,
         }
@@ -1797,31 +1799,37 @@ impl Workspace {
 
         let scan_context = self.search_scan_context();
         let library = self.library.as_mut().expect("library checked above");
-        let mut receipt_library = match scan_library(
-            &library_path,
-            &library.notebooks,
-            library.default_notebook_id.as_deref(),
-            &self.recovery_root,
-            &library.metadata_warnings,
-            &scan_context,
-        ) {
-            Ok(scan) => {
-                let view = scan.view.clone();
-                install_library_scan(library, scan);
-                view
-            }
-            Err(error) => {
-                library.search = SearchSnapshot::unavailable(
-                    self.search_generation.load(Ordering::Acquire),
-                    vec![format!("无法刷新搜索索引：{}", error.message)],
-                );
-                let mut view = library.view.clone();
-                push_warning(
-                    &mut view.warnings,
-                    format!("笔记已保存，但无法刷新列表：{}", error.message),
-                );
-                library.view = view.clone();
-                view
+        let projected =
+            project_committed_note(library, &note_path, &candidate, &saved_session.content);
+        let mut receipt_library = if projected {
+            library.view.clone()
+        } else {
+            match scan_library(
+                &library_path,
+                &library.notebooks,
+                library.default_notebook_id.as_deref(),
+                &self.recovery_root,
+                &library.metadata_warnings,
+                &scan_context,
+            ) {
+                Ok(scan) => {
+                    let view = scan.view.clone();
+                    install_library_scan(library, scan);
+                    view
+                }
+                Err(error) => {
+                    library.search = SearchSnapshot::unavailable(
+                        self.search_generation.load(Ordering::Acquire),
+                        vec![format!("无法刷新搜索索引：{}", error.message)],
+                    );
+                    let mut view = library.view.clone();
+                    push_warning(
+                        &mut view.warnings,
+                        format!("笔记已保存，但无法刷新列表：{}", error.message),
+                    );
+                    library.view = view.clone();
+                    view
+                }
             }
         };
         if let Some(warning) = publish_warning {
@@ -1829,7 +1837,11 @@ impl Workspace {
         }
         library.view.warnings = receipt_library.warnings.clone();
         #[cfg(feature = "perf-acceptance")]
-        trace.mark("library-scan");
+        trace.mark(if projected {
+            "saved-note-projection"
+        } else {
+            "library-scan"
+        });
         Ok(SaveReceipt {
             session: saved_session,
             library: receipt_library,
@@ -2924,6 +2936,13 @@ impl Workspace {
         } = prepared;
         let library = self.library.as_mut().expect("library path was checked");
         if metadata.directory_available {
+            // Opening a note or staging an image can observe metadata before a
+            // save. Keep that mismatch until a complete scan replaces the index.
+            if library.notebooks != metadata.notebooks
+                || library.default_notebook_id != default_notebook_id
+            {
+                library.search.metadata_matches_scan = false;
+            }
             for (id, bytes) in &metadata.bytes {
                 if accept_visible_baseline {
                     library
@@ -4493,6 +4512,7 @@ fn library_scan_parts(scan: LibraryScan) -> (LibraryView, SearchSnapshot) {
             index: scan.search_index,
             available: true,
             incomplete: scan.incomplete,
+            metadata_matches_scan: true,
             warnings,
             generation: scan.generation,
         }
@@ -4506,6 +4526,56 @@ fn install_library_scan(library: &mut LibraryState, scan: LibraryScan) {
     let (view, search) = library_scan_parts(scan);
     library.view = view;
     library.search = search;
+}
+
+/// Publish only the note whose native write and independent retention completed.
+/// Keep the scan generation and disk cache untouched: unrelated files still need
+/// the full probe queued by every successful frontend library save.
+fn project_committed_note(
+    library: &mut LibraryState,
+    path: &Path,
+    package: &NotePackage,
+    content: &NoteContent,
+) -> bool {
+    let id = &package.document.note_id;
+    if !library.search.available
+        || library.search.incomplete
+        || !library.search.metadata_matches_scan
+        || !library.metadata_warnings.is_empty()
+        || !is_canonical_uuid_v4(id)
+        || path != library.path.join("notes").join(format!("{id}.cuenote"))
+        || library.search.index.indexed_notes() != library.view.notes.len()
+        || library
+            .view
+            .trash_notes
+            .iter()
+            .any(|note| &note.note_id == id)
+    {
+        return false;
+    }
+    let mut matches = library
+        .view
+        .notes
+        .iter()
+        .enumerate()
+        .filter(|(_, note)| &note.note_id == id);
+    let Some((position, previous)) = matches.next() else {
+        return false;
+    };
+    if matches.next().is_some() {
+        return false;
+    }
+    let summary = note_summary_from_package(id, package);
+    if summary.trashed_at.is_some()
+        || summary.notebook_id != previous.notebook_id
+        || summary.pinned != previous.pinned
+        || !library.search.index.replace_note(&summary, content)
+    {
+        return false;
+    }
+    library.view.notes[position] = summary;
+    sort_note_summaries(&mut library.view.notes);
+    true
 }
 
 fn preserve_unavailable_notes_view(

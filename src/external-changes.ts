@@ -8,7 +8,7 @@ export interface ExternalChangeToken {
 
 export interface ExternalChangesCoordinatorOptions {
   getSessionId: () => string | null;
-  /** Defer a notification while a foreground save already checks the library. */
+  /** Defer background fingerprint checks while a foreground save is active. */
   canProbe?: () => boolean;
   probe: (sessionId: string | null) => Promise<ExternalChangeProbe>;
   onChanged: (
@@ -126,6 +126,16 @@ export function createExternalChangesCoordinator(options: ExternalChangesCoordin
     if (timer !== null) schedule();
   };
 
+  // A library save the host confirmed published must request its own full
+  // probe: the receipt may project only the committed note, so no watcher
+  // notification is guaranteed. Unlike afterSave this always queues a scan,
+  // including when the UI session went stale and onSaved was skipped. Repeated
+  // saves coalesce through the debounce, and canProbe still defers the scan
+  // until foreground saves settle.
+  const librarySaved = () => {
+    schedule();
+  };
+
   const sessionChanged = () => {
     epoch += 1;
     inputVersion = 0;
@@ -141,5 +151,5 @@ export function createExternalChangesCoordinator(options: ExternalChangesCoordin
 
   const resume = () => { disposed = false; };
 
-  return { schedule, checkNow, noteInputChanged, afterSave, sessionChanged, dispose, resume };
+  return { schedule, checkNow, noteInputChanged, afterSave, librarySaved, sessionChanged, dispose, resume };
 }

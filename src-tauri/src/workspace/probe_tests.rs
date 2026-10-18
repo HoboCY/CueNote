@@ -87,6 +87,150 @@ fn cache_files(root: &Path) -> BTreeMap<String, Vec<u8>> {
 }
 
 #[test]
+fn committed_projection_keeps_dirty_search_building_until_full_probe() {
+    let (temp, mut workspace) = fixture();
+    let session = workspace.new_note().unwrap();
+    let mut content = session.content;
+    content.title = "Previous title".into();
+    workspace
+        .save_note_content(&session.session_id, content.clone())
+        .unwrap();
+    let cache_before = cache_files(temp.path());
+    write_external_note(&workspace, "Arrived without a frontend notification");
+    workspace.search_generation.fetch_add(1, Ordering::AcqRel);
+    let progress = Arc::new(Mutex::new(Vec::new()));
+    let sink = progress.clone();
+    workspace.attach_search_progress(Arc::new(move |event| {
+        sink.lock().unwrap().push(event.phase)
+    }));
+    content.title = "Committed title".into();
+    let saved = workspace
+        .save_note_content(&session.session_id, content)
+        .unwrap();
+    assert_eq!(saved.library.notes.len(), 1);
+    assert_eq!(saved.library.notes[0].title, "Committed title");
+    let search = workspace.search_notes("Committed", None, 0).unwrap();
+    assert_eq!(search.status, SearchStatus::Building);
+    assert!(search.hits.is_empty());
+    assert!(progress.lock().unwrap().is_empty());
+    assert_eq!(cache_files(temp.path()), cache_before);
+    let probe = workspace
+        .probe_external_changes(Some(&session.session_id))
+        .unwrap();
+    assert_eq!(probe.library.unwrap().notes.len(), 2);
+    assert_eq!(
+        workspace.search_notes("Committed", None, 0).unwrap().total,
+        1
+    );
+    assert_eq!(workspace.search_notes("Arrived", None, 0).unwrap().total, 1);
+    assert_eq!(progress.lock().unwrap().last(), Some(&SearchStatus::Ready));
+}
+
+#[test]
+fn metadata_refreshed_before_saving_still_requires_a_complete_projection_refresh() {
+    let (_temp, mut workspace) = fixture();
+    let session = workspace.new_note().unwrap();
+    workspace
+        .save_note_content(&session.session_id, session.content.clone())
+        .unwrap();
+    let library = workspace.library.as_ref().unwrap();
+    let notebook_id = library.default_notebook_id.as_ref().unwrap();
+    let path = library
+        .path
+        .join("notebooks")
+        .join(format!("{notebook_id}.json"));
+    let mut metadata: NotebookMetadata = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+    metadata.name = "Metadata seen while opening".into();
+    fs::write(path, serde_json::to_vec(&metadata).unwrap()).unwrap();
+    // Opening refreshes metadata but does not scan all note files.
+    let reopened = workspace.open_note(&session.note_id).unwrap();
+    write_external_note(&workspace, "External arrival before save");
+    let mut content = reopened.content;
+    content.title = "Saved after reopening".into();
+    let receipt = workspace
+        .save_note_content(&reopened.session_id, content)
+        .unwrap();
+    assert_eq!(
+        receipt.library.notes.len(),
+        2,
+        "metadata must match the complete index, not only the previous metadata read"
+    );
+    assert_eq!(
+        receipt.library.default_notebook_name,
+        "Metadata seen while opening"
+    );
+}
+
+#[test]
+fn committed_projection_falls_back_when_metadata_changes_or_index_is_incomplete() {
+    for metadata_changes in [true, false] {
+        let (_temp, mut workspace) = fixture();
+        let session = workspace.new_note().unwrap();
+        let mut content = session.content;
+        content.title = "Original title".into();
+        workspace
+            .save_note_content(&session.session_id, content.clone())
+            .unwrap();
+        let library = workspace.library.as_ref().unwrap();
+        if metadata_changes {
+            let notebook_id = library.default_notebook_id.as_ref().unwrap();
+            let path = library
+                .path
+                .join("notebooks")
+                .join(format!("{notebook_id}.json"));
+            let mut metadata: NotebookMetadata =
+                serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            metadata.name = "Changed notebook name".into();
+            fs::write(path, serde_json::to_vec(&metadata).unwrap()).unwrap();
+        } else {
+            let path = library
+                .path
+                .join("notes")
+                .join(format!("{}.cuenote", session.note_id));
+            fs::copy(path, library.path.join("notes/duplicate.cuenote")).unwrap();
+            workspace
+                .probe_external_changes(Some(&session.session_id))
+                .unwrap();
+            assert!(
+                workspace
+                    .search_notes("Original", None, 0)
+                    .unwrap()
+                    .incomplete
+            );
+        }
+        write_external_note(&workspace, "Another externally arrived note");
+        content.title = "Saved title".into();
+        let receipt = workspace
+            .save_note_content(&session.session_id, content)
+            .unwrap();
+        assert_eq!(
+            receipt.library.notes.len(),
+            2,
+            "fallback scans include other new files"
+        );
+        assert_eq!(
+            workspace
+                .search_notes("externally arrived", None, 0)
+                .unwrap()
+                .total,
+            1
+        );
+        if metadata_changes {
+            assert_eq!(
+                receipt.library.default_notebook_name,
+                "Changed notebook name"
+            );
+        } else {
+            assert!(receipt
+                .library
+                .warnings
+                .iter()
+                .any(|warning| warning.contains("重复笔记身份")));
+        }
+    }
+}
+
+#[test]
 fn save_arriving_before_probe_commit_keeps_the_previous_view_and_cache() {
     for checkpoint in [
         ProbeCheckpoint::MetadataPrepared,
