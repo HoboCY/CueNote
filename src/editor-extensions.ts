@@ -1,10 +1,10 @@
-import { Extension, textblockTypeInputRule, type Extensions } from '@tiptap/core';
+import { Extension, InputRule, textblockTypeInputRule, type Extensions } from '@tiptap/core';
 import { Code } from '@tiptap/extension-code';
 import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
 import { BulletList, ListItem, ListKeymap, OrderedList, TaskItem, TaskList } from '@tiptap/extension-list';
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table';
 import { StarterKit } from '@tiptap/starter-kit';
-import { Plugin } from '@tiptap/pm/state';
+import { Plugin, TextSelection } from '@tiptap/pm/state';
 import { createLowlight } from 'lowlight';
 import { createMathExtensions, type MathEditHandler } from './math-extensions.ts';
 import { createImageExtensions, type ImageEditorRuntime } from './image-extensions.ts';
@@ -22,6 +22,49 @@ import typescript from 'highlight.js/lib/languages/typescript';
 
 const BACKTICK_CODE_FENCE = /^```([^\s`]*)[\s\n]$/;
 const TILDE_CODE_FENCE = /^~~~([^\s~]*)[\s\n]$/;
+
+function createTaskItemExtension() {
+  return TaskItem.extend({
+    content: 'block*',
+    addInputRules() {
+      const inherited = this.parent?.() ?? [];
+      if (!inherited[0]) return inherited;
+      return [new InputRule({
+        find: inherited[0].find,
+        handler: ({ state, range, match }) => {
+          const $from = state.doc.resolve(range.from);
+          const itemDepth = $from.depth - 1;
+          const listDepth = itemDepth - 1;
+          if (listDepth < 1 || $from.parent.type.name !== 'paragraph'
+            || $from.parentOffset !== 0
+            || $from.node(itemDepth).type.name !== 'listItem'
+            || $from.node(itemDepth).childCount !== 1
+            || $from.node(listDepth).type.name !== 'bulletList') return null;
+
+          // The earlier "- " rule already made a bullet. Convert just this item,
+          // preserving sibling bullets and the containing block's nesting level.
+          const tr = state.tr.delete(range.from, range.to);
+          const $start = tr.doc.resolve(range.from);
+          const list = $start.node(listDepth);
+          const item = $start.node(itemDepth);
+          const itemOffset = $start.before(itemDepth) - $start.start(listDepth);
+          const before = list.content.cut(0, itemOffset);
+          const after = list.content.cut(itemOffset + item.nodeSize);
+          const task = this.type.create({ checked: match[match.length - 1] === 'x' }, item.content);
+          const taskList = state.schema.nodes.taskList.create(null, task);
+          const preceding = before.size ? list.copy(before) : null;
+          const replacement = [
+            ...(preceding ? [preceding] : []), taskList,
+            ...(after.size ? [list.copy(after)] : []),
+          ];
+          const start = $start.before(listDepth);
+          tr.replaceWith(start, $start.after(listDepth), replacement);
+          tr.setSelection(TextSelection.create(tr.doc, start + (preceding?.nodeSize ?? 0) + 3));
+        },
+      }), ...inherited];
+    },
+  });
+}
 
 function createCueNoteLowlight() {
   const lowlight = createLowlight();
@@ -241,7 +284,7 @@ export function createEditorExtensions(
     ListItem.extend({ content: 'block*' }),
     BulletList.extend({ content() { return `${this.options.itemTypeName}*`; } }),
     OrderedList.extend({ content() { return `${this.options.itemTypeName}*`; } }),
-    TaskItem.extend({ content: 'block*' }),
+    createTaskItemExtension(),
     TaskList.extend({ content() { return `${this.options.itemTypeName}*`; } }),
     ListKeymap.configure({
       listTypes: [
