@@ -63,6 +63,8 @@ func printJSON(_ value: Any) throws { print(String(decoding: try json(value), as
 
 final class Driver {
     let run: String, record: Object, pid: pid_t, token: String, port: UInt16
+    private var pointerWindow: CGWindowID?
+    private var pointerButtonDown = false
     init(run: String) throws {
         try localPath(run); try localPath(run+"/launcher.json"); try localPath(run+"/.observer-token")
         self.run = run; record = try read(run + "/launcher.json")
@@ -130,10 +132,52 @@ final class Driver {
         let screen = try object(response["screen"]), value = try object(response["value"]), viewport = try object(value["viewport"])
         guard yes(screen["key"]), number(viewport["width"]) > 0, number(viewport["height"]) > 0,
               number(screen["width"]) > 0, number(screen["height"]) > 0 else { throw Failure("Invalid/unfocused WebView geometry") }
+        guard let window = screen["windowNumber"] as? NSNumber, window.uint32Value > 0 else { throw Failure("Missing native target window") }
+        pointerWindow = window.uint32Value
         return CGPoint(x: number(screen["x"]) + x * number(screen["width"]) / number(viewport["width"]),
                        y: number(screen["y"]) + y * number(screen["height"]) / number(viewport["height"]))
     }
-    func post(_ event: CGEvent?) throws { try foreground(); guard let event else { throw Failure("Cannot create native event") }; event.postToPid(pid) }
+    func pointerTarget(_ point: CGPoint) throws {
+        guard Thread.isMainThread, let expected = pointerWindow, let primary = NSScreen.screens.first else {
+            throw Failure("Cannot verify the native pointer target")
+        }
+        // AppKit uses bottom-left coordinates and mouse-down hit testing,
+        // excluding transparent points and windows that ignore mouse events.
+        // Bounding rectangles alone misidentify the cursor and Dock helpers.
+        let cocoaPoint = NSPoint(x:point.x,y:primary.frame.maxY-point.y)
+        let hit = NSWindow.windowNumber(at:cocoaPoint,belowWindowWithWindowNumber:0)
+        guard hit == Int(expected) else {
+            throw Failure("Native pointer target mismatch: expected PID \(pid), window \(expected); observed window \(hit) at CG \(point), AppKit \(cocoaPoint)")
+        }
+        guard let windows = CGWindowListCopyWindowInfo(.optionIncludingWindow,expected) as? [[String:Any]],
+              let window = windows.first,
+              (window[kCGWindowOwnerPID as String] as? Int) == Int(pid),
+              (window[kCGWindowNumber as String] as? Int) == Int(expected),
+              (window[kCGWindowIsOnscreen as String] as? Bool) == true,
+              let bounds = window[kCGWindowBounds as String] as? [String:Double],
+              let x = bounds["X"], let y = bounds["Y"], let width = bounds["Width"], let height = bounds["Height"],
+              CGRect(x:x,y:y,width:width,height:height).contains(point) else {
+            throw Failure("Native pointer window ownership or geometry changed")
+        }
+    }
+    func post(_ event: CGEvent?) throws {
+        guard let event else { throw Failure("Cannot create native event") }
+        do {
+            try foreground()
+            if [.mouseMoved,.leftMouseDown,.leftMouseUp,.scrollWheel].contains(event.type) { try pointerTarget(event.location) }
+            // PID-directed mouse events did not reach WKWebView on the target M1.
+            // Use the normal session event route after verifying focus and hit location.
+            try foreground()
+            event.post(tap:.cgSessionEventTap)
+            if event.type == .leftMouseDown { pointerButtonDown = true }
+            if event.type == .leftMouseUp { pointerButtonDown = false }
+            try foreground()
+        } catch {
+            try? append(run+"/input-failures.jsonl",["eventType":event.type.rawValue,
+                "pointerButtonMayRemainDown":pointerButtonDown,"error":String(describing:error)])
+            throw error
+        }
+    }
     func wheel(_ response: Object, x: Double, y: Double, delta: Double) throws {
         let event = CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 1, wheel1: Int32(-delta.rounded()), wheel2: 0, wheel3: 0)
         event?.location = try point(response, x: x, y: y); try post(event)
