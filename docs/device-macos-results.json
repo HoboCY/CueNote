@@ -117,10 +117,10 @@
     "accessibility": true,
     "nativeInput": true,
     "os": "Version 26.6.2 (Build 25G83)",
-    "screenshots": false
+    "screenshots": true
   },
   "permissionDiagnosis": {
-    "checkedUtc": "2026-10-18T00:39:01Z",
+    "checkedUtc": "2026-10-18T03:12:24Z",
     "userConfirmedDriverEnabled": true,
     "sshResponsibleApplication": "com.apple.sshd-keygen-wrapper",
     "guiResponsibleApplication": "com.apple.Terminal",
@@ -140,9 +140,16 @@
         "evidence": "mac-ui-20261018-1/doctor.json",
         "accessibility": true,
         "nativeInput": true
+      },
+      {
+        "evidence": "mac-matrix-45-evidence-20261018.tar.gz / permissions-5/doctor.json",
+        "accessibility": true,
+        "nativeInput": true,
+        "os": "Version 26.6.2 (Build 25G83)",
+        "screenshots": true
       }
     ],
-    "nextStep": "Native input permission and exact driver validation passed. Screen capture requested for formal-app UI checks; wait for user to finish Terminal restart before launching the next matrix.",
+    "nextStep": "Permissions verified after user restarted Terminal. Runtime validation of cbd9c08 paired kit is next.",
     "matrixStarted": true,
     "screenshotsOptional": true,
     "guiMatrixWrapper": {
@@ -491,5 +498,10 @@
       "rawLogHashesVerified": true
     },
     "fullPerformanceMatrix": "pending"
+  },
+  "matrix00Followup": {
+    "report": "performance-macos-matrix00-results.json",
+    "metricSamples": 66,
+    "timingGatesPassed": false
   }
 }

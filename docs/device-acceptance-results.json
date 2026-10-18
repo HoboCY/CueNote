@@ -122,7 +122,7 @@
       {
         "step": "Q51 native input permissions",
         "status": "通过",
-        "detail": "After user enabled Terminal Accessibility, actual GUI doctor reports accessibility/nativeInput true. Screenshot permission remains optional and false."
+        "detail": "After user enabled Terminal Accessibility and Screen Recording and restarted Terminal, GUI doctor at 03:12:24Z reports accessibility/nativeInput/screenshots true. Actual performance-app screenshots acquired."
       },
       {
         "step": "Actual CLI native click and nonactivating overlay regression",
@@ -136,6 +136,11 @@
       "nativeResourceTestsPassed": 47,
       "fullPerformanceMatrix": "pending",
       "report": "device-macos-results.json"
+    },
+    "matrix00Followup": {
+      "report": "performance-macos-matrix00-results.json",
+      "metricSamples": 66,
+      "timingGatesPassed": false
     }
   },
   "cases": [
@@ -275,7 +280,7 @@
       "id": "A23",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Windows storage-change revalidation: 467 timing samples, 13 normal exits, native content and 48 resource checks passed; automatic-backup cancellation/retry remains separately open. M1 exact input driver passed; storage-change native resources 47/47 passed. Full Mac Q51 and complete A23 remain unaccepted."
+      "notes": "Windows 00c1e3f variant: 467 timing samples, 13 normal exits, native content and 48 resource checks passed; one-save same-session automatic-backup retry separately passed (not complete A19). M1 native resources 47/47; matrix 5 retains 66 metric samples, initial index failed and repeated title replacement stopped execution. New cbd9c08 runtime validation pending. Full Mac Q51 and complete A23 remain unaccepted."
     },
     {
       "id": "A24",

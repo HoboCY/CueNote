@@ -14,7 +14,8 @@
     },
     "accessibility": true,
     "nativeInput": true,
-    "screenshots": false
+    "screenshots": true,
+    "permissionsCheckedUtc": "2026-10-18T03:12:24Z"
   },
   "failedMatrices": [
     {
@@ -248,7 +249,7 @@
       }
     ]
   },
-  "nextStep": "Run the frozen matrix after validating the initial-index durability optimization. No daily-use approval.",
+  "nextStep": "Validate cbd9c08 paired application/driver, repeated exact replacements and cold/warm index reads; then repeat full frozen Q51. No daily-use approval.",
   "dailyUseApproved": false,
   "scrollAndGeometryDiagnosis": {
     "status": "Scroll and geometry defects fixed; v12 diagnostic full input calibration and reopen passed. Exact 7ad4bfb driver verification is separate.",
@@ -568,5 +569,11 @@
       "rawFiles": 57,
       "allHashesVerified": true
     }
+  },
+  "matrix00Followup": {
+    "report": "performance-macos-matrix00-results.json",
+    "metricSamples": 66,
+    "timingGatesPassed": false,
+    "inputReplacementRegression": "Fourth repeated save failed; cbd9c08 follow-up runtime validation pending."
   }
 }

@@ -1,0 +1,321 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "hostedCI": false,
+  "sourceCommit": "00c1e3f825503939648326607882186410545985",
+  "binarySha256": "02f3c341828326d39c9b91758cc0ae87bf7153bf4f72feb1a47ac5981d5463c0",
+  "driverSha256": "241af0316b08e501d9f09ce3dd991ca784aefdc67e9fa835d0b352ad1b644983",
+  "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+  "permissions": {
+    "checkedUtc": "2026-10-18T03:12:24Z",
+    "accessibility": true,
+    "nativeInput": true,
+    "os": "Version 26.6.2 (Build 25G83)",
+    "screenshots": true
+  },
+  "attempt4": {
+    "metricSamples": 0,
+    "completed": false,
+    "allRunsClosed": true,
+    "failures": [
+      {
+        "activeRun": "/Users/hobo/CueNote-ui-acceptance-20261018-4/result/calibration/measurements/C3D900DC-4711-40BB-905A-10641901534B",
+        "error": "Application document lost focus/visibility"
+      }
+    ]
+  },
+  "focusDiagnostic": {
+    "observations": 101,
+    "result": {
+      "normalExit": true
+    },
+    "index": {
+      "state": {
+        "editable": false,
+        "errors": [],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [],
+        "mapCanEdit": false,
+        "maps": 0,
+        "notes": 1000,
+        "observedFrames": 2,
+        "progress": [
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新"
+        ],
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "✳\n准备好记录了吗？\n在“默认笔记本”中创建一篇笔记，开始整理你的想法。\n新建笔记\n",
+        "titleSelection": null,
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "timing": {
+        "feedback1000": {
+          "elapsedMs": 1006.6235420703888,
+          "progress": [
+            "正在建立搜索索引library · 60/1000"
+          ],
+          "save": null,
+          "savingFeedback": null
+        },
+        "feedback2000": {
+          "elapsedMs": 2011.6302499771118,
+          "progress": [
+            "正在建立搜索索引library · 80/1000"
+          ],
+          "save": null,
+          "savingFeedback": null
+        },
+        "readyMs": 61674.4662501812
+      }
+    },
+    "scope": "Independent diagnostic; focus loss was not reproduced. Excluded from Q51 timing; root cause of transient loss remains unknown."
+  },
+  "attempt5": {
+    "metricSamples": 66,
+    "completed": false,
+    "allRunsClosed": true,
+    "timingGatesPassed": false,
+    "metrics": [
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 3000,
+        "metric": "startup",
+        "minimumCount": 10,
+        "passed": false,
+        "rule": "maximum"
+      },
+      {
+        "count": 3,
+        "groups": {
+          "first": {
+            "count": 3,
+            "maxMs": 66708.0500421524,
+            "p95Ms": 66708.0500421524
+          }
+        },
+        "limitMs": 60000,
+        "maxMs": 66708.0500421524,
+        "metric": "initial-index",
+        "minimumCount": 3,
+        "p95Ms": 66708.0500421524,
+        "passed": false,
+        "rule": "maximum"
+      },
+      {
+        "count": 60,
+        "groups": {
+          "cached": {
+            "count": 30,
+            "maxMs": 377.5017910003662,
+            "p95Ms": 243.45183277130127
+          },
+          "first": {
+            "count": 30,
+            "maxMs": 1819.7827501296997,
+            "p95Ms": 315.4447500705719
+          }
+        },
+        "limitMs": 1000,
+        "maxMs": 1819.7827501296997,
+        "metric": "ordinary-open",
+        "minimumCount": 60,
+        "p95Ms": 250.71837496757507,
+        "passed": true,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 5000,
+        "metric": "stress-open",
+        "minimumCount": 40,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 3,
+        "groups": {
+          "cached": {
+            "count": 2,
+            "maxMs": 1308.1944580078125,
+            "p95Ms": 1308.1944580078125
+          },
+          "first": {
+            "count": 1,
+            "maxMs": 1682.4012079238892,
+            "p95Ms": 1682.4012079238892
+          }
+        },
+        "limitMs": 2000,
+        "maxMs": 1682.4012079238892,
+        "metric": "ordinary-save",
+        "minimumCount": 32,
+        "p95Ms": 1682.4012079238892,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 10000,
+        "metric": "stress-save",
+        "minimumCount": 32,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 300,
+        "metric": "search",
+        "minimumCount": 30,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 1000,
+        "metric": "ordinary-map",
+        "minimumCount": 30,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 3000,
+        "metric": "stress-map",
+        "minimumCount": 30,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 100,
+        "metric": "ordinary-input",
+        "minimumCount": 100,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      },
+      {
+        "count": 0,
+        "groups": {},
+        "limitMs": 200,
+        "metric": "stress-input",
+        "minimumCount": 100,
+        "passed": false,
+        "rule": "nearest-rank p95"
+      }
+    ],
+    "initialIndexMs": [
+      60502.06691598892,
+      66708.0500421524,
+      66540.21891593933
+    ],
+    "calibration": {
+      "nativeInputVerified": true,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261018-5/result/calibration/measurements/337A4095-6BFF-4771-9D02-65EB67004FA2",
+      "scope": "Current window position and display configuration only; no CI input acceptance"
+    },
+    "inputFailure": {
+      "expected": {
+        "kind": "dirty-title",
+        "text": "普通样本 04 · SHARED-Q51-ORDINARY"
+      },
+      "actualTitle": "普通样本 03 · SHARED-Q5普通样本 04 · SHARED-Q51-ORDINARY1-ORDINARY",
+      "selectedText": "普通样本 03 · SHARED-Q5普通样本 04 · SHARED-Q51-ORDINARY1-ORDINARY",
+      "titleSelection": {
+        "end": 58,
+        "focused": true,
+        "start": 0
+      },
+      "save": "已保存到本地",
+      "focused": true
+    },
+    "normalExits": [
+      {
+        "file": "matrix-5/result/calibration/measurements/337A4095-6BFF-4771-9D02-65EB67004FA2/closed.json",
+        "exitStatusAvailable": true,
+        "normalExit": true,
+        "pid": 65664,
+        "quitRequested": true,
+        "status": 0,
+        "terminationReason": 1
+      },
+      {
+        "file": "matrix-5/result/index-1/measurements/5940801E-B544-4CBC-9337-52811F757420/closed.json",
+        "exitStatusAvailable": true,
+        "normalExit": true,
+        "pid": 65997,
+        "quitRequested": true,
+        "status": 0,
+        "terminationReason": 1
+      },
+      {
+        "file": "matrix-5/result/index-1/measurements/64C3B59A-E1D8-4F75-BC6C-4A8BD35200F4/closed.json",
+        "exitStatusAvailable": true,
+        "normalExit": true,
+        "pid": 65777,
+        "quitRequested": true,
+        "status": 0,
+        "terminationReason": 1
+      },
+      {
+        "file": "matrix-5/result/index-2/measurements/A8A43D04-D83D-4F59-97F9-D44CCB29D0BA/closed.json",
+        "exitStatusAvailable": true,
+        "normalExit": true,
+        "pid": 65859,
+        "quitRequested": true,
+        "status": 0,
+        "terminationReason": 1
+      },
+      {
+        "file": "matrix-5/result/index-3/measurements/F6EF9D67-9758-4FE7-8CE4-697F293DBA9A/closed.json",
+        "exitStatusAvailable": true,
+        "normalExit": true,
+        "pid": 65935,
+        "quitRequested": true,
+        "status": 0,
+        "terminationReason": 1
+      }
+    ]
+  },
+  "followup": {
+    "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+    "changes": [
+      "Keep shared version-store lock across witness reads; avoid per-version lock creation and synchronization for these read-only paths. Actual leases and all content verification remain.",
+      "After native Cmd+A, require full selection in the unchanged focused text field before sending replacement text. Read-only observation; no frozen plan or timing boundary changes."
+    ],
+    "windowsRelatedTestsPassed": 59,
+    "windowsRelatedTestsLogSha256": "44d47ba57a0e4b2a5230fad30fd3e1c564094b76c818c4973373869cfa3b8e45",
+    "macOSRuntimeValidation": "pending",
+    "ci": "https://github.com/HoboCY/CueNote/actions/runs/39093894548"
+  },
+  "evidence": {
+    "archive": "mac-matrix-45-evidence-20261018.tar.gz",
+    "sha256": "b3c990e914ee268a2c6a0a37168222277b7117b12584c44b0c9a038f3e468b18",
+    "rawFiles": 130,
+    "allHashesVerified": true,
+    "manifestSha256": "8a380f735dc46fd078ef94066b57063ece9a8902218dab19bc283f6df90b5449",
+    "excludes": [
+      "observer credentials",
+      "note libraries",
+      "backups",
+      "caches",
+      "executables"
+    ]
+  },
+  "dailyUseApproved": false,
+  "scope": "Partial native timing evidence. No complete Q51 pass, content-acceptance pass, formal-app UI approval or OneDrive claim."
+}
