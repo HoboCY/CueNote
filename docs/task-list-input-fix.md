@@ -10,4 +10,4 @@
 
 独立静态审查确认位置计算、内容转移及撤销可逆性；提出匹配范围差异后，已改为复用上游匹配器并补充相关标记样本。审查没有运行桌面或输入法；最终匹配器调整由主执行人测试验证，不称为审查者复验通过。
 
-本机证据为 `package-output/list-input-red.log`、`list-fix-full-frontend-final.log` 和 `list-fix-build-final.log`；普通版原始输入证据位于仓库外 `implementation-execution/issue-33/windows-editor-079fa6e-markdown/`。新安装包的双端真实键盘复验仍待完成，完整 A06 保持未验收。
+本机证据为 `package-output/list-input-red.log`、`list-fix-full-frontend-final.log` 和 `list-fix-build-final.log`；普通版原始输入证据位于仓库外 `implementation-execution/issue-33/windows-editor-079fa6e-markdown/`。`7a11fb1` 普通安装包已完成[双端真实键盘、勾选及保存重开复验](editor-block-followup-7a11fb1.md)，层级修复通过；完整 A06 保持未验收。

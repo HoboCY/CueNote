@@ -264,6 +264,20 @@
       "fullA06Accepted": false,
       "fullA25Accepted": false,
       "fullA26Accepted": false
+    },
+    "blockEditorFollowup": {
+      "sourceCommits": [
+        "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+        "7a11fb19e512c5db23bd26ad210396bde0850d38"
+      ],
+      "report": "editor-block-followup-7a11fb1-results.json",
+      "snapshots": 38,
+      "verifiedFactCopies": 349,
+      "fullA08Accepted": true,
+      "fullA06Accepted": false,
+      "fullA07Accepted": false,
+      "imageDeleteFocusFix": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+      "installedImageFocusRetestPending": true
     }
   },
   "mac": {
@@ -510,6 +524,14 @@
       "beforeSaveListPending": true,
       "normalExits": 3,
       "nativeContentVerified": true
+    },
+    "taskMarkerFollowup": {
+      "sourceCommit": "7a11fb19e512c5db23bd26ad210396bde0850d38",
+      "nativeInputToggleReopenPassed": true,
+      "verifiedEvidenceFiles": 239,
+      "evidenceArchiveSha256": "601672808bfc5d37d8e092a6bf466e8410c3ea941a6f32e85ddb05f17af17da5",
+      "report": "editor-block-followup-7a11fb1.md",
+      "fullA06Accepted": false
     }
   },
   "cases": [
@@ -545,21 +567,21 @@
     },
     {
       "id": "A06",
-      "windows": "失败",
+      "windows": "未测",
       "mac": "未测",
-      "notes": "079fa6e ordinary Windows reproduced an extra outer bullet for the advertised task marker. Fix7a11fb1 passes159 frontend tests/build; installed-candidate keyboard retest pending. Independent section undo, formatting/table substeps and ordinary reopen are recorded in windows-editor-079fa6e-results.json; full case remains open."
+      "notes": "7a11fb1 ordinary candidates: task markers, native checkbox toggles and normal save/reopen passed on both devices. Other existing editor/human IME evidence remains separately recorded; full case not accepted."
     },
     {
       "id": "A07",
-      "windows": "未测",
+      "windows": "失败",
       "mac": "未测",
-      "notes": "Mac 9760cf6 manual IME/independent undo and real screenshot/Preview clipboard/reopen substeps user-confirmed; subsequent undo clarified and snapshot retained. Complete cases remain unaccepted."
+      "notes": "Windows079fa6e image paste/resize/move/delete and assets verified. Direct Ctrl+Z after image control deletion lost body focus; refocusing restored exact image. Fix4f517a4 passes160 frontend tests/build; installed keyboard retest pending. Full case remains open."
     },
     {
       "id": "A08",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "未测",
-      "notes": ""
+      "notes": "079fa6e->7a11fb1 ordinary Windows: node text/add/delete/hierarchy, internal undo/redo, collapsed body undo/redo, preview, body block moves/delete/undo, collapse focus, normal reopen and continued editing passed. Same map button/context restored; exact pixel scroll position not claimed (87px shift). Mac full case untested. See editor-block-followup-7a11fb1-results.json."
     },
     {
       "id": "A09",
@@ -655,7 +677,7 @@
       "id": "A24",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Both ordinary installed candidates updated to 9760cf6 with full prior application and app-specific data backups and unchanged-data hashes. Saved note reopened on both; Windows normal close request/process disappearance confirmed, attached exit code unavailable. Same-version replacement does not establish actual upgrade/uninstall."
+      "notes": "Both ordinary candidates received7a11fb1 through verified backups; Mac subsequently4f517a4. Windows backup1473 files and installer exit0, app/data hash verified; Mac full prior app and seven scoped roots preserved. Same-version replacement does not establish actual upgrade/uninstall."
     },
     {
       "id": "A25",
@@ -671,7 +693,7 @@
     }
   ],
   "pending": [
-    "7a11fb1 task-marker structure fix: ordinary installed keyboard regression pending;159 frontend tests and build passed.",
+    "4f517a4 image deletion focus fix:160 frontend tests/build passed; ordinary installed direct keyboard undo regression pending. Task-marker input fix7a11fb1 passed native input/toggle/reopen on both devices.",
     "079fa6e full Q51 passed on Windows and M1; two separate M1 immediate-startup save diagnostics while list-pending also passed. Full A23 Q52 UI boundaries remain open.",
     "Mac 9760cf6 manual IME/clipboard/reopen substeps confirmed; complete A06/A07 format and block-operation cases remain open.",
     "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and late organization metadata; one ordinary rich-note sequential round trip has passed.",
@@ -701,5 +723,20 @@
     "imageBytesUnchanged": true,
     "codeAndFormulaSourceUnchanged": true,
     "fullA10A11Accepted": false
+  },
+  "currentOrdinaryCandidates": {
+    "windows": {
+      "sourceCommit": "7a11fb19e512c5db23bd26ad210396bde0850d38",
+      "sha256": "f6f3dbd868cb8d3883c308b86aec9f72f6c82dc616b0ee67c92761ba8c1b2408",
+      "backupFiles": 1473,
+      "installerExitCode": 0,
+      "unchangedData": true
+    },
+    "mac": {
+      "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+      "sha256": "fc323333171cefbacd3822b1fdd6a99468b8b0a8cb23ad9715c80a22b8243df0",
+      "unchangedData": true
+    },
+    "scope": "Same-version replacement; not full A24 upgrade/uninstall acceptance."
   }
 }

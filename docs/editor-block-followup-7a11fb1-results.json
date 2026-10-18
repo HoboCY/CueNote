@@ -1,0 +1,60 @@
+{
+  "format": 1,
+  "sourceCommits": [
+    "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+    "7a11fb19e512c5db23bd26ad210396bde0850d38"
+  ],
+  "ordinaryWindowsSha256": "f6f3dbd868cb8d3883c308b86aec9f72f6c82dc616b0ee67c92761ba8c1b2408",
+  "ordinaryMacSha256": "0ad4f64a933704354c8221a8004ce99ed971ee9de5e6597c577c7b21d0610d30",
+  "verifiedWindowsSnapshots": 38,
+  "verifiedWindowsFactCopies": 349,
+  "map": {
+    "earlierStages": 21,
+    "dataOperationsPassed": true,
+    "normalReopenAndContinueEditingPassed": true,
+    "continuedNodeId": "f86101cc-3459-4b0c-b737-c6b35aecc710",
+    "continuedNoteSha256": "7ed93697e45af7fdfea2e0ab3bc4dfcaf82eb284bf6361d46a1468c7ed2aebcb",
+    "collapseFocus": {
+      "focus": {
+        "type": "ControlType.Button",
+        "name": "展开编辑",
+        "bounds": "1121,963,96,46"
+      },
+      "after": "1121,963,96,46",
+      "utc": "2026-10-18T17:52:09.6325920Z",
+      "before": "1121,876,96,46"
+    },
+    "scope": "Returned to original map button and same block context. Screen Y changed87 physical pixels after expansion/collapse; exact pixel scroll restoration is not claimed."
+  },
+  "image": {
+    "nativeClipboard": "Programmatic Windows Bitmap, encoded as PNG by clipboard/WebView; prior human two-app coverage is separate",
+    "asset": {
+      "path": "assets/fc204001-49ab-4d03-96aa-3b00d70d407f",
+      "bytes": 9073,
+      "sha256": "815dbab793f7976d03612fdc923ea433c4219d9aa49034239960d706f197263a"
+    },
+    "resizeMoveDeleteAndFocusedUndoPassed": true,
+    "directUndoAfterDeleteFailed": true,
+    "fixCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+    "installedFixRetestPending": true
+  },
+  "taskInput": {
+    "windows": true,
+    "mac": true,
+    "toggleAndNormalReopenBoth": true,
+    "scope": "Native synthetic key events, not human IME. Both actual ordinary7a candidates; empty trailing paragraphs differ because Windows plan sent one extra Enter."
+  },
+  "scope": "Actual-device substeps. Full A06/A07 and Mac A08 remain incomplete. No offline or real OneDrive claims from this batch.",
+  "macEvidence": {
+    "verifiedFiles": 239,
+    "archiveSha256": "601672808bfc5d37d8e092a6bf466e8410c3ea941a6f32e85ddb05f17af17da5",
+    "manifestSha256": "b9620150f6e0a00a855fe52cfbcddc135e4f9ee517306470f2ea09deb3421dcf",
+    "earlierEditorNoteUnchangedByNewNotebook": true,
+    "newNotebookNoteId": "0e4e816b-79d5-43f4-8798-062bfc8d8e38",
+    "scope": "Book/layout substeps only; cursor preservation not yet verified."
+  },
+  "windowsNormalCloseExitCodes": [
+    0,
+    0
+  ]
+}
