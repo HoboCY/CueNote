@@ -1,0 +1,1912 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-19",
+  "source": {
+    "format": 1,
+    "version": "0.1.0",
+    "target": "aarch64-apple-darwin",
+    "rust": "1.99.0",
+    "node": "24.21.0",
+    "sourceCommit": "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+    "sourceDirty": false,
+    "applicationIdentifier": "com.hobocy.cuenote.performance",
+    "features": [
+      "perf-acceptance",
+      "tauri/custom-protocol"
+    ],
+    "binaries": {
+      "cuenote-performance-driver": "21e492fbd837cf5b9d122c42537288a335fbcc4b1bfccf88588ec7cde2581c23",
+      "performance_fixture": "97f06808267ede2dc6e88879ea07e994b5c699d605751bbef635aabd48d9a536",
+      "CueNote Performance.app/Contents/MacOS/cuenote": "8a4a906392cc8ad1420503d3ea668ffb63865d72ae04c97d7ce23f9e5603ae14",
+      "resource-tests/format_v1": "835b155ef309b95c246588314396ea5f7edc5e30d77379d0ee27d019e2ab5eab",
+      "resource-tests/image_content": "11914503123424b31c6a606d7688f120ceb534c0c32e839d4d319ab1246db6c9",
+      "resource-tests/rich_content": "89be70e840c5c6a8f6dbe73eb927a990ae9b57ab5dd2db705eafd95fac12d776",
+      "resource-tests/storage": "eed60c9e9a714381ddf516d5da30e80117ae27f565ff574b7f1774edec2153de"
+    },
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "swift": "Apple Swift version 6.1.2 (swiftlang-6.1.2.1.2 clang-1700.0.13.5)\nTarget: arm64-apple-macosx15.0",
+    "plans": {
+      "cancel-save-wait.json": "80da63728a05532617e77d122ed60e51f7e1caf48cf900f5bad90526c6e783d3",
+      "clear-search.json": "03f92d6d58b8812a46fb03ac0a75da94296921d0868b6b27c6cbf00dceacb159",
+      "index.json": "6067da55a11c2fa9889a3d350103daef7ab1decc1734303b120b06b499537847",
+      "ordinary-inputs.json": "bd6339602657e8269ec28fccfcba1350c4a07cdba63d6a3767a451537d6b4a6a",
+      "ordinary-maps.json": "9b48dbb78ae2663a14a7c042b9e3095cd4e68e38727c97cada068559a9a2d1cb",
+      "ordinary-opens.json": "8a5996e2368ffd975b28489c1f232aa846b2162583b4592ec06aa4e714aaa994",
+      "ordinary-saves.json": "4465c8484fad383447b054cee2c52a802299c1b839c871394f429ef335c0d896",
+      "ordinary-select.json": "2fc6f09162ed60c6afad429acc586326ed1da66ce5f07160f84f2d65987bf257",
+      "search.json": "caa4f7b5833129a3be9785993db9b385429a11f9d393bec68650f60f883073b7",
+      "stress-inputs.json": "8d248d39dc15e33f20ab77117c6a3eb7a33307e6c9867ba852d652e4881b4b7e",
+      "stress-maps.json": "ce8b64ad4c28e7bf42d8a25cb304165173b69e4e506d87f39c77e60f1c0e6bc7",
+      "stress-opens.json": "eb3083cf73180dd6c74d67f4dfd5889d2b362448ee78c95efc2e52c671c5ee7f",
+      "stress-saves.json": "b5808fdac407833df659af79db84d56c6f59ff3cfe5bc28b44eb51caa7e8ddd6",
+      "stress-select.json": "c8a0cef8e5c629b44d6b22f73fdea0ba97d98fa62c2c1d1a678ab33f83504e6a"
+    },
+    "resourceSuites": [
+      "format_v1",
+      "image_content",
+      "rich_content",
+      "storage"
+    ],
+    "xcode": "Xcode 16.4\nBuild version 16F6",
+    "runner": {
+      "image": "macos15",
+      "imageVersion": "20260907.0337.1",
+      "runId": "39144374983"
+    },
+    "scope": "Isolated performance tools only; neither CI timings nor this kit establish M1 acceptance."
+  },
+  "environment": {
+    "cpu": "Apple M1 Pro",
+    "freeBytes": 33980035072,
+    "memoryBytes": 17179869184,
+    "note": "No OS-cache clearing; first means first opening within this matrix. Automatic backups remain enabled.",
+    "os": "Version 26.6.2 (Build 25G83)",
+    "screens": [
+      {
+        "backingScale": 2,
+        "height": 982,
+        "width": 1512,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "startedUtc": "2026-10-18T16:42:26Z"
+  },
+  "runtimeTooling": {
+    "applicationSourceCommit": "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+    "scope": "Frozen Q51 actions/timings with passive focus recorder before launch and after startup AX binding; no refocus during actions; trace disabled",
+    "tooling": [
+      {
+        "path": "/Users/hobo/CueNote-acceptance-delivery-20261018-f1308f4/focus-matrix-projection-build-3/cuenote-performance-driver",
+        "sha256": "11efdc77ff12e1e2778a33542c3c24ebbd9495cf604c5409a870710d92abf557"
+      },
+      {
+        "path": "/Users/hobo/CueNote-acceptance-delivery-20261018-f1308f4/focus-matrix-projection-build-3/focus-recording-v1",
+        "sha256": "6923d72d12a82673b59a595904a235653d972a014ddbba44383a3aaee3cb76ac"
+      },
+      {
+        "path": "/Users/hobo/CueNote-acceptance-delivery-20261018-f1308f4/focus-matrix-projection-build-3/Matrix.swift",
+        "sha256": "223aede24d913ba0a6cdd7b1a4f6d4fae01140bb62949544c85e2bf95f4c5e8d"
+      },
+      {
+        "path": "/Users/hobo/CueNote-acceptance-delivery-20261018-f1308f4/focus-matrix-projection-build-3/matrix.diff",
+        "sha256": "19efcb6f86cfea5c017106310d05a7891373b98920face792b8ffd6cd73e2cd8"
+      },
+      {
+        "path": "/Users/hobo/CueNote-acceptance-delivery-20261018-f1308f4/focus-matrix-projection-src-v3/Driver.swift",
+        "sha256": "1ac2f13d7c175f273b8911fdd4a0773fe65af7eac9123f918cea8bee79f1229f"
+      },
+      {
+        "path": "/Users/hobo/CueNote-acceptance-delivery-20261018-f1308f4/focus-matrix-projection-src-v3/Matrix.swift",
+        "sha256": "6811f4321840d2bbddf9bab9d1e4931907fbaa7bcfdb46931a98724702163849"
+      },
+      {
+        "path": "/Users/hobo/CueNote-acceptance-delivery-20261018-f1308f4/focus-matrix-projection-src-v3/main.swift",
+        "sha256": "e4f7aa80e91daa6f3ab9b9aa0c3c5655fafd0af1277993e18fbd389658a02d47"
+      },
+      {
+        "path": "/Users/hobo/CueNote-acceptance-delivery-20261018-f1308f4/focus-matrix-projection-src-v3/FocusRecording.swift",
+        "sha256": "edb45be36a85322c3510d7aedfdedab8e354208ac40fcb3537f707902eea178d"
+      },
+      {
+        "path": "/Users/hobo/CueNote-acceptance-delivery-20261018-f1308f4/focus-matrix-projection-src-v3/focus-recording-v1.swift",
+        "sha256": "e383b288918dd0756dbf8a1c188632bc67c3833adadf5b7af23e17a30a6ffbbf"
+      }
+    ]
+  },
+  "counts": {
+    "metricSamples": 467,
+    "independentlyReconstructedSamples": 467,
+    "formalRuns": 14,
+    "calibrationRuns": 1,
+    "normalExits": 15,
+    "allRunsClosed": true,
+    "failures": 0,
+    "completed": true,
+    "timingGatesPassed": true
+  },
+  "metrics": [
+    {
+      "count": 10,
+      "groups": {
+        "indexed": {
+          "count": 10,
+          "maxMs": 2744.83145904541,
+          "p95Ms": 2744.83145904541
+        }
+      },
+      "limitMs": 3000,
+      "maxMs": 2744.83145904541,
+      "metric": "startup",
+      "minimumCount": 10,
+      "p95Ms": 2744.83145904541,
+      "passed": true,
+      "rule": "maximum",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 3,
+      "groups": {
+        "first": {
+          "count": 3,
+          "maxMs": 49960.46700000763,
+          "p95Ms": 49960.46700000763
+        }
+      },
+      "limitMs": 60000,
+      "maxMs": 49960.46700000763,
+      "metric": "initial-index",
+      "minimumCount": 3,
+      "p95Ms": 49960.46700000763,
+      "passed": true,
+      "rule": "maximum",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 60,
+      "groups": {
+        "cached": {
+          "count": 30,
+          "maxMs": 298.4920001029968,
+          "p95Ms": 266.15179204940796
+        },
+        "first": {
+          "count": 30,
+          "maxMs": 665.2450840473175,
+          "p95Ms": 268.5947091579437
+        }
+      },
+      "limitMs": 1000,
+      "maxMs": 665.2450840473175,
+      "metric": "ordinary-open",
+      "minimumCount": 60,
+      "p95Ms": 266.9007909297943,
+      "passed": true,
+      "rule": "nearest-rank p95",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 40,
+      "groups": {
+        "cached": {
+          "count": 30,
+          "maxMs": 668.5460000038147,
+          "p95Ms": 582.1249160766602
+        },
+        "first": {
+          "count": 10,
+          "maxMs": 702.5477080345154,
+          "p95Ms": 702.5477080345154
+        }
+      },
+      "limitMs": 5000,
+      "maxMs": 702.5477080345154,
+      "metric": "stress-open",
+      "minimumCount": 40,
+      "p95Ms": 668.5460000038147,
+      "passed": true,
+      "rule": "nearest-rank p95",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 32,
+      "groups": {
+        "cached": {
+          "count": 28,
+          "maxMs": 456.66337513923645,
+          "p95Ms": 383.13929200172424
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 450.0957500934601,
+          "p95Ms": 450.0957500934601
+        },
+        "rotation": {
+          "count": 3,
+          "maxMs": 700.933167219162,
+          "p95Ms": 700.933167219162
+        }
+      },
+      "limitMs": 2000,
+      "maxMs": 700.933167219162,
+      "metric": "ordinary-save",
+      "minimumCount": 32,
+      "p95Ms": 682.7645418643951,
+      "passed": true,
+      "rule": "nearest-rank p95",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 32,
+      "groups": {
+        "cached": {
+          "count": 28,
+          "maxMs": 2266.0195829868317,
+          "p95Ms": 2241.9639580249786
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 2341.56170797348,
+          "p95Ms": 2341.56170797348
+        },
+        "rotation": {
+          "count": 3,
+          "maxMs": 5208.356457948685,
+          "p95Ms": 5208.356457948685
+        }
+      },
+      "limitMs": 10000,
+      "maxMs": 5208.356457948685,
+      "metric": "stress-save",
+      "minimumCount": 32,
+      "p95Ms": 5133.244999885559,
+      "passed": true,
+      "rule": "nearest-rank p95",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 30,
+      "groups": {
+        "cached": {
+          "count": 24,
+          "maxMs": 167.71195793151855,
+          "p95Ms": 167.5466251373291
+        },
+        "first": {
+          "count": 6,
+          "maxMs": 184.72295784950256,
+          "p95Ms": 184.72295784950256
+        }
+      },
+      "limitMs": 300,
+      "maxMs": 184.72295784950256,
+      "metric": "search",
+      "minimumCount": 30,
+      "p95Ms": 167.71195793151855,
+      "passed": true,
+      "rule": "nearest-rank p95",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 30,
+      "groups": {
+        "cached": {
+          "count": 29,
+          "maxMs": 242.39804196357727,
+          "p95Ms": 216.81454205513
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 132.58574986457825,
+          "p95Ms": 132.58574986457825
+        }
+      },
+      "limitMs": 1000,
+      "maxMs": 242.39804196357727,
+      "metric": "ordinary-map",
+      "minimumCount": 30,
+      "p95Ms": 216.81454205513,
+      "passed": true,
+      "rule": "nearest-rank p95",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 30,
+      "groups": {
+        "cached": {
+          "count": 29,
+          "maxMs": 302.082750082016,
+          "p95Ms": 263.60804200172424
+        },
+        "first": {
+          "count": 1,
+          "maxMs": 205.13316702842712,
+          "p95Ms": 205.13316702842712
+        }
+      },
+      "limitMs": 3000,
+      "maxMs": 302.082750082016,
+      "metric": "stress-map",
+      "minimumCount": 30,
+      "p95Ms": 263.60804200172424,
+      "passed": true,
+      "rule": "nearest-rank p95",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 100,
+      "groups": {
+        "cached": {
+          "count": 100,
+          "maxMs": 73.24258303642273,
+          "p95Ms": 65.6976671218872
+        }
+      },
+      "limitMs": 100,
+      "maxMs": 73.24258303642273,
+      "metric": "ordinary-input",
+      "minimumCount": 100,
+      "p95Ms": 65.6976671218872,
+      "passed": true,
+      "rule": "nearest-rank p95",
+      "independentlyRecomputed": true
+    },
+    {
+      "count": 100,
+      "groups": {
+        "cached": {
+          "count": 100,
+          "maxMs": 67.19066596031189,
+          "p95Ms": 61.351166009902954
+        }
+      },
+      "limitMs": 200,
+      "maxMs": 67.19066596031189,
+      "metric": "stress-input",
+      "minimumCount": 100,
+      "p95Ms": 61.351166009902954,
+      "passed": true,
+      "rule": "nearest-rank p95",
+      "independentlyRecomputed": true
+    }
+  ],
+  "startupSamples": [
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/507E73F6-F8CC-465F-8CA2-EA07F108C523",
+      "elapsedMs": 2744.83145904541,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 53/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    },
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/73ED3FA4-ADF5-40F0-8BAB-177D9145F6E7",
+      "elapsedMs": 1009.8340001106262,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 51/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    },
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/31CFEE07-8FD5-4ECC-BBD9-A12BDD362A5D",
+      "elapsedMs": 1360.1135830879211,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 53/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    },
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/263FBDCA-6952-46A6-9C37-609F4902D377",
+      "elapsedMs": 1032.2002499103546,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 53/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    },
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/7B067206-590E-4A2A-B9C6-4CED6C23BAEE",
+      "elapsedMs": 1532.2337498664856,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 53/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    },
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/0E09D605-EAF2-4F46-8219-CDA4E2B98623",
+      "elapsedMs": 1028.6165421009064,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 53/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    },
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/20EE379E-2A92-4AD5-9CA4-0868A63DEC50",
+      "elapsedMs": 1397.0121672153473,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 65/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    },
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/2CD5B90B-1A08-4729-92E8-5CEB03B9FFA5",
+      "elapsedMs": 1005.4097909927368,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 53/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    },
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/A686B4A5-B84F-4D9D-8AB2-76F033ED7D5C",
+      "elapsedMs": 1318.0944578647614,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 53/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    },
+    {
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/4B3F2475-D35A-429A-93C6-78ABAD537CE4",
+      "elapsedMs": 1037.126874923706,
+      "state": {
+        "contentHeading": "内容区 · 普通样本 00",
+        "editable": true,
+        "errors": [
+          "",
+          "",
+          "",
+          "",
+          "",
+          ""
+        ],
+        "expandedNodes": 0,
+        "focused": true,
+        "hits": [],
+        "images": [
+          {
+            "ready": true,
+            "top": 284.671875,
+            "visible": true,
+            "width": 1024
+          },
+          {
+            "ready": false,
+            "top": 2887,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3159.34375,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3431.6875,
+            "visible": false,
+            "width": 0
+          },
+          {
+            "ready": false,
+            "top": 3704.03125,
+            "visible": false,
+            "width": 0
+          }
+        ],
+        "mapCanEdit": false,
+        "maps": 1,
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "notes": 1,
+        "observedFrames": 2,
+        "progress": [
+          "正在读取完整笔记列表，当前笔记可以继续编辑。",
+          "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+          "正在验证备份 · 已检查 53/1010…"
+        ],
+        "save": "已保存到本地",
+        "savingFeedback": null,
+        "selectedText": "",
+        "text": "",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY",
+        "titleSelection": {
+          "end": 29,
+          "focused": false,
+          "start": 29
+        },
+        "viewport": {
+          "devicePixelRatio": 2,
+          "height": 832,
+          "width": 1280
+        },
+        "visibility": "visible"
+      },
+      "readiness": "editor-first-image"
+    }
+  ],
+  "sampleReconstruction": {
+    "matches": true,
+    "breakdown": {
+      "fullMatrixRun": 454,
+      "initialIndex": 3,
+      "startup": 10
+    }
+  },
+  "feedback": {
+    "stressSaveSamples": 32,
+    "checks": [
+      {
+        "operation": "stress-save-1",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1014.1702079772949,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-1",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2002.7688329219818,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-2",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1005.1058750152588,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-2",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2006.2060840129852,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-3",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1004.1435420513153,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-3",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2001.5525419712067,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-4",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1005.3669579029083,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-4",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2007.9494578838348,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-5",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1001.4528748989105,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-5",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2006.948667049408,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-6",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1001.7625830173492,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-6",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2005.0393328666687,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-7",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1005.213958978653,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-7",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2008.000375032425,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-8",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1003.7536249160767,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-8",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2000.4502079486847,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-9",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1003.9650828838348,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-9",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2008.5353329181671,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-10",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1008.0863749980927,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-10",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2006.2757079601288,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-11",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1005.7219998836517,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-11",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2004.4670000076294,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-12",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1002.5990419387817,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-12",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2005.7930419445038,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-13",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1006.0820000171661,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-13",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2004.5281670093536,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-14",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1005.8399169445038,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-14",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2002.2651669979095,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-15",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1006.3745419979095,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-15",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2000.7160840034485,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-16",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1001.8221249580383,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-16",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2000.4676251411438,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-17",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1005.9928750991821,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-17",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2005.4181671142578,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-18",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1006.7265839576721,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-18",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2003.562749862671,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-19",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1007.1133329868317,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-19",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2001.5461251735687,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-20",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1005.6687910556793,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-20",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2008.1696660518646,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-21",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1002.6875410079956,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-21",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2004.8478331565857,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-22",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1004.1101248264313,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-22",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2012.2080419063568,
+        "visible": false,
+        "save": "已保存到本地"
+      },
+      {
+        "operation": "stress-save-23",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1000.1204159259796,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-23",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2007.1971249580383,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-24",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1000.0769591331482,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-24",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2002.9203751087189,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-25",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1007.2067921161652,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-25",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2004.3026249408722,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-26",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1004.1966669559479,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-26",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2007.3669590950012,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-27",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1003.5151669979095,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-27",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2002.520208120346,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-28",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1008.290540933609,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-28",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2005.545333147049,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-29",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1008.0659999847412,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-29",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2004.0057909488678,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-30",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1000.8047080039978,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-30",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2007.0639159679413,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-31",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1006.6164171695709,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-31",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2007.4712090492249,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-32",
+        "checkpoint": "feedback1000",
+        "elapsedMs": 1004.1778748035431,
+        "visible": true,
+        "save": "正在保存…"
+      },
+      {
+        "operation": "stress-save-32",
+        "checkpoint": "feedback2000",
+        "elapsedMs": 2002.5497498512268,
+        "visible": true,
+        "save": "正在保存…"
+      }
+    ]
+  },
+  "sampleState": {
+    "visibleAndFocused": 467,
+    "nonemptyErrors": 0
+  },
+  "calibration": {
+    "nativeInputVerified": true,
+    "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/calibration/measurements/C1502FC4-F9AC-4051-A766-475B9157DFAE",
+    "scope": "Current window position and display configuration only; no CI input acceptance"
+  },
+  "contentVerification": {
+    "editedNotes": [
+      {
+        "allOtherContentAndIdentityExact": true,
+        "assets": [
+          {
+            "bytes": 1048576,
+            "name": "10c4eaf6-3832-4bcb-bc4b-8e81bb23023b",
+            "sha256": "977388359993da3d2b6daefb0edcf1236cee76098d4055f1282a3b5114ff1792"
+          },
+          {
+            "bytes": 1048576,
+            "name": "776e7b15-c41e-47fd-8e9d-56fe79b11408",
+            "sha256": "ba43dbb2822b46d3765f94b7e8ffd176b869310289bc06ac7647ab7fe647f6ee"
+          },
+          {
+            "bytes": 1048576,
+            "name": "a262a1ea-fa33-48ee-94fa-a3844efe5635",
+            "sha256": "2681264d829858c8ab76637e8b1c5e0466619da0c63c0cb624208fc5fa438196"
+          },
+          {
+            "bytes": 1048576,
+            "name": "d45aa9f8-86e2-477a-a9d8-f431c078a3e9",
+            "sha256": "a4ad302ddf520f8f00984763897bc70f3db6f7ca9ab0f33226eb4bb187860f58"
+          },
+          {
+            "bytes": 1048576,
+            "name": "f8035b54-d239-4739-b47e-95ff2eb85b22",
+            "sha256": "4b39636db900a76c20913414f99e2b57f33abeed277ee7fa00f4fe30341b3931"
+          }
+        ],
+        "bytes": 5249357,
+        "heading": "内容区 · 普通样本 00",
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "sha256": "6224299cfaf45310b9149f247ffcce4f96bca5f2d39cd87829e8959ba2b38895",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY"
+      },
+      {
+        "allOtherContentAndIdentityExact": true,
+        "assets": [
+          {
+            "bytes": 5242880,
+            "name": "4c584f74-5593-4fa4-82aa-bcfee8e11eef",
+            "sha256": "9824971acc0e1b518c1aa22ad3f3c9dab4329810651f73d800253157f4041b25"
+          },
+          {
+            "bytes": 5242880,
+            "name": "55594b5a-4aa5-429f-8956-e5031c0ef8e7",
+            "sha256": "9ce2a11cbb77898abf60ec62d0e0fe53580cd152c6b5ac81db2c6480ac01610c"
+          },
+          {
+            "bytes": 5242880,
+            "name": "711fbe1c-4a2f-4f32-9f36-0d4f72efb1be",
+            "sha256": "6e0a771781fd88c5bea3dca61acd249ad787e624dc5a4fc2d48113029ecb0714"
+          },
+          {
+            "bytes": 5242880,
+            "name": "7906facb-6440-482e-b7ca-5f9e5374a271",
+            "sha256": "50ab5f9f1745f3a53c78b8f2fd2cd47da1ef3c0e874f710f7e52b60f8cc1bdcc"
+          },
+          {
+            "bytes": 5242880,
+            "name": "887c72ab-e2d7-408a-9f7d-0d73dc5035d0",
+            "sha256": "b83214b840c917f3bcbfde9c8b4e5ce8e863c64427e20229e463692fe9f80dbe"
+          },
+          {
+            "bytes": 5242880,
+            "name": "91f20ce3-049e-4d3e-9bbb-0f6c89f1f833",
+            "sha256": "81e56da517cbb15bfb0347633ee7b7b85a9cd36c7cc95b0f4357a625d5e8c6de"
+          },
+          {
+            "bytes": 5242880,
+            "name": "9fa9d1f6-6f61-48e7-9802-741c1915e834",
+            "sha256": "a698202e892c05e871d8e42457c02709f824a30133d526461a0fd63aa9ed7bf0"
+          },
+          {
+            "bytes": 5242880,
+            "name": "ae420cc6-f4d5-45b0-9512-58a65ea4ac34",
+            "sha256": "fd8b2b8c51c2e89fae29224a9cec158c8c946904eff69f3d4eecfa0658fc981c"
+          },
+          {
+            "bytes": 5242880,
+            "name": "c2d9e4b2-777b-4f83-9b98-3d1048790a4e",
+            "sha256": "89991d0821a87a0d69e3c2e3029da2edd43e757fb8c243994830a973a803bef7"
+          },
+          {
+            "bytes": 5242880,
+            "name": "f3fb9039-ab06-4404-bccb-0f30ca0af842",
+            "sha256": "cc3a811190c00b0b4f95366b36990529094056d690505327f45a8f91149b5bbf"
+          }
+        ],
+        "bytes": 52456211,
+        "heading": "内容区 · 压力样本 00",
+        "noteId": "da509c0e-7713-4234-b8eb-ec5fd6f993d6",
+        "sha256": "53b25376582d94484289112f1292c527071406c940b3346f92c23f388fdb641d",
+        "title": "压力样本 42 · SHARED-Q51-STRESS"
+      }
+    ],
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "notebooksChecked": 10,
+    "notesChecked": 1000,
+    "scope": "Exact native package content after all normal exits/restarts"
+  },
+  "resourceTests": {
+    "hostedCI": false,
+    "os": "Version 26.6.2 (Build 25G83)",
+    "passed": true,
+    "scope": "Native Q52 format/image/storage regressions on this host; no UI, OneDrive or power-loss claim",
+    "sourceCommit": "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+    "suites": [
+      {
+        "logSha256": "c585cfd5d0c4cbfad5b399ee6cbc4004fb471611ce3a2ef94d34299ba5f9c01c",
+        "passed": true,
+        "sha256": "835b155ef309b95c246588314396ea5f7edc5e30d77379d0ee27d019e2ab5eab",
+        "suite": "format_v1",
+        "passedCount": 14
+      },
+      {
+        "logSha256": "77d060f82e9f56b9649c31f4298b1e9c2acad645e77ad7a01e6af7cf6f85caeb",
+        "passed": true,
+        "sha256": "11914503123424b31c6a606d7688f120ceb534c0c32e839d4d319ab1246db6c9",
+        "suite": "image_content",
+        "passedCount": 17
+      },
+      {
+        "logSha256": "15edc403304c7eea3afb6cc820eac12b38781a4f5139f64f8b933e000203b43c",
+        "passed": true,
+        "sha256": "89be70e840c5c6a8f6dbe73eb927a990ae9b57ab5dd2db705eafd95fac12d776",
+        "suite": "rich_content",
+        "passedCount": 6
+      },
+      {
+        "logSha256": "09343a483afc5bb1d1da029f801eaced6dd93d86304e29120c39ebce3e0a513f",
+        "passed": true,
+        "sha256": "eed60c9e9a714381ddf516d5da30e80117ae27f565ff574b7f1774edec2153de",
+        "suite": "storage",
+        "passedCount": 10
+      }
+    ],
+    "totalPassed": 47
+  },
+  "normalExits": [
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81596,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/DFEAD321-0515-4F29-9475-04E225D8B496"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81638,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-2/measurements/65655E12-C397-47C3-B01C-6070D4145AFE"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81708,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-3/measurements/6266E8B6-5BBE-4B14-9A75-A66B714E3154"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81742,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/8440E54A-E9F4-4655-BFC1-69EAF1CFE943"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81856,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/507E73F6-F8CC-465F-8CA2-EA07F108C523"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81876,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/73ED3FA4-ADF5-40F0-8BAB-177D9145F6E7"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81886,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/31CFEE07-8FD5-4ECC-BBD9-A12BDD362A5D"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81896,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/263FBDCA-6952-46A6-9C37-609F4902D377"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81904,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/7B067206-590E-4A2A-B9C6-4CED6C23BAEE"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81910,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/0E09D605-EAF2-4F46-8219-CDA4E2B98623"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81916,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/20EE379E-2A92-4AD5-9CA4-0868A63DEC50"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81923,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/2CD5B90B-1A08-4729-92E8-5CEB03B9FFA5"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81936,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/A686B4A5-B84F-4D9D-8AB2-76F033ED7D5C"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81946,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/index-1/measurements/4B3F2475-D35A-429A-93C6-78ABAD537CE4"
+    },
+    {
+      "exitStatusAvailable": true,
+      "normalExit": true,
+      "pid": 81562,
+      "quitRequested": true,
+      "status": 0,
+      "terminationReason": 1,
+      "run": "/Users/hobo/CueNote-ui-acceptance-20261019-11/result/calibration/measurements/C1502FC4-F9AC-4051-A766-475B9157DFAE"
+    }
+  ],
+  "archive": {
+    "file": "mac-matrix-11-evidence-20261019.tar.gz",
+    "sha256": "2d24c871a7d855668999c96f67c27ed746755307f61903fb9bfd29300b098953",
+    "files": 287,
+    "manifestSha256": "11000efb3f082cdb6422e1a7ab8f8c63ac467cbbe06980e1d6541e1fec0e3a0e",
+    "allFileHashesVerified": true
+  },
+  "scope": "Actual M1 Pro isolated performance binary. Q51 passes; native Q52 resource regressions pass. Full A23, ordinary app, OneDrive and all A01-A26 acceptance remain incomplete."
+}

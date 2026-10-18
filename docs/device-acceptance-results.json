@@ -475,6 +475,19 @@
       "passed": 83,
       "report": "native-fault-acceptance-12da826-results.json",
       "scope": "Actual-device native debug fault harnesses; other GUI/OneDrive cases remain open."
+    },
+    "currentNoteStartupFollowup": {
+      "sourceCommit": "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+      "report": "performance-macos-matrix11-results.json",
+      "metricSamples": 467,
+      "timingGatesPassed": 11,
+      "timingGatesTotal": 11,
+      "allTimingGatesPassed": true,
+      "startupMaxMs": 2744.83145904541,
+      "normalExitsIncludingCalibration": 15,
+      "nativeResourceTestsPassed": 47,
+      "nativeContentVerified": true,
+      "fullA23Accepted": false
     }
   },
   "cases": [
@@ -613,8 +626,8 @@
     {
       "id": "A23",
       "windows": "未测",
-      "mac": "失败",
-      "notes": "079fa6e Windows full Q51 11/11 with 467 samples, 13 normal exits and 48 native resource tests; startup max 783.76 ms. Mac 9760cf6 matrix10 complete 467 samples, 10/11 timing gates, startup 4590.58/4101.88 ms above 3000ms; 15 normal exits and 47 resource tests. Mac 079fa6e retest pending. Full A23 remains unaccepted."
+      "mac": "未测",
+      "notes": "079fa6e: both target devices passed the full Q51 timing matrix, 11/11 gates and 467 samples each. Windows startup max783.76ms, 13 normal exits, 48 native resource tests. M1 matrix11 startup max2744.83ms, 15 normal exits, 47 native resource tests. All 1000 notes and 10 notebooks checked on each device. Full Q52 UI boundaries and full A23 remain unaccepted."
     },
     {
       "id": "A24",
@@ -636,7 +649,7 @@
     }
   ],
   "pending": [
-    "Mac9760cf6 matrix10 startup failed at 4590.58/4101.88ms, other 10 timing gates passed. Short untraced diagnostic reproduced first startup3149.52ms. Additional trace diagnostic did not exceed3000ms; remaining pre-readiness and initial-load cost still under investigation.",
+    "079fa6e full Q51 passed on Windows and M1. Separately measure immediate save while the startup library list is still pending; full A23 Q52 UI boundaries remain open.",
     "Mac 9760cf6 manual IME/clipboard/reopen substeps confirmed; complete A06/A07 format and block-operation cases remain open.",
     "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and late organization metadata; one ordinary rich-note sequential round trip has passed.",
     "Full A01-A26, Q51/Q52 target-device evidence",

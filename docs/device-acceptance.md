@@ -13,7 +13,7 @@
 
 截至 2026-10-18 13:06 UTC，两端普通安装版均已更新为同源码 `9760cf6`，更新前保留旧应用、各自应用数据及专用 OneDrive 测试库，更新后逐文件校验数据未改动。Windows 通过既有 Explorer 窗口的 Document.Application 启动（父进程确认为 Explorer），Mac 通过 Launch Services 启动；两端已重新显示保存的笔记。这是同版本候选替换，实际版本升级及卸载保留仍待完整验收。
 
-`3013f3c` 的独立 Windows 性能版[失败记录](performance-windows-probe-yield.md)保留。后续 `cf350d8` 的[Windows 467 样本](performance-windows-committed-projection.md)全部达标；[Mac 第八轮](performance-macos-matrix8.md)为 10/11，首次重启超时。图片读取优先权修复 `9760cf6` 的[Windows 467 样本](performance-windows-image-priority.md)再次全部达标；[Mac 第十轮](performance-macos-matrix10.md)完整取得 467 样本，仍为 10/11，启动两次为 4590.58 / 4101.88 ms，超过 3000 ms。其余计时、千篇原生内容、15 次正常退出与 47 项资源回归通过。[额外启动诊断](macos-startup-after-actions-9760cf6.md)复现首次 3121.50 ms，独立留档，不混入矩阵；启动阻断尚未解决。
+`3013f3c` 的独立 Windows 性能版[失败记录](performance-windows-probe-yield.md)保留。后续 `cf350d8` 的[Windows 467 样本](performance-windows-committed-projection.md)全部达标；[Mac 第八轮](performance-macos-matrix8.md)为 10/11，首次重启超时。图片读取优先权修复 `9760cf6` 的[Windows 467 样本](performance-windows-image-priority.md)再次全部达标；[Mac 第十轮](performance-macos-matrix10.md)完整取得 467 样本，仍为 10/11，启动两次为 4590.58 / 4101.88 ms，超过 3000 ms。其余计时、千篇原生内容、15 次正常退出与 47 项资源回归通过。[额外启动诊断](macos-startup-after-actions-9760cf6.md)复现首次 3121.50 ms，独立留档，不混入矩阵；当时启动门槛尚未通过，后续第十一轮结果见下文。
 
 `cf350d8` 普通版已完成[OneDrive 顺序编辑](onedrive-sequential-cf350d8.md)：Windows→Mac→Windows→Mac，8 份快照、24 个文件逐字节核验，三分区、代码缩进和语言、公式源码、图片原始字节与可编辑导图身份均保持正确。Mac 初始占位目录曾正确暂停新建，设置本机保留后才继续。`9760cf6` 重开已保存内容正常；[Mac 人工试用](macos-human-input-9760cf6.md)的输入法、独立撤销/重做、截图工具及“预览”粘贴和重开子步骤已由用户确认正常。用户随后确认撤销后没有恢复，撤销后的单图/总结状态已独立留档，两端 OneDrive 文件一致。完整 A06/A07、离线并发冲突及双端日用验收仍未通过。
 
@@ -23,7 +23,9 @@ Windows 单端 A22 也已通过 [Markdown 导出验收](windows-markdown-export-
 
 Windows 单端 A05 已通过[布局与侧栏验收](windows-layout-9760cf6.md)：收放后的三分区草稿、标题与正文光标上下文保留，48 份事实副本重新核对。双端 A17 的保存中断故障场景也已通过：[原生故障验收](native-fault-acceptance-12da826.md)取得 Windows 85/85、M1 83/83，均无失败或跳过；A18–A20 仅对应原生子步骤通过，普通界面场景保持未验收。
 
-[缩小启动诊断](macos-startup-minimal-9760cf6.md)用两次压力保存复现首次 3110.06 ms，原生笔记和资产完整；带追踪采样另行留档。[当前笔记优先启动](startup-current-note.md)已提交为 `079fa6e`，[Windows 完整复测](performance-windows-startup-current.md)取得 467 样本、11/11 门槛、启动最大 783.76 ms，13 次正常退出和千篇原生内容通过。Mac 新候选尚待实测，未替换正式性能失败结论。
+[缩小启动诊断](macos-startup-minimal-9760cf6.md)用两次压力保存复现首次 3110.06 ms，原生笔记和资产完整；带追踪采样另行留档。[当前笔记优先启动](startup-current-note.md)已提交为 `079fa6e`，[Windows 完整复测](performance-windows-startup-current.md)取得 467 样本、11/11 门槛、启动最大 783.76 ms，13 次正常退出和千篇原生内容通过。[Mac 第十一轮](performance-macos-matrix11.md)同样取得 467 样本、11/11 门槛，启动最大 2744.83 ms，15 次正常退出、千篇原生内容及 47 项资源回归通过；双端 Q51 计时已达标。完整 Q52、普通安装版功能和同步恢复用例仍待完成，启动列表加载期间立即保存的延迟另行检查。
+
+截至 2026-10-19，Windows 普通安装版已更新至 `079fa6e`：更新前备份 1293 个文件，安装退出码 0，安装后数据逐字节未变，程序通过 Explorer 正常用户环境启动。Mac 普通安装版仍为 `9760cf6`；其 `079fa6e` 安装包已取得并校验，尚未替换。这仍是同版本候选替换，不作为 A24 完整通过。
 
 | 记录 | Windows 目标实机 | M1 Pro 目标实机 |
 | --- | --- | --- |
@@ -114,7 +116,7 @@ Mac 可只回传环境脚本的文本结果及试用结果；遇到问题记录�
 | A20 | 先备份再恢复、坏备份拒绝、整库确认、逐文件中断续做/回退 | 未测 | 未测 |
 | A21 | 库外原地安全保存、排除搜索、另存新 ID、原文件不变 | 通过（9760cf6 普通版） | 未测 |
 | A22 | Markdown 三分区/附件、移动目录后可读、原生包不变 | 通过（9760cf6 普通版，[导出记录](windows-markdown-export-9760cf6.md)） | 未测 |
-| A23 | Q51 完整性能矩阵和 Q52 各边界内/等于/超出及异常包 | 079fa6e Q51 11/11、467 样本与原生内容通过；完整项待验收 | 9760cf6 原生资源 47/47；第十轮 Q51 10/11，两次启动超时；079fa6e 待复测，完整项未通过 |
+| A23 | Q51 完整性能矩阵和 Q52 各边界内/等于/超出及异常包 | 079fa6e Q51 11/11、467 样本与原生内容通过；完整项待验收 | 079fa6e 第十一轮 Q51 11/11、467 样本、千篇原生内容与资源 47/47 通过；完整项待验收 |
 | A24 | 个人包安装启动、实际升级/卸载保留笔记/备份/恢复 | 未测完整流程；安装/启动子步骤通过 | 安装、程序/签名及进程/窗口子步骤通过；完整流程未测 |
 | A25 | 公式范围、改源码/撤销/错误、离线、双向及导出、美元转义 | 未测 | 未测 |
 | A26 | 七种指定语言+未知语言、空白/特殊字符、双向/导出/搜索 | 未测 | 未测 |
