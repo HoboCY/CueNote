@@ -196,7 +196,21 @@
         "ordinaryLaunch": "Existing Explorer COM",
         "scope": "Same-version candidate replacement; not actual version-upgrade/uninstall acceptance"
       }
-    ]
+    ],
+    "managementFollowup": {
+      "sourceCommit": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+      "report": "windows-management-9760cf6-results.json",
+      "evidenceFilesVerified": 169,
+      "nativeSnapshotsVerified": 14,
+      "savedNotes": 4,
+      "remainingNotebooks": 2,
+      "normalExitCode": 0,
+      "reopenedUiVerified": false,
+      "fullA01Accepted": false,
+      "fullA02Accepted": false,
+      "fullA04Accepted": false,
+      "scope": "Ordinary installed Windows candidate, dedicated synthetic local library. Creation, rename, note entry defaults, same titles, guarded deletion, pin and move substeps verified. Reopened UI awaits foreground; other required management and trash substeps remain untested."
+    }
   },
   "mac": {
     "reportedChip": "Apple M1 Pro",
@@ -405,13 +419,13 @@
       "id": "A01",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "9760cf6 ordinary Windows management substeps verified; full case remains unaccepted. See windows-management-9760cf6-results.json for exact facts and missing scenarios."
     },
     {
       "id": "A02",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "9760cf6 ordinary Windows management substeps verified; full case remains unaccepted. See windows-management-9760cf6-results.json for exact facts and missing scenarios."
     },
     {
       "id": "A03",

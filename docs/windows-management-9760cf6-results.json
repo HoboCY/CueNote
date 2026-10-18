@@ -1,0 +1,1638 @@
+{
+  "schemaVersion": 1,
+  "artifact": "windows-management-9760cf6-results",
+  "generatedAt": "2026-10-18T13:35:23.757Z",
+  "generatedBy": "read-only synthesis script (Node); no window/process/remote operations",
+  "acceptanceSource": {
+    "file": "accepted-q50-q53-a01-a26.md",
+    "sha256": "a4cc222c8c6ab6cdac5470bd722477d96d3f592472bed18b08229575a3d80068"
+  },
+  "scope": {
+    "acceptanceRefs": [
+      "Q53 A01",
+      "Q53 A02",
+      "Q53 A04"
+    ],
+    "platform": "windows",
+    "evidenceFilter": "windows-management-*",
+    "evidenceRoot": "C:\\Users\\Hobo\\.codex\\visualizations\\2026\\10\\10\\01a12393-3b57-76e3-afff-50bd8ef5f539\\implementation-execution\\issue-33",
+    "evidenceRelativeTo": "证据根目录下的相对路径",
+    "sourceRevision": "9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c",
+    "binary": {
+      "path": "D:\\Apps\\CueNote\\cuenote.exe",
+      "sha256": "a4520e94a0807b7f45a2ed722bd7dbce92016342a312ca6480845002846e0919",
+      "fileVersion": "0.1.0",
+      "verifiedAt": "2026-10-18T13:35:23.761Z"
+    },
+    "library": {
+      "path": "D:\\Projects\\notebook\\package-output\\ordinary-win-management-9760cf6\\library"
+    },
+    "captureTimeNote": "快照 utc 为 UTC；界面时间为本地 UTC+8（今日 2026-10-18）。"
+  },
+  "dailyUseApproved": false,
+  "dualPlatformAcceptance": false,
+  "overall": "仅 Windows 单端合成验收的部分证据整理：A01、A02 部分通过且未闭环，A04 未测；不得标记为整例或双端验收通过。",
+  "cases": {
+    "A01": {
+      "criteria": "Q53 A01：创建/重命名/删除笔记本；不同入口创建笔记；同名笔记。判定：默认笔记本不可删除；笔记本名非空且不重复；非空笔记本不直接删除；新笔记归属正确，同名标题可独立保存。",
+      "status": "未测",
+      "verifiedFactIds": [
+        "A01-init",
+        "A01-create-book",
+        "A01-rename-book",
+        "A01-entry-all-notes",
+        "A01-entry-global-search",
+        "A01-duplicate-title-independent",
+        "A01-nonempty-delete-refused",
+        "A01-empty-book-cancel",
+        "A01-empty-book-confirm"
+      ],
+      "gaps": [
+        "尚缺“笔记本名非空且不重复”的完整拒绝验证：没有空白名称或重名创建的尝试帧。",
+        "默认笔记本没有重命名/删除控件的界面证据已记录；原生拒绝路径不在本次实机步骤范围。"
+      ],
+      "coverage": "部分子步骤已验证，未达到整例通过条件"
+    },
+    "A02": {
+      "criteria": "Q53 A02：排序、移动、置顶、重启。判定：仅内容/标题修改更新内容修改时间；移动、打开、置顶不改该时间；全局/笔记本置顶一致；回到上次编辑笔记，已不存在则回列表。",
+      "status": "未测",
+      "verifiedFactIds": [
+        "A02-title-updates-content-time",
+        "A02-open-pin-move-keep-content-time",
+        "A02-pin-first-all-notes",
+        "A02-move-to-default"
+      ],
+      "gaps": [
+        "缺重开界面/数据帧：无法验证“回到上次编辑笔记，已不存在则回列表”，也无法验证重启后的置顶与排序持久化。",
+        "“全局/笔记本置顶一致”只有“全部笔记”列表的置顶居首证据，没有独立的单笔记本视图排序帧。",
+        "置顶居首已验证；取消置顶后的内容时间排序仍待核验。"
+      ],
+      "coverage": "部分子步骤已验证，未达到整例通过条件"
+    },
+    "A04": {
+      "criteria": "Q53 A04：删除/恢复/永久删除。判定：回收站只读，恢复后编辑；原笔记本不存在则选择目标；不自动清空；永久删除需确认，取消不改变数据。",
+      "status": "未测",
+      "verifiedFactIds": [],
+      "gaps": [
+        "完全未测：无回收站、恢复、永久删除的计划或快照。"
+      ]
+    }
+  },
+  "facts": [
+    {
+      "id": "A01-init",
+      "case": "A01",
+      "claim": "空库完成默认笔记本初始化",
+      "result": "observed",
+      "detail": "初始库视图（13:12:34Z 帧）显示 0 个笔记本、搜索索引暂不可用，并给出“初始化当前空笔记库”；init 计划点击该按钮；初始化后帧（13:12:50Z）为 1 个笔记本、0 篇笔记；create-a 快照中默认笔记本 288e4300 的 createdAt=2026-10-18T13:12:48.957Z。笔记库路径为指定独立库。",
+      "evidence": [
+        {
+          "path": "windows-management-init-plan.json",
+          "sha256": "315c6c363da1a04b270d4985b23973be840970cb03284f0154db62b3f7d30fb1"
+        },
+        {
+          "path": "windows-management-initial-view/accessibility.json",
+          "sha256": "090230d62ef457a02d959ff05f0f9c1de851440b6dfa74705a1abcc59a06903e"
+        },
+        {
+          "path": "windows-management-init-dialog-view/accessibility.json",
+          "sha256": "a37e7d354bec948ee08addc33852e46975f918fe970a89bdc24aa51126e4a946"
+        },
+        {
+          "path": "windows-management-create-a/native-snapshot.json",
+          "sha256": "376219a5912230d78f7b5086b376ea852b6908ac1bb3e1cd71abab4cbad80413"
+        }
+      ]
+    },
+    {
+      "id": "A01-create-book",
+      "case": "A01",
+      "claim": "新建笔记本",
+      "result": "observed",
+      "detail": "create-a 计划在“笔记本名称”输入“验收甲”并点击“创建笔记本”；create-a 快照新增 4cf8e8ba（createdAt=2026-10-18T13:13:45.723Z，modifiedAt 同值），默认笔记本不变。",
+      "evidence": [
+        {
+          "path": "windows-management-create-a-plan.json",
+          "sha256": "cebb9eb07ca1355abd9dfb3aa3171ca8e99605ce38e7646183441f7cb4ce9f6c"
+        },
+        {
+          "path": "windows-management-create-a/native-snapshot.json",
+          "sha256": "376219a5912230d78f7b5086b376ea852b6908ac1bb3e1cd71abab4cbad80413"
+        }
+      ]
+    },
+    {
+      "id": "A01-rename-book",
+      "case": "A01",
+      "claim": "重命名笔记本",
+      "result": "observed",
+      "detail": "first-note 计划通过“重命名笔记本 验收甲”把名称改为“验收甲改”并保存；first-note-saved 快照中 4cf8e8ba 名称为“验收甲改”（modifiedAt=2026-10-18T13:14:10.844Z）。",
+      "evidence": [
+        {
+          "path": "windows-management-first-note-plan.json",
+          "sha256": "e158fe9a4815de070a597c9da423fdaad24357d59edb1cc36fecd3a099128d0c"
+        },
+        {
+          "path": "windows-management-first-note-saved/native-snapshot.json",
+          "sha256": "b910a007ec9994794b909f738ad42d075ef589a37598b477a4e53a7a80d7f56f"
+        }
+      ]
+    },
+    {
+      "id": "A01-entry-all-notes",
+      "case": "A01",
+      "claim": "全部笔记入口新建笔记归默认笔记本",
+      "result": "observed",
+      "detail": "default-note 计划在“全部笔记 2”视图点击“在『默认笔记本』中新建笔记”；native 快照新增 53f4911e（title=默认入口笔记，createdAt=2026-10-18T13:18:49.393Z，contentModifiedAt=13:18:50.567Z），organization.notebookId=288e4300（默认笔记本）。",
+      "evidence": [
+        {
+          "path": "windows-management-default-note-plan.json",
+          "sha256": "e49acf9403f56a751008b776a226ba777be6dbbbf72978d745e54a754bc1d311"
+        },
+        {
+          "path": "windows-management-default-note/native-snapshot.json",
+          "sha256": "0fda486bd09db517c9428ae694ef12a6e4e225855600e985071ade64afa37cbc"
+        }
+      ]
+    },
+    {
+      "id": "A01-entry-global-search",
+      "case": "A01",
+      "claim": "全库搜索入口新建笔记归默认笔记本",
+      "result": "observed",
+      "detail": "global-search 计划在侧栏搜索“同名”，界面显示“2 条匹配 · 全部笔记”；search-create 计划在该搜索结果页点击“在『默认笔记本』中新建笔记”；native 快照新增 b9964af6（title=全局搜索入口笔记，createdAt=2026-10-18T13:19:21.658Z），notebookId=288e4300。",
+      "evidence": [
+        {
+          "path": "windows-management-global-search-plan.json",
+          "sha256": "1fe1940452954508dbacff12b12e31ba3f3ea17007cd1342831b9cafec775005"
+        },
+        {
+          "path": "windows-management-global-search/accessibility.json",
+          "sha256": "6daa3cb7ca85c0374d16ad9288b59b59154af1018c46ba572ce693e4b44274bf"
+        },
+        {
+          "path": "windows-management-search-create-plan.json",
+          "sha256": "9d8cadac624e7f36c339c0893090f5ff91b376d9e0c356e7492c22eb203f0bdc"
+        },
+        {
+          "path": "windows-management-search-created/native-snapshot.json",
+          "sha256": "640199e24d5948c8f2c22491af0374744839d982eeacd429d560495efa0937c6"
+        }
+      ]
+    },
+    {
+      "id": "A01-duplicate-title-independent",
+      "case": "A01",
+      "claim": "同名标题可独立保存",
+      "result": "observed",
+      "detail": "a5cffb72 与 de63e7b1 的 title 均为“同名验收笔记”，noteId 与 .cuenote 文件相互独立；两帧界面（全局搜索 2 条匹配、笔记本列表 2 篇）同时可见两条同名笔记。",
+      "evidence": [
+        {
+          "path": "windows-management-second-note-saved/native-snapshot.json",
+          "sha256": "4d56a877cc0a327775ada77a8b1f9bc736bc1bbf7297939e7a7c9aef3cadc2ad"
+        },
+        {
+          "path": "windows-management-global-search/accessibility.json",
+          "sha256": "6daa3cb7ca85c0374d16ad9288b59b59154af1018c46ba572ce693e4b44274bf"
+        }
+      ]
+    },
+    {
+      "id": "A01-nonempty-delete-refused",
+      "case": "A01",
+      "claim": "非空笔记本不直接删除",
+      "result": "observed",
+      "detail": "nonempty-delete 计划对“验收甲改”（含 2 篇笔记）打开删除对话框并点击“删除笔记本”；界面明示“此笔记本仍有笔记，请先将笔记移动到其他笔记本，再删除此笔记本。”；native 快照中 4cf8e8ba 与两条笔记均保留（对话框仍停留在取消/删除选择处）。",
+      "evidence": [
+        {
+          "path": "windows-management-nonempty-delete-plan.json",
+          "sha256": "6a2cb37719991dc13573cc66bf77309d07436c669e42b6e94afb1652961631dd"
+        },
+        {
+          "path": "windows-management-nonempty-delete-refused/accessibility.json",
+          "sha256": "c869c9f230e478a23fe667a5e2f50bcc9bf499f3238fc1f61d97015c37d19f4d"
+        },
+        {
+          "path": "windows-management-nonempty-delete-refused/native-snapshot.json",
+          "sha256": "e55f0f749e64cf6a93032701957171d7c59040ae3f72fd903407fe79ce253012"
+        }
+      ]
+    },
+    {
+      "id": "A01-empty-book-cancel",
+      "case": "A01",
+      "claim": "空笔记本取消删除不改数据",
+      "result": "observed",
+      "detail": "empty-cancel 计划对“验收空本”点击删除后取消；取消帧与删除前帧的库文件、截图、accessibility 逐字节一致（native-snapshot.json 与 inspection.json 仅采集 utc 字段不同），fd89d972 仍存在。",
+      "evidence": [
+        {
+          "path": "windows-management-empty-cancel-plan.json",
+          "sha256": "1c16b1316403baf1050d15200488b42bdf653e25156d398d0b4dffd886dafcbd"
+        },
+        {
+          "path": "windows-management-empty-book/native-snapshot.json",
+          "sha256": "22d1f726b4817cab662e1dda417ffd33d1eb6f8c1eb8ac9fde2c4396cf5633e9"
+        },
+        {
+          "path": "windows-management-empty-delete-cancelled/native-snapshot.json",
+          "sha256": "a6bd0c1db6efbc215109294c1e97364d7b7a5cbc813fd5b35e5cd149a6ba2e19"
+        },
+        {
+          "path": "windows-management-empty-delete-cancelled/accessibility.json",
+          "sha256": "d977a2a9a14f4c663e85eafa0e8d41deaa9ba26e1eecff65f523713610158b84"
+        }
+      ]
+    },
+    {
+      "id": "A01-empty-book-confirm",
+      "case": "A01",
+      "claim": "空笔记本确认删除",
+      "result": "observed",
+      "detail": "empty-delete 计划对“验收空本”确认删除；之后快照中 fd89d972 消失，默认笔记本与“验收甲改”保留。",
+      "evidence": [
+        {
+          "path": "windows-management-empty-delete-plan.json",
+          "sha256": "594da34d5aeb929bf3b83bd48e30d50ca850beca3418a6cb89ce8ba79c08c1b9"
+        },
+        {
+          "path": "windows-management-empty-deleted/native-snapshot.json",
+          "sha256": "2721b28e1bea6dc256a2a9733123a4458d20cd74442025221a2911ca2693dfc8"
+        }
+      ]
+    },
+    {
+      "id": "A01-default-book-affordance",
+      "case": "A01",
+      "claim": "默认笔记本未见编辑/删除入口（未尝试）",
+      "result": "observed",
+      "detail": "各帧笔记本列表中默认笔记本 288e4300 只有“选择笔记本 默认笔记本”，没有“重命名笔记本/删除笔记本”控件；本次未实际尝试删除默认笔记本，不作为该判定已通过的证据。",
+      "evidence": [
+        {
+          "path": "windows-management-empty-book/accessibility.json",
+          "sha256": "d977a2a9a14f4c663e85eafa0e8d41deaa9ba26e1eecff65f523713610158b84"
+        },
+        {
+          "path": "windows-management-nonempty-delete-refused/accessibility.json",
+          "sha256": "c869c9f230e478a23fe667a5e2f50bcc9bf499f3238fc1f61d97015c37d19f4d"
+        }
+      ]
+    },
+    {
+      "id": "A02-title-updates-content-time",
+      "case": "A02",
+      "claim": "标题保存更新内容修改时间",
+      "result": "observed",
+      "detail": "de63e7b1 保存标题后 contentModifiedAt 由 13:14:11.692Z 变为 13:15:32.768Z；a5cffb72 由 13:17:00.126Z 变为 13:17:59.802Z（second-note-saved）。",
+      "evidence": [
+        {
+          "path": "windows-management-first-note-saved/native-snapshot.json",
+          "sha256": "b910a007ec9994794b909f738ad42d075ef589a37598b477a4e53a7a80d7f56f"
+        },
+        {
+          "path": "windows-management-second-note-saved/native-snapshot.json",
+          "sha256": "4d56a877cc0a327775ada77a8b1f9bc736bc1bbf7297939e7a7c9aef3cadc2ad"
+        }
+      ]
+    },
+    {
+      "id": "A02-open-pin-move-keep-content-time",
+      "case": "A02",
+      "claim": "打开/置顶/移动不改内容修改时间",
+      "result": "observed",
+      "detail": "四篇笔记的 contentModifiedAt 在 search-created、old-pinned、old-moved-default、before-reopen 各阶段完全一致：53f4911e=13:18:50.567Z、a5cffb72=13:17:59.802Z、b9964af6=13:19:22.834Z、de63e7b1=13:15:32.768Z；期间发生了打开笔记、置顶与移动。整理时间另行变化：de63e7b1 置顶后 organizationModifiedAt=13:20:46.273Z，移入默认本后=13:20:50.791Z。",
+      "evidence": [
+        {
+          "path": "windows-management-search-created/native-snapshot.json",
+          "sha256": "640199e24d5948c8f2c22491af0374744839d982eeacd429d560495efa0937c6"
+        },
+        {
+          "path": "windows-management-old-pinned/native-snapshot.json",
+          "sha256": "286bb3c6af6f55e6262832ae6b6e55f6b539b18be541f832a5218ccba43f4ce7"
+        },
+        {
+          "path": "windows-management-old-moved-default/native-snapshot.json",
+          "sha256": "9ad8d1753d0bfad7c1475e54c89c2efc54fa7d4e736be4dc560ac671fe528aeb"
+        },
+        {
+          "path": "windows-management-before-reopen/native-snapshot.json",
+          "sha256": "1e9fab9b41170beeaf68047bb6aac7097a677bd47a9629f5750a82a375367b7c"
+        }
+      ]
+    },
+    {
+      "id": "A02-pin-first-all-notes",
+      "case": "A02",
+      "claim": "置顶后居首（全部笔记列表）",
+      "result": "observed",
+      "detail": "pin-old 计划打开旧笔记（21:15 帧=de63e7b1）并点击“置顶当前笔记”；old-pinned 界面中列表首位为该笔记（带 ◆ 与“已置顶”），按钮变为“取消置顶当前笔记”；native 中 de63e7b1 pinned=true。",
+      "evidence": [
+        {
+          "path": "windows-management-pin-old-plan.json",
+          "sha256": "e67e8f280e0a63da4d19656239debc2c85f9c22064448f0e8de30695e9aecb68"
+        },
+        {
+          "path": "windows-management-old-pinned/accessibility.json",
+          "sha256": "5c4b3a8a70bebb0f31fcd2837e0795ad0f9ae8b3b403157b7dc330ded25933a2"
+        },
+        {
+          "path": "windows-management-old-pinned/native-snapshot.json",
+          "sha256": "286bb3c6af6f55e6262832ae6b6e55f6b539b18be541f832a5218ccba43f4ce7"
+        }
+      ]
+    },
+    {
+      "id": "A02-move-to-default",
+      "case": "A02",
+      "claim": "移入默认笔记本",
+      "result": "observed",
+      "detail": "move-default 计划用组合框选择目标笔记本（默认笔记本）后确认；old-moved-default 快照中 de63e7b1 的 notebookId 由 4cf8e8ba 变为 288e4300，默认本 3 篇、验收甲改 1 篇，organizationModifiedAt=13:20:50.791Z。",
+      "evidence": [
+        {
+          "path": "windows-management-move-default-plan.json",
+          "sha256": "82117f0720d3e5243344a81cf8c0861140980723f564d15cfc8e34488b4b7c65"
+        },
+        {
+          "path": "windows-management-old-moved-default/native-snapshot.json",
+          "sha256": "9ad8d1753d0bfad7c1475e54c89c2efc54fa7d4e736be4dc560ac671fe528aeb"
+        }
+      ]
+    },
+    {
+      "id": "A04-not-tested",
+      "case": "A04",
+      "claim": "删除/恢复/永久删除未测",
+      "result": "not-tested",
+      "detail": "windows-management-* 证据中没有笔记移入回收站、恢复、永久删除的计划或快照；各阶段界面“回收站 0”。",
+      "evidence": [
+        {
+          "path": "windows-management-before-reopen/accessibility.json",
+          "sha256": "e36d65903c0fde61ba95a47e23ef906e92eee95a6813122e3a45d0f04c6211ad"
+        },
+        {
+          "path": "windows-management-empty-deleted/accessibility.json",
+          "sha256": "95b575e7122fe55c619cdb1927e3226b0507fb6289d3d4555d61d23362ea672c"
+        }
+      ]
+    },
+    {
+      "id": "meta-latest-before-reopen",
+      "case": "meta",
+      "claim": "before-reopen 为最新 UI/原生快照",
+      "result": "observed",
+      "detail": "before-reopen inspection utc=2026-10-18T13:20:56.7006989Z，native utc=2026-10-18T13:20:56.8467119Z；侧栏已收起，当前笔记为已置顶且已移入默认本的 de63e7b1。",
+      "evidence": [
+        {
+          "path": "windows-management-before-reopen/inspection.json",
+          "sha256": "873e278494b69433cea0c22d866ffd825ed512d78201753e509610128553a2bc"
+        },
+        {
+          "path": "windows-management-before-reopen/native-snapshot.json",
+          "sha256": "1e9fab9b41170beeaf68047bb6aac7097a677bd47a9629f5750a82a375367b7c"
+        },
+        {
+          "path": "windows-management-before-reopen/accessibility.json",
+          "sha256": "e36d65903c0fde61ba95a47e23ef906e92eee95a6813122e3a45d0f04c6211ad"
+        }
+      ]
+    },
+    {
+      "id": "meta-restart-close",
+      "case": "meta",
+      "claim": "关闭进程退出 0（尚无重开帧）",
+      "result": "observed",
+      "detail": "restart-close.json: processEnded=true、requestAccepted=true、exitCode=0、pid=87620、utc=2026-10-18T13:21:29.7015435Z；该文件只证明退出码，不含重开后的界面或数据帧。",
+      "evidence": [
+        {
+          "path": "windows-management-restart-close.json",
+          "sha256": "ad1f7daf20b9ad53b1c6025ba2067a490ee1f5801e78e87bd69f36ba16389c17"
+        }
+      ]
+    },
+    {
+      "id": "meta-reopened-pending",
+      "case": "meta",
+      "claim": "重开未捕获",
+      "result": "blocked",
+      "detail": "仅有 reopened 计划文件（wait 300ms），没有 windows-management-reopened 证据目录；系统焦点限制，等待用户介入，因此重开界面、书本/全局一致性与“回到上次笔记/回退列表”均无证据。",
+      "evidence": [
+        {
+          "path": "windows-management-reopened-plan.json",
+          "sha256": "7b9c07e0565a4c017582173449c8b6a381e1f227a8e6dc0fb245931b52f94a84"
+        }
+      ]
+    },
+    {
+      "id": "meta-library-unchanged",
+      "case": "meta",
+      "claim": "当前库与 before-reopen 快照一致",
+      "result": "observed",
+      "detail": "本次只读校验：独立库当前 6 个文件（2 本 + 4 笔记）与 before-reopen 快照中的 path/bytes/sha256 完全一致，说明关闭后未再发生写入。",
+      "evidence": [
+        {
+          "path": "windows-management-before-reopen/native-snapshot.json",
+          "sha256": "1e9fab9b41170beeaf68047bb6aac7097a677bd47a9629f5750a82a375367b7c"
+        }
+      ]
+    },
+    {
+      "id": "meta-binary-hash",
+      "case": "meta",
+      "claim": "二进制哈希与记录一致",
+      "result": "observed",
+      "detail": "本次重算 D:\\Apps\\CueNote\\cuenote.exe SHA256=a4520e94a0807b7f45a2ed722bd7dbce92016342a312ca6480845002846e0919（FileVersion 0.1.0），与全部 20 个 inspection.json 记录一致。",
+      "evidence": [
+        {
+          "path": "windows-management-before-reopen/inspection.json",
+          "sha256": "873e278494b69433cea0c22d866ffd825ed512d78201753e509610128553a2bc"
+        }
+      ]
+    },
+    {
+      "id": "meta-snapshot-self-consistency",
+      "case": "meta",
+      "claim": "14 个 native-snapshot 与副本哈希自洽",
+      "result": "observed",
+      "detail": "14 个阶段的 native-snapshot.json 所列库文件与证据目录内副本逐一比对，sha256/字节数 0 处不一致。",
+      "evidence": [
+        {
+          "path": "windows-management-before-reopen/native-snapshot.json",
+          "sha256": "1e9fab9b41170beeaf68047bb6aac7097a677bd47a9629f5750a82a375367b7c"
+        },
+        {
+          "path": "windows-management-create-a/native-snapshot.json",
+          "sha256": "376219a5912230d78f7b5086b376ea852b6908ac1bb3e1cd71abab4cbad80413"
+        }
+      ]
+    }
+  ],
+  "syntheticIdentity": {
+    "notebooks": [
+      {
+        "id": "288e4300-bb22-425e-bff5-00343c7fda72",
+        "name": "默认笔记本",
+        "default": true,
+        "createdAt": "2026-10-18T13:12:48.957Z",
+        "modifiedAt": "2026-10-18T13:12:48.957Z"
+      },
+      {
+        "id": "4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96",
+        "name": "验收甲改",
+        "default": false,
+        "createdAt": "2026-10-18T13:13:45.723Z",
+        "modifiedAt": "2026-10-18T13:14:10.844Z"
+      }
+    ],
+    "extraNotebooksSeenOnlyInEarlierStages": [
+      {
+        "id": "fd89d972-fab8-4768-a9cd-fae87718994f",
+        "name": "验收空本",
+        "note": "empty-book 创建、empty-delete-cancelled 保留、empty-deleted 中已删除",
+        "createdAt": "2026-10-18T13:19:43.271Z"
+      }
+    ],
+    "notes": [
+      {
+        "noteId": "53f4911e-b23e-403e-92cc-98e866c34587",
+        "title": "默认入口笔记",
+        "notebookId": "288e4300-bb22-425e-bff5-00343c7fda72",
+        "pinned": false,
+        "trashedAt": null,
+        "createdAt": "2026-10-18T13:18:49.393Z",
+        "contentModifiedAt": "2026-10-18T13:18:50.567Z",
+        "organizationModifiedAt": "2026-10-18T13:18:49.393Z"
+      },
+      {
+        "noteId": "a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be",
+        "title": "同名验收笔记",
+        "notebookId": "4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96",
+        "pinned": false,
+        "trashedAt": null,
+        "createdAt": "2026-10-18T13:17:00.126Z",
+        "contentModifiedAt": "2026-10-18T13:17:59.802Z",
+        "organizationModifiedAt": "2026-10-18T13:17:00.126Z"
+      },
+      {
+        "noteId": "b9964af6-0aac-4609-a630-3585f6bedbd5",
+        "title": "全局搜索入口笔记",
+        "notebookId": "288e4300-bb22-425e-bff5-00343c7fda72",
+        "pinned": false,
+        "trashedAt": null,
+        "createdAt": "2026-10-18T13:19:21.658Z",
+        "contentModifiedAt": "2026-10-18T13:19:22.834Z",
+        "organizationModifiedAt": "2026-10-18T13:19:21.658Z"
+      },
+      {
+        "noteId": "de63e7b1-12b2-4b88-bc80-287b618be1f9",
+        "title": "同名验收笔记",
+        "notebookId": "288e4300-bb22-425e-bff5-00343c7fda72",
+        "pinned": true,
+        "trashedAt": null,
+        "createdAt": "2026-10-18T13:14:11.692Z",
+        "contentModifiedAt": "2026-10-18T13:15:32.768Z",
+        "organizationModifiedAt": "2026-10-18T13:20:50.791Z"
+      }
+    ],
+    "unNamedStates": [
+      {
+        "stage": "windows-management-first-note-interrupted-view",
+        "noteId": "de63e7b1-12b2-4b88-bc80-287b618be1f9",
+        "title": "",
+        "reason": "自动填充焦点中断；不计通过，随后 first-note-recover + 保存成功"
+      },
+      {
+        "stage": "windows-management-second-note",
+        "noteId": "a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be",
+        "title": "",
+        "reason": "focus 方法失败后的空笔记帧；不计通过，paired 计划保存成功"
+      }
+    ]
+  },
+  "reopen": {
+    "beforeReopenCaptured": true,
+    "beforeReopenFrame": {
+      "inspectionUtc": "2026-10-18T13:20:56.7006989Z",
+      "nativeUtc": "2026-10-18T13:20:56.8467119Z",
+      "sidebarCollapsed": true,
+      "currentNoteId": "de63e7b1-12b2-4b88-bc80-287b618be1f9"
+    },
+    "restartClose": {
+      "processEnded": true,
+      "requestAccepted": true,
+      "exitCode": 0,
+      "pid": 87620,
+      "utc": "2026-10-18T13:21:29.7015435Z"
+    },
+    "reopenedCaptured": false,
+    "reopenedEvidenceDirs": [],
+    "blocker": "系统焦点限制，等待用户；仅存在 wait 型 reopened 计划，无界面/原生重开帧。",
+    "libraryStateAfterClose": {
+      "matchesBeforeReopenSnapshot": true,
+      "files": [
+        {
+          "path": "notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+          "bytes": 197,
+          "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+        },
+        {
+          "path": "notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+          "bytes": 195,
+          "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+        },
+        {
+          "path": "notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+          "bytes": 540,
+          "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+        },
+        {
+          "path": "notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+          "bytes": 539,
+          "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+        },
+        {
+          "path": "notes/b9964af6-0aac-4609-a630-3585f6bedbd5.cuenote",
+          "bytes": 549,
+          "sha256": "a224285ec292b405383a774cc525f27fd4c97964fb6e6b3c944af4a37e10116b"
+        },
+        {
+          "path": "notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+          "bytes": 546,
+          "sha256": "926b8e7d39c92d1e283edea2d71734f5da11b041beb719bbf0dec56f62ebe35d"
+        }
+      ]
+    }
+  },
+  "nonPassFrames": [
+    {
+      "frame": "windows-management-first-note-interrupted-view",
+      "noteId": "de63e7b1-12b2-4b88-bc80-287b618be1f9",
+      "title": "",
+      "verdict": "不计通过：自动填充焦点中断；成功帧为 windows-management-first-note-saved"
+    },
+    {
+      "frame": "windows-management-second-note",
+      "noteId": "a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be",
+      "title": "",
+      "verdict": "不计通过：focus 方法失败留下的空标题笔记；成功帧为 windows-management-second-note-saved"
+    },
+    {
+      "frame": "windows-management-pointer-release.json",
+      "verdict": "非业务证据：仅记录自动填充关闭后释放此前测试鼠标按下的清理动作"
+    }
+  ],
+  "verifications": [
+    {
+      "check": "二进制 SHA256 重算",
+      "result": "a4520e94a0807b7f45a2ed722bd7dbce92016342a312ca6480845002846e0919",
+      "expected": "a4520e94a0807b7f45a2ed722bd7dbce92016342a312ca6480845002846e0919",
+      "pass": true
+    },
+    {
+      "check": "20 个 inspection.json 记录的 sha256 与期望二进制一致",
+      "result": "yes",
+      "pass": true
+    },
+    {
+      "check": "14 个 native-snapshot 自洽（所列文件与副本逐一比对）",
+      "result": "0 mismatches",
+      "pass": true,
+      "checked": [
+        {
+          "stage": "windows-management-before-reopen",
+          "files": 6,
+          "utc": "2026-10-18T13:20:56.8467119Z"
+        },
+        {
+          "stage": "windows-management-create-a",
+          "files": 2,
+          "utc": "2026-10-18T13:13:47.3603034Z"
+        },
+        {
+          "stage": "windows-management-default-note",
+          "files": 5,
+          "utc": "2026-10-18T13:18:53.1543475Z"
+        },
+        {
+          "stage": "windows-management-empty-book",
+          "files": 7,
+          "utc": "2026-10-18T13:19:44.7669113Z"
+        },
+        {
+          "stage": "windows-management-empty-delete-cancelled",
+          "files": 7,
+          "utc": "2026-10-18T13:19:48.9010403Z"
+        },
+        {
+          "stage": "windows-management-empty-deleted",
+          "files": 6,
+          "utc": "2026-10-18T13:19:53.6289723Z"
+        },
+        {
+          "stage": "windows-management-first-note-saved",
+          "files": 3,
+          "utc": "2026-10-18T13:15:35.5947728Z"
+        },
+        {
+          "stage": "windows-management-global-search",
+          "files": 5,
+          "utc": "2026-10-18T13:19:19.1935852Z"
+        },
+        {
+          "stage": "windows-management-nonempty-delete-refused",
+          "files": 4,
+          "utc": "2026-10-18T13:18:19.3282271Z"
+        },
+        {
+          "stage": "windows-management-old-moved-default",
+          "files": 6,
+          "utc": "2026-10-18T13:20:52.4741643Z"
+        },
+        {
+          "stage": "windows-management-old-pinned",
+          "files": 6,
+          "utc": "2026-10-18T13:20:47.9689971Z"
+        },
+        {
+          "stage": "windows-management-search-created",
+          "files": 6,
+          "utc": "2026-10-18T13:19:25.4430531Z"
+        },
+        {
+          "stage": "windows-management-second-note",
+          "files": 4,
+          "utc": "2026-10-18T13:17:03.8890539Z"
+        },
+        {
+          "stage": "windows-management-second-note-saved",
+          "files": 4,
+          "utc": "2026-10-18T13:18:02.5963383Z"
+        }
+      ]
+    },
+    {
+      "check": "库当前状态 vs before-reopen 快照",
+      "result": "byte-identical (6 files)",
+      "pass": true
+    },
+    {
+      "check": "空本取消帧 vs 删除前帧（库文件/截图/accessibility 逐字节；两个 JSON 仅 utc 不同）",
+      "result": [
+        {
+          "path": "accessibility.json",
+          "equalIgnoringCaptureUtc": false
+        },
+        {
+          "path": "inspection.json",
+          "equalIgnoringCaptureUtc": true
+        },
+        {
+          "path": "native-snapshot.json",
+          "equalIgnoringCaptureUtc": true
+        },
+        {
+          "path": "notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+          "equalIgnoringCaptureUtc": false
+        },
+        {
+          "path": "notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+          "equalIgnoringCaptureUtc": false
+        },
+        {
+          "path": "notebooks/fd89d972-fab8-4768-a9cd-fae87718994f.json",
+          "equalIgnoringCaptureUtc": false
+        },
+        {
+          "path": "notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+          "equalIgnoringCaptureUtc": false
+        },
+        {
+          "path": "notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+          "equalIgnoringCaptureUtc": false
+        },
+        {
+          "path": "notes/b9964af6-0aac-4609-a630-3585f6bedbd5.cuenote",
+          "equalIgnoringCaptureUtc": false
+        },
+        {
+          "path": "notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+          "equalIgnoringCaptureUtc": false
+        },
+        {
+          "path": "window.png",
+          "equalIgnoringCaptureUtc": false
+        }
+      ],
+      "pass": true
+    },
+    {
+      "check": "打开/置顶/移动期间四篇笔记 contentModifiedAt 不变",
+      "result": {
+        "53f4911e-b23e-403e-92cc-98e866c34587": "2026-10-18T13:18:50.567Z",
+        "a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be": "2026-10-18T13:17:59.802Z",
+        "b9964af6-0aac-4609-a630-3585f6bedbd5": "2026-10-18T13:19:22.834Z",
+        "de63e7b1-12b2-4b88-bc80-287b618be1f9": "2026-10-18T13:15:32.768Z"
+      },
+      "pass": true
+    }
+  ],
+  "notPerformed": [
+    "未操作窗口、远程设备或应用进程（未启动/关闭/重开 CueNote）",
+    "未调用业务接口或 IPC",
+    "未读取密钥或个人资料",
+    "未提交或推送",
+    "A04 相关删除/恢复/永久删除均未执行"
+  ],
+  "limitations": [
+    "仅 Windows 单端、单二进制哈希的合成证据整理；不含 macOS，不构成双端验收。",
+    "仅覆盖 windows-management-* 帧；其他目录（如 windows-user-*、windows-cf350d8-*）未纳入。",
+    "源版本 9760cf6eb6f7ea353d94ec5f7ebd4c08aaceb50c 为提供的上下文；本次未重新建立源码到二进制构建溯源。",
+    "重开相关判定（上次笔记回退、置顶持久化、重开一致性）因未捕获重开帧而保持阻塞。",
+    "dailyUseApproved=false：证据不足以给出日用结论。"
+  ],
+  "evidenceManifest": [
+    {
+      "path": "windows-management-before-reopen-plan.json",
+      "bytes": 162,
+      "sha256": "d67e93cc2da8d0e13bd322690b3038b136e4f3dfbf6cd4c018999625638d42e9"
+    },
+    {
+      "path": "windows-management-before-reopen/accessibility.json",
+      "bytes": 23172,
+      "sha256": "e36d65903c0fde61ba95a47e23ef906e92eee95a6813122e3a45d0f04c6211ad"
+    },
+    {
+      "path": "windows-management-before-reopen/inspection.json",
+      "bytes": 438,
+      "sha256": "873e278494b69433cea0c22d866ffd825ed512d78201753e509610128553a2bc"
+    },
+    {
+      "path": "windows-management-before-reopen/native-snapshot.json",
+      "bytes": 4266,
+      "sha256": "1e9fab9b41170beeaf68047bb6aac7097a677bd47a9629f5750a82a375367b7c"
+    },
+    {
+      "path": "windows-management-before-reopen/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-before-reopen/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-before-reopen/notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+      "bytes": 540,
+      "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+    },
+    {
+      "path": "windows-management-before-reopen/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-before-reopen/notes/b9964af6-0aac-4609-a630-3585f6bedbd5.cuenote",
+      "bytes": 549,
+      "sha256": "a224285ec292b405383a774cc525f27fd4c97964fb6e6b3c944af4a37e10116b"
+    },
+    {
+      "path": "windows-management-before-reopen/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 546,
+      "sha256": "926b8e7d39c92d1e283edea2d71734f5da11b041beb719bbf0dec56f62ebe35d"
+    },
+    {
+      "path": "windows-management-before-reopen/window.png",
+      "bytes": 66829,
+      "sha256": "4142bff9f0b72bc3040379c106764724b9752e145d2db70453343ef335be553b"
+    },
+    {
+      "path": "windows-management-create-a-plan.json",
+      "bytes": 192,
+      "sha256": "cebb9eb07ca1355abd9dfb3aa3171ca8e99605ce38e7646183441f7cb4ce9f6c"
+    },
+    {
+      "path": "windows-management-create-a/accessibility.json",
+      "bytes": 14506,
+      "sha256": "b99f0d7fb5ede6f8c0cb1845287af1d965625e71aa74f0b181ece80cbca9ed56"
+    },
+    {
+      "path": "windows-management-create-a/inspection.json",
+      "bytes": 437,
+      "sha256": "44e40beedba28489039eebc833196b4c58d63772b785f8655be3bd4b795157c4"
+    },
+    {
+      "path": "windows-management-create-a/native-snapshot.json",
+      "bytes": 1147,
+      "sha256": "376219a5912230d78f7b5086b376ea852b6908ac1bb3e1cd71abab4cbad80413"
+    },
+    {
+      "path": "windows-management-create-a/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-create-a/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 192,
+      "sha256": "07f2770e6e1c40990d37ec8e23a41c82bc67180d33deb705ed817f250c1be3fa"
+    },
+    {
+      "path": "windows-management-create-a/window.png",
+      "bytes": 68585,
+      "sha256": "962b2714975f05cdd150b3119052fb7169cdd4c45430c53912e1870701c52fae"
+    },
+    {
+      "path": "windows-management-default-note-plan.json",
+      "bytes": 437,
+      "sha256": "e49acf9403f56a751008b776a226ba777be6dbbbf72978d745e54a754bc1d311"
+    },
+    {
+      "path": "windows-management-default-note/accessibility.json",
+      "bytes": 30385,
+      "sha256": "a65c0ab76b4cef95942da6af9fa6cd9b7d64036ba29b1eb3820390cf676479d8"
+    },
+    {
+      "path": "windows-management-default-note/inspection.json",
+      "bytes": 438,
+      "sha256": "2975442006ca61a9b6fc34b39e8b4d053849812a6632281787f8a4cb3c5e9947"
+    },
+    {
+      "path": "windows-management-default-note/native-snapshot.json",
+      "bytes": 3484,
+      "sha256": "0fda486bd09db517c9428ae694ef12a6e4e225855600e985071ade64afa37cbc"
+    },
+    {
+      "path": "windows-management-default-note/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-default-note/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-default-note/notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+      "bytes": 540,
+      "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+    },
+    {
+      "path": "windows-management-default-note/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-default-note/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-default-note/window.png",
+      "bytes": 80019,
+      "sha256": "efebd1f3ebe05240a1b9e48d36c0e138a5516eb1b42583dfde67f1211066efa3"
+    },
+    {
+      "path": "windows-management-empty-book-plan.json",
+      "bytes": 243,
+      "sha256": "3445390f86023be46c18957c4cf5736d5151b99c60f194948e71748fd2c0359d"
+    },
+    {
+      "path": "windows-management-empty-book/accessibility.json",
+      "bytes": 30124,
+      "sha256": "d977a2a9a14f4c663e85eafa0e8d41deaa9ba26e1eecff65f523713610158b84"
+    },
+    {
+      "path": "windows-management-empty-book/inspection.json",
+      "bytes": 438,
+      "sha256": "ccaa3971311a7a2a1c8451888cc0f023a312ebae3e6cf15ff00a496f05acd8d9"
+    },
+    {
+      "path": "windows-management-empty-book/native-snapshot.json",
+      "bytes": 4740,
+      "sha256": "22d1f726b4817cab662e1dda417ffd33d1eb6f8c1eb8ac9fde2c4396cf5633e9"
+    },
+    {
+      "path": "windows-management-empty-book/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-empty-book/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-empty-book/notebooks/fd89d972-fab8-4768-a9cd-fae87718994f.json",
+      "bytes": 195,
+      "sha256": "91dc12e05a1f92c6b728c41f8ac5341578c70b43188f495395e289a1e364f1e5"
+    },
+    {
+      "path": "windows-management-empty-book/notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+      "bytes": 540,
+      "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+    },
+    {
+      "path": "windows-management-empty-book/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-empty-book/notes/b9964af6-0aac-4609-a630-3585f6bedbd5.cuenote",
+      "bytes": 549,
+      "sha256": "a224285ec292b405383a774cc525f27fd4c97964fb6e6b3c944af4a37e10116b"
+    },
+    {
+      "path": "windows-management-empty-book/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-empty-book/window.png",
+      "bytes": 81706,
+      "sha256": "ed865872e6abfd9c7202c9e99c5c126f8f3916c1f979daa7c50aa2943d326633"
+    },
+    {
+      "path": "windows-management-empty-cancel-plan.json",
+      "bytes": 128,
+      "sha256": "1c16b1316403baf1050d15200488b42bdf653e25156d398d0b4dffd886dafcbd"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/accessibility.json",
+      "bytes": 30124,
+      "sha256": "d977a2a9a14f4c663e85eafa0e8d41deaa9ba26e1eecff65f523713610158b84"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/inspection.json",
+      "bytes": 438,
+      "sha256": "ed4ca0e15026d2af6883f057647f219eff14bccb5b2ed38a70c4641ed563be85"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/native-snapshot.json",
+      "bytes": 4740,
+      "sha256": "a6bd0c1db6efbc215109294c1e97364d7b7a5cbc813fd5b35e5cd149a6ba2e19"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/notebooks/fd89d972-fab8-4768-a9cd-fae87718994f.json",
+      "bytes": 195,
+      "sha256": "91dc12e05a1f92c6b728c41f8ac5341578c70b43188f495395e289a1e364f1e5"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+      "bytes": 540,
+      "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/notes/b9964af6-0aac-4609-a630-3585f6bedbd5.cuenote",
+      "bytes": 549,
+      "sha256": "a224285ec292b405383a774cc525f27fd4c97964fb6e6b3c944af4a37e10116b"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-empty-delete-cancelled/window.png",
+      "bytes": 81706,
+      "sha256": "ed865872e6abfd9c7202c9e99c5c126f8f3916c1f979daa7c50aa2943d326633"
+    },
+    {
+      "path": "windows-management-empty-delete-plan.json",
+      "bytes": 137,
+      "sha256": "594da34d5aeb929bf3b83bd48e30d50ca850beca3418a6cb89ce8ba79c08c1b9"
+    },
+    {
+      "path": "windows-management-empty-deleted/accessibility.json",
+      "bytes": 30586,
+      "sha256": "95b575e7122fe55c619cdb1927e3226b0507fb6289d3d4555d61d23362ea672c"
+    },
+    {
+      "path": "windows-management-empty-deleted/inspection.json",
+      "bytes": 438,
+      "sha256": "87bdc479ac6ccd02a686a515e78150149bdb0829061a32a486b1eb849a7d1aa7"
+    },
+    {
+      "path": "windows-management-empty-deleted/native-snapshot.json",
+      "bytes": 4267,
+      "sha256": "2721b28e1bea6dc256a2a9733123a4458d20cd74442025221a2911ca2693dfc8"
+    },
+    {
+      "path": "windows-management-empty-deleted/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-empty-deleted/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-empty-deleted/notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+      "bytes": 540,
+      "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+    },
+    {
+      "path": "windows-management-empty-deleted/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-empty-deleted/notes/b9964af6-0aac-4609-a630-3585f6bedbd5.cuenote",
+      "bytes": 549,
+      "sha256": "a224285ec292b405383a774cc525f27fd4c97964fb6e6b3c944af4a37e10116b"
+    },
+    {
+      "path": "windows-management-empty-deleted/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-empty-deleted/window.png",
+      "bytes": 84978,
+      "sha256": "a90db5c9fdc58c295367e95bde99d27642e557ca22f4039561204d71274f0dff"
+    },
+    {
+      "path": "windows-management-first-note-interrupted-view/accessibility.json",
+      "bytes": 28636,
+      "sha256": "774872fcf9adfa2361321f3825ec320f310c082114d06104418890a98c29e40e"
+    },
+    {
+      "path": "windows-management-first-note-interrupted-view/inspection.json",
+      "bytes": 438,
+      "sha256": "6f29a1ad5e960d133200fe11ac2f10c0c318e247817997608ed54cbdb40da34f"
+    },
+    {
+      "path": "windows-management-first-note-interrupted-view/window.png",
+      "bytes": 87146,
+      "sha256": "b0ba7e124ab71601b532cb1b4a6155a510fd7c9d94c6c7a4de2e4fbf2e04283f"
+    },
+    {
+      "path": "windows-management-first-note-plan.json",
+      "bytes": 590,
+      "sha256": "e158fe9a4815de070a597c9da423fdaad24357d59edb1cc36fecd3a099128d0c"
+    },
+    {
+      "path": "windows-management-first-note-recover-plan.json",
+      "bytes": 182,
+      "sha256": "05e23f5ab0a7e9a243a12efb7c8b236c5e6b3f9e60fdb11d9c8a02b2a8fc1bf2"
+    },
+    {
+      "path": "windows-management-first-note-saved/accessibility.json",
+      "bytes": 28648,
+      "sha256": "9da0c476ab38f1fe4a857eb15c84d1747e83b20ab5fb10ffbb7be970b9fb73ec"
+    },
+    {
+      "path": "windows-management-first-note-saved/inspection.json",
+      "bytes": 438,
+      "sha256": "e874a82b6453a58b31f5d9b06165c1366a4c85348b16937ddc721bb49fd75266"
+    },
+    {
+      "path": "windows-management-first-note-saved/native-snapshot.json",
+      "bytes": 1930,
+      "sha256": "b910a007ec9994794b909f738ad42d075ef589a37598b477a4e53a7a80d7f56f"
+    },
+    {
+      "path": "windows-management-first-note-saved/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-first-note-saved/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-first-note-saved/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-first-note-saved/window.png",
+      "bytes": 79248,
+      "sha256": "0c4cadb55672f1f661570c404db4512a63fc1026b8d765ef89aa5df30902c21f"
+    },
+    {
+      "path": "windows-management-global-search-plan.json",
+      "bytes": 111,
+      "sha256": "1fe1940452954508dbacff12b12e31ba3f3ea17007cd1342831b9cafec775005"
+    },
+    {
+      "path": "windows-management-global-search/accessibility.json",
+      "bytes": 31134,
+      "sha256": "6daa3cb7ca85c0374d16ad9288b59b59154af1018c46ba572ce693e4b44274bf"
+    },
+    {
+      "path": "windows-management-global-search/inspection.json",
+      "bytes": 438,
+      "sha256": "b4c893aed861b060c2fd2f881d4b60489431f931e8ed55d2c19d46956f95a495"
+    },
+    {
+      "path": "windows-management-global-search/native-snapshot.json",
+      "bytes": 3484,
+      "sha256": "6ff512e324fdb03b0748ef1e357b899335d0411238abb4d2c82b4c68a5dc4377"
+    },
+    {
+      "path": "windows-management-global-search/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-global-search/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-global-search/notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+      "bytes": 540,
+      "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+    },
+    {
+      "path": "windows-management-global-search/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-global-search/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-global-search/window.png",
+      "bytes": 80952,
+      "sha256": "1c315dbaa475e6ca982b68002e1252130160b0b430667608c7271ef0eae0d1ad"
+    },
+    {
+      "path": "windows-management-init-dialog-view/accessibility.json",
+      "bytes": 13848,
+      "sha256": "a37e7d354bec948ee08addc33852e46975f918fe970a89bdc24aa51126e4a946"
+    },
+    {
+      "path": "windows-management-init-dialog-view/inspection.json",
+      "bytes": 437,
+      "sha256": "20ac7f905ddbdc74e2557d40ca2ad03a6f1481c9bfa3e1a9bdea01f23a1a2c60"
+    },
+    {
+      "path": "windows-management-init-dialog-view/window.png",
+      "bytes": 68732,
+      "sha256": "4b56a879cbe866099db0d6fab24f1b902bf2002d7b1ae4d59a0600d219a3caeb"
+    },
+    {
+      "path": "windows-management-init-plan.json",
+      "bytes": 88,
+      "sha256": "315c6c363da1a04b270d4985b23973be840970cb03284f0154db62b3f7d30fb1"
+    },
+    {
+      "path": "windows-management-initial-view/accessibility.json",
+      "bytes": 16423,
+      "sha256": "090230d62ef457a02d959ff05f0f9c1de851440b6dfa74705a1abcc59a06903e"
+    },
+    {
+      "path": "windows-management-initial-view/inspection.json",
+      "bytes": 437,
+      "sha256": "27633aa638da28560827d6696841d01c8ec55996d964f331cdb26297835731d2"
+    },
+    {
+      "path": "windows-management-initial-view/window.png",
+      "bytes": 81108,
+      "sha256": "1aeb7d72175525f341c18bafb0a29d33361de25c8a4b1fcf02460410830ae8dc"
+    },
+    {
+      "path": "windows-management-move-default-plan.json",
+      "bytes": 178,
+      "sha256": "82117f0720d3e5243344a81cf8c0861140980723f564d15cfc8e34488b4b7c65"
+    },
+    {
+      "path": "windows-management-new-book-dialog-plan.json",
+      "bytes": 76,
+      "sha256": "7f291cdc2b02057c694baebc8e20e0d03843895f0658e4ee3b6ff4568ed5dc89"
+    },
+    {
+      "path": "windows-management-new-book-dialog-view/accessibility.json",
+      "bytes": 15094,
+      "sha256": "bff32b763bf3063301f18b6feb9963ccf27c58c3de24232f40008c7f49416d9c"
+    },
+    {
+      "path": "windows-management-new-book-dialog-view/inspection.json",
+      "bytes": 437,
+      "sha256": "dcb93563fc6d9d33c200aefa6cd0703bdbf8252c4a7484995ec703c314231f63"
+    },
+    {
+      "path": "windows-management-new-book-dialog-view/window.png",
+      "bytes": 87766,
+      "sha256": "37653c836d74f6d3642c3b960ba1a35cf013b0fe241483f157bd4019ed2fca1a"
+    },
+    {
+      "path": "windows-management-nonempty-delete-plan.json",
+      "bytes": 162,
+      "sha256": "6a2cb37719991dc13573cc66bf77309d07436c669e42b6e94afb1652961631dd"
+    },
+    {
+      "path": "windows-management-nonempty-delete-refused/accessibility.json",
+      "bytes": 30949,
+      "sha256": "c869c9f230e478a23fe667a5e2f50bcc9bf499f3238fc1f61d97015c37d19f4d"
+    },
+    {
+      "path": "windows-management-nonempty-delete-refused/inspection.json",
+      "bytes": 438,
+      "sha256": "5a8cf74045ebc599d52fd2d5f0a95532f7fe6d3ed3802a463bdb7b7ffcc2487f"
+    },
+    {
+      "path": "windows-management-nonempty-delete-refused/native-snapshot.json",
+      "bytes": 2707,
+      "sha256": "e55f0f749e64cf6a93032701957171d7c59040ae3f72fd903407fe79ce253012"
+    },
+    {
+      "path": "windows-management-nonempty-delete-refused/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-nonempty-delete-refused/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-nonempty-delete-refused/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-nonempty-delete-refused/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-nonempty-delete-refused/window.png",
+      "bytes": 103279,
+      "sha256": "f184997d7864821815a437b9df249258f4b47eb3bf8a8dfff950c7a2a5c320a5"
+    },
+    {
+      "path": "windows-management-old-moved-default/accessibility.json",
+      "bytes": 30617,
+      "sha256": "2a7dccf0db9fc1b63a3e4dd2673fce043ebb615c0893b0f512731e871970dad9"
+    },
+    {
+      "path": "windows-management-old-moved-default/inspection.json",
+      "bytes": 438,
+      "sha256": "45e8181e3128e68e8ab6a055c4a0aed16dc08ea2ea92c1952201bc601739e73f"
+    },
+    {
+      "path": "windows-management-old-moved-default/native-snapshot.json",
+      "bytes": 4266,
+      "sha256": "9ad8d1753d0bfad7c1475e54c89c2efc54fa7d4e736be4dc560ac671fe528aeb"
+    },
+    {
+      "path": "windows-management-old-moved-default/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-old-moved-default/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-old-moved-default/notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+      "bytes": 540,
+      "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+    },
+    {
+      "path": "windows-management-old-moved-default/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-old-moved-default/notes/b9964af6-0aac-4609-a630-3585f6bedbd5.cuenote",
+      "bytes": 549,
+      "sha256": "a224285ec292b405383a774cc525f27fd4c97964fb6e6b3c944af4a37e10116b"
+    },
+    {
+      "path": "windows-management-old-moved-default/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 546,
+      "sha256": "926b8e7d39c92d1e283edea2d71734f5da11b041beb719bbf0dec56f62ebe35d"
+    },
+    {
+      "path": "windows-management-old-moved-default/window.png",
+      "bytes": 88941,
+      "sha256": "415e7822775290f1258bb1826678b89f4b871f6c81862c98d2a6440ee0384064"
+    },
+    {
+      "path": "windows-management-old-pinned/accessibility.json",
+      "bytes": 30614,
+      "sha256": "5c4b3a8a70bebb0f31fcd2837e0795ad0f9ae8b3b403157b7dc330ded25933a2"
+    },
+    {
+      "path": "windows-management-old-pinned/inspection.json",
+      "bytes": 438,
+      "sha256": "267fb66beccc95ce2f9e182eede035006bdc2ee25d3dd2af490ebc3577abe36e"
+    },
+    {
+      "path": "windows-management-old-pinned/native-snapshot.json",
+      "bytes": 4266,
+      "sha256": "286bb3c6af6f55e6262832ae6b6e55f6b539b18be541f832a5218ccba43f4ce7"
+    },
+    {
+      "path": "windows-management-old-pinned/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-old-pinned/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-old-pinned/notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+      "bytes": 540,
+      "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+    },
+    {
+      "path": "windows-management-old-pinned/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-old-pinned/notes/b9964af6-0aac-4609-a630-3585f6bedbd5.cuenote",
+      "bytes": 549,
+      "sha256": "a224285ec292b405383a774cc525f27fd4c97964fb6e6b3c944af4a37e10116b"
+    },
+    {
+      "path": "windows-management-old-pinned/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 546,
+      "sha256": "fa0f8f52528b84df52742d9b0fbcd72ac034a1f644a39fc5b5f86984fda324da"
+    },
+    {
+      "path": "windows-management-old-pinned/window.png",
+      "bytes": 88808,
+      "sha256": "7a52f5b2772e7daaf4a3aebd3d526fa82535f72b7fbb70f1a51e3b807a942097"
+    },
+    {
+      "path": "windows-management-picker-confirm-plan.json",
+      "bytes": 63,
+      "sha256": "3f8905064a52c68f0815754a9c319790950b4aac6e5e39d4afba461db0b4eb6a"
+    },
+    {
+      "path": "windows-management-picker-path-plan.json",
+      "bytes": 201,
+      "sha256": "b381c5f299c5c12d4e2c226b5a207bf5972d2c7083c66bc4d9fb9761411e92f0"
+    },
+    {
+      "path": "windows-management-picker-path-view/accessibility.json",
+      "bytes": 7836,
+      "sha256": "bf3bcb6d2fbec5ba85e07413fc6f0e1f535631552ff1ceeccd91e3fa2f39a5b2"
+    },
+    {
+      "path": "windows-management-picker-path-view/inspection.json",
+      "bytes": 458,
+      "sha256": "6eeb27d557f793d757ba7677b60c245afd1e414635b5eb03217381f8c7c827fe"
+    },
+    {
+      "path": "windows-management-picker-path-view/window.png",
+      "bytes": 40842,
+      "sha256": "fd33db328762887a34d15cbec3f9f1afc433beceeaee1cb6ba283c870a5982f6"
+    },
+    {
+      "path": "windows-management-picker-view/accessibility.json",
+      "bytes": 10133,
+      "sha256": "933ac773566411c5e8db44b786f9ba97d987a45a33fb0de4ba867f5be17116eb"
+    },
+    {
+      "path": "windows-management-picker-view/inspection.json",
+      "bytes": 458,
+      "sha256": "b9ccb68ef78ca5521adb1a190328c06bb5a0136231cedad99f88c204a62ae932"
+    },
+    {
+      "path": "windows-management-picker-view/window.png",
+      "bytes": 42674,
+      "sha256": "b9b9da688bda0e2839601d8e9b0bba56ace30ab775c4ae440969858e21a7c52f"
+    },
+    {
+      "path": "windows-management-pin-old-plan.json",
+      "bytes": 352,
+      "sha256": "e67e8f280e0a63da4d19656239debc2c85f9c22064448f0e8de30695e9aecb68"
+    },
+    {
+      "path": "windows-management-pointer-release-plan.json",
+      "bytes": 27,
+      "sha256": "37cea9067544c26993863e50b1feec0d39ebb1fd9c8ae96ac6c00c224020bf8b"
+    },
+    {
+      "path": "windows-management-pointer-release.json",
+      "bytes": 241,
+      "sha256": "e3757a5ff3e4a76eeb4c9b625e45ac9355fdecf751036b2b90a486b6c31f96aa"
+    },
+    {
+      "path": "windows-management-reopened-plan.json",
+      "bytes": 28,
+      "sha256": "7b9c07e0565a4c017582173449c8b6a381e1f227a8e6dc0fb245931b52f94a84"
+    },
+    {
+      "path": "windows-management-restart-close.json",
+      "bytes": 135,
+      "sha256": "ad1f7daf20b9ad53b1c6025ba2067a490ee1f5801e78e87bd69f36ba16389c17"
+    },
+    {
+      "path": "windows-management-search-create-plan.json",
+      "bytes": 332,
+      "sha256": "9d8cadac624e7f36c339c0893090f5ff91b376d9e0c356e7492c22eb203f0bdc"
+    },
+    {
+      "path": "windows-management-search-created/accessibility.json",
+      "bytes": 31146,
+      "sha256": "5dc4d22192b19a45464526b861764106d4d657b7f605874acb48898f71dab02e"
+    },
+    {
+      "path": "windows-management-search-created/inspection.json",
+      "bytes": 438,
+      "sha256": "07bfed943f1b982329e4b7ab50aaef4afc4f663bacea60fd2b8769f74c88def1"
+    },
+    {
+      "path": "windows-management-search-created/native-snapshot.json",
+      "bytes": 4267,
+      "sha256": "640199e24d5948c8f2c22491af0374744839d982eeacd429d560495efa0937c6"
+    },
+    {
+      "path": "windows-management-search-created/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-search-created/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-search-created/notes/53f4911e-b23e-403e-92cc-98e866c34587.cuenote",
+      "bytes": 540,
+      "sha256": "772f1b6706fbbddbad0350716531ab4a052c67a46e60599661cd6e5341bd3d29"
+    },
+    {
+      "path": "windows-management-search-created/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-search-created/notes/b9964af6-0aac-4609-a630-3585f6bedbd5.cuenote",
+      "bytes": 549,
+      "sha256": "a224285ec292b405383a774cc525f27fd4c97964fb6e6b3c944af4a37e10116b"
+    },
+    {
+      "path": "windows-management-search-created/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-search-created/window.png",
+      "bytes": 82793,
+      "sha256": "ec09ef3fd141ea8aba688d3ec672a8019c81a0f25208221cd248371f0a61aca3"
+    },
+    {
+      "path": "windows-management-second-note-paired-plan.json",
+      "bytes": 229,
+      "sha256": "d4f4771dd32cc91be83baaa6e57fb04fbb6a63674500d1333c5c72eedc55af7d"
+    },
+    {
+      "path": "windows-management-second-note-plan.json",
+      "bytes": 323,
+      "sha256": "387b5bc4569baf6893835c98fe401de8d56f3a1e0a8a42ea81646086b15efd08"
+    },
+    {
+      "path": "windows-management-second-note-saved/accessibility.json",
+      "bytes": 29245,
+      "sha256": "e8e4943c3262d33a8266b769a4e8bda911af2658cbfd5cd2db85bde62f0d8b0d"
+    },
+    {
+      "path": "windows-management-second-note-saved/inspection.json",
+      "bytes": 438,
+      "sha256": "375563b871b7b09ee5a3f1db04db7ec7de8fddc0a2e2d5301b13f176e65a8cc4"
+    },
+    {
+      "path": "windows-management-second-note-saved/native-snapshot.json",
+      "bytes": 2707,
+      "sha256": "4d56a877cc0a327775ada77a8b1f9bc736bc1bbf7297939e7a7c9aef3cadc2ad"
+    },
+    {
+      "path": "windows-management-second-note-saved/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-second-note-saved/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-second-note-saved/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 539,
+      "sha256": "d5c4295301881f75d8ddda75c508de1b8349ec28b7218228869dc654393ccfb3"
+    },
+    {
+      "path": "windows-management-second-note-saved/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-second-note-saved/window.png",
+      "bytes": 86423,
+      "sha256": "4aee478600f4decb5fd77fbbdc122a45895b30bfa61a2d35a3e6d11ade2bc638"
+    },
+    {
+      "path": "windows-management-second-note/accessibility.json",
+      "bytes": 29233,
+      "sha256": "86018411ececf4018da941752c5a4bbf27bd2e0d33eac6c6361092ccbd9bd183"
+    },
+    {
+      "path": "windows-management-second-note/inspection.json",
+      "bytes": 438,
+      "sha256": "a431afe7def217d3452da654cbf85ae0d60c48f50d73ab026009256eb1aa873e"
+    },
+    {
+      "path": "windows-management-second-note/native-snapshot.json",
+      "bytes": 2689,
+      "sha256": "f6bd96651b03fcbfdb5c36a7783b3d22864b67a8e0967886739737c67158d578"
+    },
+    {
+      "path": "windows-management-second-note/notebooks/288e4300-bb22-425e-bff5-00343c7fda72.json",
+      "bytes": 197,
+      "sha256": "f7362b17ac7bf5a8ab47aa9f257358efdfcc27f630ec7ee504345d1089d365d0"
+    },
+    {
+      "path": "windows-management-second-note/notebooks/4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96.json",
+      "bytes": 195,
+      "sha256": "074d357ad76502c925ce40c666411f1b05c64f0dea151dea14f71cca3e58f54f"
+    },
+    {
+      "path": "windows-management-second-note/notes/a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be.cuenote",
+      "bytes": 498,
+      "sha256": "6116513b6becce6593e8a072e124a24445c0f0d1b844456bf052935173ea0f5a"
+    },
+    {
+      "path": "windows-management-second-note/notes/de63e7b1-12b2-4b88-bc80-287b618be1f9.cuenote",
+      "bytes": 541,
+      "sha256": "12f19848fa5d328bda6cd3e992a4e7b995b1bd04bbb880f4290f4af2d9869a26"
+    },
+    {
+      "path": "windows-management-second-note/window.png",
+      "bytes": 79841,
+      "sha256": "bc6edf43675108222c467639788f2951cc7bc72ed441f2a833bfc9984304438b"
+    },
+    {
+      "path": "windows-management-select-plan.json",
+      "bytes": 76,
+      "sha256": "bb6019556972d871aa5423e76f2728b86fda9ad1f8ff77c715d1345903970feb"
+    }
+  ]
+}
