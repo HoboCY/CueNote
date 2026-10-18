@@ -894,9 +894,9 @@ fn ensure_group_member(
     version_id: &str,
 ) -> Result<(), StorageError> {
     validate_version_id(version_id)?;
-    let groups = durability.ensure_child(durability.versions, GROUPS_DIRECTORY)?;
+    let groups = durability.prepare_group_directory(durability.versions, GROUPS_DIRECTORY)?;
     let group_id = make_group_id(note_id, origin_key)?;
-    let group = durability.ensure_child(&groups, &group_id)?;
+    let group = durability.prepare_group_directory(&groups, &group_id)?;
     let path = group.join(version_id);
     let file = match fs::symlink_metadata(&path) {
         Ok(_) => open_group_member(&group, version_id, true)?,
@@ -966,7 +966,7 @@ impl<'a> VersionDurability<'a> {
         Ok(())
     }
 
-    fn sync(&self, path: &Path, stage: &str) -> io::Result<()> {
+    fn check_path(&self, path: &Path) -> io::Result<()> {
         let suffix = path
             .strip_prefix(self.versions)
             .map_err(|_| io::Error::other("Directory is outside version durability scope"))?;
@@ -983,6 +983,11 @@ impl<'a> VersionDurability<'a> {
             checked.push(component.as_os_str());
             validate_sync_directory(&checked)?;
         }
+        Ok(())
+    }
+
+    fn sync(&self, path: &Path, stage: &str) -> io::Result<()> {
+        self.check_path(path)?;
         let mut current = path;
         loop {
             version_sync_checkpoint(stage, current)?;
@@ -997,11 +1002,20 @@ impl<'a> VersionDurability<'a> {
         self.check_anchor()
     }
 
-    fn ensure_child(&self, parent: &Path, name: &str) -> Result<PathBuf, StorageError> {
+    /// Only for the derived group index, after version publication is durable.
+    /// Its member-file barrier and final group -> groups -> versions barrier
+    /// commit both newly created directories. Never return store success before
+    /// that chain completes, including when retrying existing directory names.
+    fn prepare_group_directory(&self, parent: &Path, name: &str) -> Result<PathBuf, StorageError> {
+        self.check_path(parent)
+            .map_err(|error| StorageError::io("无法验证版本分组目录的存储位置", error))?;
         let path = parent.join(name);
         check_or_create_directory_with(&path, true, |parent| {
-            self.sync(parent, "directory-created")
+            version_sync_checkpoint("directory-created", parent)?;
+            self.check_path(parent)
         })?;
+        self.check_path(&path)
+            .map_err(|error| StorageError::io("版本分组目录的存储位置已变化", error))?;
         Ok(path)
     }
 }
@@ -1891,6 +1905,50 @@ mod tests {
                 "retained content"
             );
         }
+    }
+
+    #[test]
+    fn losing_an_incomplete_group_index_keeps_the_version_recoverable_and_retryable() {
+        let directory = version_temp();
+        let source = directory.path().join("origin.cuenote");
+        let root = directory.path().join("preserved");
+        write_package_file(&source, &plain("Index interrupted", "recover this content")).unwrap();
+        let source_bytes = fs::read(&source).unwrap();
+        let opened = crate::storage::open_note(&source).unwrap();
+        let fault = fail_sync("member-file");
+        assert!(preserve_observed_version(&root, &opened, "external note", "observed").is_err());
+        assert_sync_hits(1);
+        drop(fault);
+        let id = list_versions(&root).unwrap().versions[0].version_id.clone();
+        let package_path = root.join("versions").join(&id).join("note.cuenote");
+        let retained_bytes = fs::read(&package_path).unwrap();
+        let origin_key = super::normalize_origin("external note").unwrap().1;
+        let group_id = super::make_group_id(&opened.package.document.note_id, &origin_key).unwrap();
+        let groups = root.join("versions/groups");
+        let group = groups.join(group_id);
+        // Model losing the not-yet-committed derived names after interruption.
+        // Only these exact empty index entries are removed, never version data.
+        fs::remove_file(group.join(&id)).unwrap();
+        fs::remove_dir(&group).unwrap();
+        fs::remove_dir(&groups).unwrap();
+        assert_eq!(list_versions(&root).unwrap().versions.len(), 1);
+        assert_eq!(
+            open_version(&root, &id)
+                .unwrap()
+                .opened
+                .package
+                .text_projection()
+                .content,
+            "recover this content"
+        );
+        let fault = fail_sync("member-directory");
+        assert!(preserve_observed_version(&root, &opened, "external note", "retry").is_err());
+        assert_sync_hits(1);
+        drop(fault);
+        preserve_observed_version(&root, &opened, "external note", "retry").unwrap();
+        assert!(group.join(&id).is_file());
+        assert_eq!(fs::read(package_path).unwrap(), retained_bytes);
+        assert_eq!(fs::read(source).unwrap(), source_bytes);
     }
 
     #[cfg(windows)]
