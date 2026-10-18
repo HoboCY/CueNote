@@ -220,7 +220,7 @@ export interface BackupProgress {
   total: number;
 }
 
-export type ExternalChangeStatus = 'unchanged' | 'changed' | 'missing' | 'unreadable';
+export type ExternalChangeStatus = 'unchanged' | 'changed' | 'missing' | 'unreadable' | 'deferred';
 
 export interface ExternalChangeProbe {
   sessionId: string | null;

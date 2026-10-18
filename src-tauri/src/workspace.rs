@@ -26,6 +26,9 @@ mod external;
 mod external_notes;
 mod library_restore;
 mod markdown_export;
+mod probe_control;
+#[cfg(test)]
+mod probe_tests;
 mod scan_cache;
 mod search;
 pub use crate::storage::versions::{PreservedVersionSummary, VersionList};
@@ -43,6 +46,8 @@ pub use library_restore::{
     LibraryRestoreAction, LibraryRestorePreview, LibraryRestoreReceipt, LibraryRestoreStatus,
 };
 pub use markdown_export::MarkdownExportReceipt;
+use probe_control::ProbeCheckpoint;
+pub(crate) use probe_control::{ForegroundSaves, ProbeAttempt};
 pub use search::{SearchHit, SearchResults, SearchSection, SearchSnippet, SearchStatus};
 
 pub type WorkspaceError = StorageError;
@@ -236,6 +241,48 @@ struct LibraryScan {
     generation: u64,
 }
 
+enum ScanAttempt {
+    Complete(ScanCompletion),
+    Deferred,
+}
+
+/// Disposable projections become visible only after the entire probe completes.
+/// Native versions have already been retained before reaching this boundary.
+struct ScanCompletion {
+    scan: LibraryScan,
+    cache: Option<(scan_cache::Cache, BTreeMap<String, scan_cache::Entry>)>,
+    checked: usize,
+    total: usize,
+}
+
+impl ScanCompletion {
+    fn publish(self, context: &SearchScanContext) -> LibraryScan {
+        let current = context.generation.load(Ordering::Acquire) == self.scan.generation;
+        if self.scan.search_available && current {
+            if let Some((cache, entries)) = self.cache {
+                cache.publish(entries);
+            }
+        }
+        // Cache I/O may overlap a new notification. Never emit Ready for an old generation.
+        let phase = if !self.scan.search_available {
+            SearchStatus::Unavailable
+        } else if context.generation.load(Ordering::Acquire) == self.scan.generation {
+            SearchStatus::Ready
+        } else {
+            SearchStatus::Building
+        };
+        emit_search_progress(
+            context,
+            Path::new(&self.scan.view.path),
+            phase,
+            self.checked,
+            self.total,
+            self.scan.incomplete,
+        );
+        self.scan
+    }
+}
+
 #[derive(Clone)]
 struct SearchScanContext {
     generation: Arc<AtomicU64>,
@@ -259,6 +306,26 @@ struct NotebookMetadataScan {
     bytes: BTreeMap<String, Vec<u8>>,
     warnings: Vec<String>,
     directory_available: bool,
+}
+
+struct PreparedLibraryMetadata {
+    metadata: NotebookMetadataScan,
+    default_notebook_id: Option<String>,
+}
+
+impl PreparedLibraryMetadata {
+    fn read(path: &Path) -> Self {
+        let mut metadata = read_library_metadata(path);
+        let default_notebook_id = if metadata.directory_available {
+            resolved_default_notebook_id(&metadata.notebooks, &mut metadata.warnings)
+        } else {
+            None
+        };
+        Self {
+            metadata,
+            default_notebook_id,
+        }
+    }
 }
 
 struct ActiveNoteSession {
@@ -2841,7 +2908,20 @@ impl Workspace {
         let Some(path) = self.library.as_ref().map(|library| library.path.clone()) else {
             return Ok(());
         };
-        let mut metadata = read_library_metadata(&path);
+        let prepared = PreparedLibraryMetadata::read(&path);
+        self.apply_library_metadata(prepared, accept_visible_baseline);
+        Ok(())
+    }
+
+    fn apply_library_metadata(
+        &mut self,
+        prepared: PreparedLibraryMetadata,
+        accept_visible_baseline: bool,
+    ) {
+        let PreparedLibraryMetadata {
+            metadata,
+            default_notebook_id,
+        } = prepared;
         let library = self.library.as_mut().expect("library path was checked");
         if metadata.directory_available {
             for (id, bytes) in &metadata.bytes {
@@ -2856,8 +2936,7 @@ impl Workspace {
                         .or_insert_with(|| Some(bytes.clone()));
                 }
             }
-            library.default_notebook_id =
-                resolved_default_notebook_id(&metadata.notebooks, &mut metadata.warnings);
+            library.default_notebook_id = default_notebook_id;
             library.notebooks = metadata.notebooks;
         }
         library.metadata_warnings = metadata.warnings;
@@ -2875,7 +2954,6 @@ impl Workspace {
                 session.was_writable = true;
             }
         }
-        Ok(())
     }
 
     pub(super) fn refresh_selected_library(
@@ -3938,11 +4016,15 @@ fn scan_library_with_previous(
         metadata_warnings,
         previous,
         context,
+        None,
     );
     if result.is_err() {
         emit_search_progress(context, library_path, SearchStatus::Unavailable, 0, 0, true);
     }
-    result
+    result.map(|attempt| match attempt {
+        ScanAttempt::Complete(completion) => completion.publish(context),
+        ScanAttempt::Deferred => unreachable!("ordinary scans cannot yield"),
+    })
 }
 
 #[cfg_attr(feature = "perf-acceptance", track_caller)]
@@ -3954,7 +4036,8 @@ fn scan_library_with_previous_inner(
     metadata_warnings: &[String],
     previous: Option<&LibraryView>,
     context: &SearchScanContext,
-) -> Result<LibraryScan, WorkspaceError> {
+    attempt: Option<&ProbeAttempt>,
+) -> Result<ScanAttempt, WorkspaceError> {
     #[cfg(feature = "perf-acceptance")]
     let mut scan_trace = crate::performance::storage_trace::StorageTrace::new("scan-library");
     let generation = context.generation.load(Ordering::Acquire);
@@ -3968,20 +4051,24 @@ fn scan_library_with_previous_inner(
             notes_directory_available = false;
             incomplete = true;
             if let Some(previous) = previous {
-                emit_search_progress(context, library_path, SearchStatus::Unavailable, 0, 0, true);
-                return Ok(LibraryScan {
-                    view: preserve_unavailable_notes_view(
-                        previous,
-                        notebooks,
-                        default_notebook_id,
-                        &notes_path,
-                        "目录尚未到达",
-                    ),
-                    search_index: search::SearchIndex::default(),
-                    search_available: false,
-                    incomplete: true,
-                    generation,
-                });
+                return Ok(ScanAttempt::Complete(ScanCompletion {
+                    scan: LibraryScan {
+                        view: preserve_unavailable_notes_view(
+                            previous,
+                            notebooks,
+                            default_notebook_id,
+                            &notes_path,
+                            "目录尚未到达",
+                        ),
+                        search_index: search::SearchIndex::default(),
+                        search_available: false,
+                        incomplete: true,
+                        generation,
+                    },
+                    cache: None,
+                    checked: 0,
+                    total: 0,
+                }));
             }
             push_warning(
                 &mut warnings,
@@ -3993,20 +4080,24 @@ fn scan_library_with_previous_inner(
             notes_directory_available = false;
             incomplete = true;
             if let Some(previous) = previous {
-                emit_search_progress(context, library_path, SearchStatus::Unavailable, 0, 0, true);
-                return Ok(LibraryScan {
-                    view: preserve_unavailable_notes_view(
-                        previous,
-                        notebooks,
-                        default_notebook_id,
-                        &notes_path,
-                        &error.message,
-                    ),
-                    search_index: search::SearchIndex::default(),
-                    search_available: false,
-                    incomplete: true,
-                    generation,
-                });
+                return Ok(ScanAttempt::Complete(ScanCompletion {
+                    scan: LibraryScan {
+                        view: preserve_unavailable_notes_view(
+                            previous,
+                            notebooks,
+                            default_notebook_id,
+                            &notes_path,
+                            &error.message,
+                        ),
+                        search_index: search::SearchIndex::default(),
+                        search_available: false,
+                        incomplete: true,
+                        generation,
+                    },
+                    cache: None,
+                    checked: 0,
+                    total: 0,
+                }));
             }
             push_warning(
                 &mut warnings,
@@ -4021,7 +4112,6 @@ fn scan_library_with_previous_inner(
     };
     entries.sort_by_key(|entry| entry.file_name());
     if entries.len() > MAX_NOTE_FILES {
-        emit_search_progress(context, library_path, SearchStatus::Unavailable, 0, 0, true);
         return Err(StorageError::new(
             "libraryTooLarge",
             "笔记文件数量超出当前索引上限。",
@@ -4069,6 +4159,13 @@ fn scan_library_with_previous_inner(
     macro_rules! report_checked_file {
         () => {{
             checked += 1;
+            // Every continue path reaches this boundary only after preserving
+            // any source/version obtained by this iteration.
+            if attempt
+                .is_some_and(|probe| probe.should_yield(ProbeCheckpoint::NoteRetentionComplete))
+            {
+                return Ok(ScanAttempt::Deferred);
+            }
             if checked == total
                 || (checked % progress_interval == 0
                     && last_progress.elapsed() >= std::time::Duration::from_millis(100))
@@ -4087,9 +4184,15 @@ fn scan_library_with_previous_inner(
     }
     let mut cache_checks = cache_check::Checks::new(&entries, cache.as_ref(), recovery_root);
     for (entry_index, entry) in entries.iter().enumerate() {
+        if attempt.is_some_and(|probe| probe.should_yield(ProbeCheckpoint::BeforeEntry)) {
+            return Ok(ScanAttempt::Deferred);
+        }
         let verified = cache_checks
             .as_mut()
             .is_some_and(|checks| checks.verified(entry_index));
+        if attempt.is_some_and(|probe| probe.should_yield(ProbeCheckpoint::EntryVerified)) {
+            return Ok(ScanAttempt::Deferred);
+        }
         let path = entry.path();
         let Some(extension) = path.extension().and_then(|extension| extension.to_str()) else {
             continue;
@@ -4193,6 +4296,9 @@ fn scan_library_with_previous_inner(
                 &origin,
                 "笔记库中取得的有效版本",
             ) {
+                if let Some(probe) = attempt {
+                    probe.must_report();
+                }
                 incomplete = true;
                 push_warning_counted(
                     &mut warnings,
@@ -4343,13 +4449,6 @@ fn scan_library_with_previous_inner(
     drop(cache_checks);
     #[cfg(feature = "perf-acceptance")]
     scan_trace.mark("note-loop-and-workers");
-    if notes_directory_available && context.generation.load(Ordering::Acquire) == generation {
-        if let Some(cache) = cache {
-            cache.publish(next_cache);
-        }
-    }
-    #[cfg(feature = "perf-acceptance")]
-    scan_trace.mark("cache-publication");
     if omitted_warnings > 0 {
         warnings.push(format!("另有 {omitted_warnings} 条笔记警告未显示。"));
     }
@@ -4368,27 +4467,23 @@ fn scan_library_with_previous_inner(
         trash_notes,
         warnings: warnings.clone(),
     };
-    let phase =
-        if notes_directory_available && context.generation.load(Ordering::Acquire) == generation {
-            SearchStatus::Ready
-        } else if notes_directory_available {
-            SearchStatus::Building
-        } else {
-            SearchStatus::Unavailable
-        };
-    emit_search_progress(context, library_path, phase, checked, total, incomplete);
     #[cfg(feature = "perf-acceptance")]
     {
         scan_trace.mark("sort-and-view");
         scan_trace.success();
     }
-    Ok(LibraryScan {
-        view,
-        incomplete: incomplete || search_index.is_incomplete(),
-        search_index,
-        search_available: notes_directory_available,
-        generation,
-    })
+    Ok(ScanAttempt::Complete(ScanCompletion {
+        scan: LibraryScan {
+            view,
+            incomplete: incomplete || search_index.is_incomplete(),
+            search_index,
+            search_available: notes_directory_available,
+            generation,
+        },
+        cache: cache.map(|cache| (cache, next_cache)),
+        checked,
+        total,
+    }))
 }
 
 fn library_scan_parts(scan: LibraryScan) -> (LibraryView, SearchSnapshot) {

@@ -4,7 +4,7 @@ import { createExternalChangesCoordinator } from '../src/external-changes.ts';
 
 type Probe = {
   sessionId: string | null;
-  status: 'unchanged' | 'changed' | 'missing' | 'unreadable';
+  status: 'unchanged' | 'changed' | 'missing' | 'unreadable' | 'deferred';
   revision: string | null;
   message: string | null;
   library: null;
@@ -83,6 +83,68 @@ test('pending file notifications get a full quiet interval after foreground savi
 function changedProbe(sessionId: string | null): Probe {
   return { sessionId, status: 'changed', revision: 'rev-2', message: null, library: null };
 }
+
+test('a host-deferred probe retries the latest session after saving without a new notification', async () => {
+  const clock = new FakeClock();
+  let saving = false, sessionId = 'session-1', applied = 0, errors = 0;
+  const probed: (string | null)[] = [];
+  const coordinator = createExternalChangesCoordinator({
+    getSessionId: () => sessionId,
+    canProbe: () => !saving,
+    probe: async id => {
+      probed.push(id);
+      if (probed.length === 1) {
+        saving = true;
+        return { ...changedProbe(id), status: 'deferred', revision: null };
+      }
+      return { ...changedProbe(id), status: 'unchanged' };
+    },
+    onChanged: () => { errors += 1; },
+    onError: () => { errors += 1; },
+    onProbeResult: () => { applied += 1; },
+    setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
+  });
+  await coordinator.checkNow();
+  assert.equal(errors, 0, 'yielding is neither an external conflict nor a read error');
+  assert.equal(applied, 0, 'a deferred scan cannot install a result');
+  clock.fire();
+  await settlePromises();
+  assert.deepEqual(probed, ['session-1']);
+  sessionId = 'session-2';
+  coordinator.sessionChanged();
+  saving = false;
+  coordinator.afterSave();
+  clock.fire();
+  await settlePromises();
+  assert.deepEqual(probed, ['session-1', 'session-2']);
+  assert.equal(applied, 1);
+  assert.equal(errors, 0);
+  clock.fire();
+  await settlePromises();
+  assert.equal(probed.length, 2, 'one retained notification does not loop forever');
+  coordinator.dispose();
+});
+
+test('disposing a host-deferred probe cancels its retry', async () => {
+  const clock = new FakeClock();
+  const response = deferred<Probe>();
+  let probes = 0, applied = 0;
+  const coordinator = createExternalChangesCoordinator({
+    getSessionId: () => 'session-1',
+    probe: async () => { probes += 1; return response.promise; },
+    onChanged: () => { applied += 1; },
+    onProbeResult: () => { applied += 1; },
+    setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
+  });
+  const operation = coordinator.checkNow();
+  coordinator.dispose();
+  response.resolve({ ...changedProbe('session-1'), status: 'deferred' });
+  await operation;
+  clock.fire();
+  await settlePromises();
+  assert.equal(probes, 1);
+  assert.equal(applied, 0);
+});
 
 test('defers notifications during a save and checks the latest session after it settles', async () => {
   const clock = new FakeClock();

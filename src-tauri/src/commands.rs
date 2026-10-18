@@ -22,6 +22,9 @@ pub struct WorkspaceState {
     workspace: Arc<Mutex<Workspace>>,
     backups: BackupControl,
     restore_running: Arc<AtomicBool>,
+    foreground_saves: crate::workspace::ForegroundSaves,
+    #[cfg(test)]
+    save_waiting_hook: Option<Arc<dyn Fn() + Send + Sync>>,
 }
 
 impl WorkspaceState {
@@ -30,6 +33,9 @@ impl WorkspaceState {
             workspace: Arc::new(Mutex::new(workspace)),
             backups: BackupControl::default(),
             restore_running: Arc::new(AtomicBool::new(false)),
+            foreground_saves: crate::workspace::ForegroundSaves::default(),
+            #[cfg(test)]
+            save_waiting_hook: None,
         }
     }
 
@@ -127,11 +133,16 @@ async fn save_mutation<T: Send + 'static>(
         #[cfg(feature = "perf-acceptance")]
         let mut trace = crate::performance::Trace::new("save-command");
         state.ensure_not_restoring()?;
+        let _save_intent = state.foreground_saves.begin_save();
         #[cfg(feature = "perf-acceptance")]
         trace.mark("mutation-gate-start");
         let _mutation = state.backups.begin_mutation()?;
         #[cfg(feature = "perf-acceptance")]
         trace.mark("mutation-gate-acquired");
+        #[cfg(test)]
+        if let Some(hook) = &state.save_waiting_hook {
+            hook();
+        }
         let mut workspace = state.workspace.lock().map_err(|_| {
             command_error("笔记服务已中断。请保留当前文字，重新启动 CueNote 后再试。")
         })?;
@@ -1098,12 +1109,24 @@ pub async fn probe_external_changes(
     state: State<'_, WorkspaceState>,
     session_id: Option<String>,
 ) -> Result<ExternalProbe, WorkspaceError> {
+    let attempt = state.foreground_saves.probe();
     let mut probe = editor_work(state.inner().clone(), move |workspace| {
-        workspace.probe_external_changes(session_id.as_deref())
+        workspace.probe_external_changes_interruptible(session_id.as_deref(), &attempt)
     })
     .await?;
-    crate::file_watch::configure(&app, probe.library.as_mut());
+    configure_probe_watch(&mut probe, |library| {
+        crate::file_watch::configure(&app, library)
+    });
     Ok(probe)
+}
+
+fn configure_probe_watch(
+    probe: &mut ExternalProbe,
+    configure: impl FnOnce(Option<&mut LibraryView>),
+) {
+    if probe.status != "deferred" {
+        configure(probe.library.as_mut());
+    }
 }
 
 #[tauri::command]
@@ -1261,6 +1284,126 @@ mod tests {
     use super::*;
     use crate::note_format::{Block, Inline, Sections};
     use std::path::Path;
+
+    #[test]
+    fn queued_save_defers_probe_before_workspace_lock_and_cleans_up_on_error() {
+        let (_temp, workspace, session_id, _) = fixture();
+        let mut state = WorkspaceState::new(workspace);
+        let (waiting, queued) = std::sync::mpsc::channel();
+        state.save_waiting_hook = Some(Arc::new(move || waiting.send(()).unwrap()));
+        let job = state.backups.begin_job(None).unwrap();
+        let mut locked = state.workspace.lock().unwrap();
+        let saving = state.clone();
+        let worker = std::thread::spawn(move || {
+            tauri::async_runtime::block_on(save_mutation(
+                saving,
+                |_| -> Result<(), WorkspaceError> { Err(command_error("save action failed")) },
+            ))
+        });
+        queued
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .unwrap();
+        assert!(
+            job.checkpoint().is_err(),
+            "queued save must still cancel an active backup"
+        );
+        assert_eq!(
+            locked
+                .probe_external_changes_interruptible(
+                    Some(&session_id),
+                    &state.foreground_saves.probe()
+                )
+                .unwrap()
+                .status,
+            "deferred"
+        );
+        drop(locked);
+        assert_eq!(
+            worker.join().unwrap().unwrap_err().message,
+            "save action failed"
+        );
+        assert_eq!(
+            state
+                .workspace
+                .lock()
+                .unwrap()
+                .probe_external_changes_interruptible(
+                    Some(&session_id),
+                    &state.foreground_saves.probe()
+                )
+                .unwrap()
+                .status,
+            "unchanged"
+        );
+        drop(job);
+        assert!(state.backups.begin_job(None).is_ok());
+    }
+
+    #[test]
+    fn rejected_save_at_restore_gate_does_not_leave_a_pending_intent() {
+        let (_temp, workspace, session_id, _) = fixture();
+        let state = WorkspaceState::new(workspace);
+        let job = state.backups.begin_restore_job(None).unwrap();
+        let error = tauri::async_runtime::block_on(save_mutation(
+            state.clone(),
+            |_| -> Result<(), WorkspaceError> {
+                panic!("restore gate must reject the action");
+            },
+        ))
+        .unwrap_err();
+        assert_eq!(error.kind, "libraryRestorePending");
+        drop(job);
+        assert_eq!(
+            state
+                .workspace
+                .lock()
+                .unwrap()
+                .probe_external_changes_interruptible(
+                    Some(&session_id),
+                    &state.foreground_saves.probe()
+                )
+                .unwrap()
+                .status,
+            "unchanged"
+        );
+    }
+
+    #[test]
+    fn deferred_probe_keeps_the_watch_and_completed_probe_reconfigures_it() {
+        let (_temp, mut workspace, session_id, _) = fixture();
+        let saves = crate::workspace::ForegroundSaves::default();
+        let intent = saves.begin_save();
+        let mut probe = workspace
+            .probe_external_changes_interruptible(Some(&session_id), &saves.probe())
+            .unwrap();
+        configure_probe_watch(&mut probe, |_| {
+            panic!("deferred response must not clear watcher")
+        });
+        drop(intent);
+        let mut completed = workspace
+            .probe_external_changes_interruptible(Some(&session_id), &saves.probe())
+            .unwrap();
+        configure_probe_watch(&mut completed, |library| {
+            library.unwrap().warnings.push("watch diagnostic".into())
+        });
+        assert!(completed
+            .library
+            .as_ref()
+            .unwrap()
+            .warnings
+            .iter()
+            .any(|warning| warning == "watch diagnostic"));
+        completed.library = None;
+        let mut called = false;
+        configure_probe_watch(&mut completed, |library| {
+            assert!(library.is_none());
+            called = true;
+        });
+        assert!(
+            called,
+            "completed no-library response must clear the old watcher"
+        );
+    }
 
     fn fixture() -> (tempfile::TempDir, Workspace, String, String) {
         let parent = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");

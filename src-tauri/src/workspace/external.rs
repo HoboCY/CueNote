@@ -32,7 +32,69 @@ pub struct ExternalReconciliation {
     pub message: Option<String>,
 }
 
+enum PreparedProbeRefresh {
+    Visible(Option<LibraryView>),
+    Scanned {
+        // External editors do not hold the command-level library lease. Keep
+        // their acquired lease across current-note checks and publication too.
+        access: Option<storage::library_access::LibraryAccessGuard>,
+        metadata: Option<PreparedLibraryMetadata>,
+        result: Result<ScanCompletion, WorkspaceError>,
+        context: SearchScanContext,
+    },
+}
+
+impl PreparedProbeRefresh {
+    fn commit(self, workspace: &mut Workspace) -> Option<LibraryView> {
+        match self {
+            Self::Visible(view) => view,
+            Self::Scanned {
+                access: _access,
+                metadata,
+                result,
+                context,
+            } => {
+                if let Some(metadata) = metadata {
+                    workspace.apply_library_metadata(metadata, true);
+                }
+                let library = workspace
+                    .library
+                    .as_mut()
+                    .expect("selected library stayed locked");
+                match result {
+                    Ok(completion) => install_library_scan(library, completion.publish(&context)),
+                    Err(error) => {
+                        library.view.warnings =
+                            vec![format!("无法刷新笔记列表：{}", error.message)];
+                        library.search = SearchSnapshot::unavailable(
+                            context.generation.load(Ordering::Acquire),
+                            vec![format!("无法刷新搜索索引：{}", error.message)],
+                        );
+                        emit_search_progress(
+                            &context,
+                            &library.path,
+                            SearchStatus::Unavailable,
+                            0,
+                            0,
+                            true,
+                        );
+                    }
+                }
+                Some(library.view.clone())
+            }
+        }
+    }
+}
+
 impl Workspace {
+    pub(crate) fn probe_external_changes_interruptible(
+        &mut self,
+        session_id: Option<&str>,
+        attempt: &ProbeAttempt,
+    ) -> Result<ExternalProbe, WorkspaceError> {
+        self.probe_external_changes_inner(session_id, Some(attempt))
+    }
+
     pub(super) fn retain_save_conflict(&self, mut error: WorkspaceError) -> WorkspaceError {
         if !matches!(error.kind.as_str(), "conflict" | "publishUncertain") {
             return error;
@@ -67,6 +129,14 @@ impl Workspace {
         &mut self,
         session_id: Option<&str>,
     ) -> Result<ExternalProbe, WorkspaceError> {
+        self.probe_external_changes_inner(session_id, None)
+    }
+
+    fn probe_external_changes_inner(
+        &mut self,
+        session_id: Option<&str>,
+        attempt: Option<&ProbeAttempt>,
+    ) -> Result<ExternalProbe, WorkspaceError> {
         #[cfg(feature = "perf-acceptance")]
         let mut trace = crate::performance::Trace::new("probe-external-changes");
         if self
@@ -80,9 +150,27 @@ impl Workspace {
                 "笔记会话已切换，已忽略旧的外部变化核对。",
             ));
         }
-        let library = self.refresh_external_library()?;
+        if attempt.is_some_and(|probe| probe.should_yield(ProbeCheckpoint::Start)) {
+            #[cfg(feature = "perf-acceptance")]
+            trace.mark("deferred-before-scan");
+            return Ok(ExternalProbe::deferred(session_id));
+        }
+        let (library, pending) = if let Some(attempt) = attempt {
+            let Some(pending) = self.prepare_probe_refresh(attempt)? else {
+                #[cfg(feature = "perf-acceptance")]
+                trace.mark("deferred-during-scan");
+                return Ok(ExternalProbe::deferred(session_id));
+            };
+            (None, Some(pending))
+        } else {
+            (self.refresh_external_library()?, None)
+        };
         #[cfg(feature = "perf-acceptance")]
-        trace.mark("library-refreshed");
+        trace.mark(if pending.is_some() {
+            "library-refresh-prepared"
+        } else {
+            "library-refreshed"
+        });
         let mut probe = ExternalProbe {
             session_id: session_id.map(str::to_owned),
             status: "unchanged".into(),
@@ -91,44 +179,142 @@ impl Workspace {
             library,
             session_read_only_reason: None,
         };
-        let Some(session) = self.session.as_ref() else {
-            return Ok(probe);
-        };
-        probe.session_read_only_reason = self.editor_read_only_reason(session);
-        if session.preserved_preview {
-            return Ok(probe);
+        if let Some(session) = self
+            .session
+            .as_ref()
+            .filter(|session| !session.preserved_preview)
+        {
+            match storage::open_note(&session.path) {
+                Ok(opened) => {
+                    #[cfg(feature = "perf-acceptance")]
+                    trace.mark("current-note-opened");
+                    versions::preserve_observed_version(
+                        &self.recovery_root,
+                        &opened,
+                        &display_path(&session.path),
+                        "核对到的文件版本",
+                    )?;
+                    #[cfg(feature = "perf-acceptance")]
+                    trace.mark("current-note-preserved");
+                    probe.revision = Some(opened.revision.clone());
+                    if session.baseline_revision.as_deref() != Some(opened.revision.as_str()) {
+                        probe.status = "changed".into();
+                    }
+                }
+                Err(error) => {
+                    let missing = note_file_is_missing(&session.path);
+                    if !(missing && session.baseline_revision.is_none()) {
+                        if let Some(attempt) = attempt {
+                            attempt.must_report();
+                        }
+                        probe.status = if missing { "missing" } else { "unreadable" }.into();
+                        probe.message = Some(if missing {
+                            error.message
+                        } else {
+                            format!("无法读取笔记文件或所在目录：{}", error.message)
+                        });
+                    }
+                }
+            }
         }
-        match storage::open_note(&session.path) {
-            Ok(opened) => {
-                #[cfg(feature = "perf-acceptance")]
-                trace.mark("current-note-opened");
-                versions::preserve_observed_version(
-                    &self.recovery_root,
-                    &opened,
-                    &display_path(&session.path),
-                    "核对到的文件版本",
-                )?;
-                #[cfg(feature = "perf-acceptance")]
-                trace.mark("current-note-preserved");
-                probe.revision = Some(opened.revision.clone());
-                if session.baseline_revision.as_deref() != Some(opened.revision.as_str()) {
-                    probe.status = "changed".into();
-                }
-            }
-            Err(error) => {
-                let missing = note_file_is_missing(&session.path);
-                if missing && session.baseline_revision.is_none() {
-                    return Ok(probe);
-                }
-                probe.status = if missing { "missing" } else { "unreadable" }.into();
-                probe.message = Some(if missing {
-                    error.message
-                } else {
-                    format!("无法读取笔记文件或所在目录：{}", error.message)
-                });
-            }
+        if attempt.is_some_and(|probe| probe.should_yield(ProbeCheckpoint::BeforeCommit)) {
+            #[cfg(feature = "perf-acceptance")]
+            trace.mark("deferred-before-commit");
+            return Ok(ExternalProbe::deferred(session_id));
+        }
+        if let Some(pending) = pending {
+            probe.library = pending.commit(self);
+            #[cfg(feature = "perf-acceptance")]
+            trace.mark("library-refresh-committed");
+        }
+        if let Some(session) = &self.session {
+            probe.session_read_only_reason = self.editor_read_only_reason(session);
         }
         Ok(probe)
+    }
+
+    fn prepare_probe_refresh(
+        &self,
+        attempt: &ProbeAttempt,
+    ) -> Result<Option<PreparedProbeRefresh>, WorkspaceError> {
+        // Keep the same selected-library lease and restore checks as a normal
+        // external probe, including the independent external-editor fallback.
+        let _access = if self.active_session_is_external() {
+            self.ensure_library_transition_allowed()?;
+            match self.acquire_library_access() {
+                Ok(access) => access,
+                Err(error) => {
+                    attempt.must_report();
+                    let mut view = self.library.as_ref().map(|library| library.view.clone());
+                    if let Some(view) = &mut view {
+                        push_warning(
+                            &mut view.warnings,
+                            format!("笔记库暂不能刷新，库外笔记仍保留：{}", error.message),
+                        );
+                    }
+                    return Ok(Some(PreparedProbeRefresh::Visible(view)));
+                }
+            }
+        } else {
+            None
+        };
+        let missing = self.library.as_ref().is_some_and(|library| {
+            fs::symlink_metadata(&library.path)
+                .is_err_and(|error| error.kind() == io::ErrorKind::NotFound)
+        });
+        if missing {
+            self.ensure_library_transition_allowed()?;
+        } else {
+            self.ensure_library_available()?;
+        }
+        let Some(library) = &self.library else {
+            return Ok(Some(PreparedProbeRefresh::Visible(None)));
+        };
+        let metadata = (!missing).then(|| PreparedLibraryMetadata::read(&library.path));
+        if attempt.should_yield(ProbeCheckpoint::MetadataPrepared) {
+            return Ok(None);
+        }
+        let (notebooks, default, warnings) = match &metadata {
+            Some(prepared) if prepared.metadata.directory_available => (
+                &prepared.metadata.notebooks,
+                prepared.default_notebook_id.as_deref(),
+                &prepared.metadata.warnings,
+            ),
+            Some(prepared) => (
+                &library.notebooks,
+                library.default_notebook_id.as_deref(),
+                &prepared.metadata.warnings,
+            ),
+            None => (
+                &library.notebooks,
+                library.default_notebook_id.as_deref(),
+                &library.metadata_warnings,
+            ),
+        };
+        let context = self.search_scan_context();
+        let result = match scan_library_with_previous_inner(
+            &library.path,
+            notebooks,
+            default,
+            &self.recovery_root,
+            warnings,
+            Some(&library.view),
+            &context,
+            Some(attempt),
+        ) {
+            Ok(ScanAttempt::Deferred) => return Ok(None),
+            Ok(ScanAttempt::Complete(completion)) => Ok(completion),
+            Err(error) => {
+                attempt.must_report();
+                Err(error)
+            }
+        };
+        Ok(Some(PreparedProbeRefresh::Scanned {
+            access: _access,
+            metadata,
+            result,
+            context,
+        }))
     }
 
     pub fn reconcile_external_changes(
@@ -441,5 +627,18 @@ impl Workspace {
             library,
             message,
         })
+    }
+}
+
+impl ExternalProbe {
+    fn deferred(session_id: Option<&str>) -> Self {
+        Self {
+            session_id: session_id.map(str::to_owned),
+            status: "deferred".into(),
+            revision: None,
+            message: None,
+            library: None,
+            session_read_only_reason: None,
+        }
     }
 }

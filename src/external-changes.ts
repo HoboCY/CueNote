@@ -82,6 +82,12 @@ export function createExternalChangesCoordinator(options: ExternalChangesCoordin
     operation = (async () => {
       try {
         const result = await options.probe(token.sessionId);
+        if (result.status === 'deferred') {
+          // Keep the notification even if the session/input changed while the
+          // host yielded its scan to a save. The retry captures the latest token.
+          if (!disposed) queued = true;
+          return;
+        }
         if (!isCurrent(token) || result.sessionId !== token.sessionId) return;
         if (result.status !== 'unchanged') {
           await options.onChanged(result, token, () => isCurrent(token));
