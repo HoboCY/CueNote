@@ -84,10 +84,23 @@ pub struct NotebookSummary {
     pub is_default: bool,
 }
 
+/// How much of the library the current `LibraryView` actually represents.
+///
+/// `Pending` is only produced by the first startup response: the remembered
+/// current note was freshly opened, but the full library scan has not run yet.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum ScanState {
+    Pending,
+    Complete,
+    Unavailable,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LibraryView {
     pub path: String,
+    pub scan_state: ScanState,
     pub default_notebook_name: String,
     pub default_notebook_id: Option<String>,
     pub notebooks: Vec<NotebookSummary>,
@@ -450,10 +463,25 @@ impl Workspace {
         }
     }
 
+    /// First workspace response. Only the very first initialization may take
+    /// the remembered current note directly without scanning every note file;
+    /// every other call keeps `snapshot()`'s complete semantics.
+    pub fn startup_snapshot(&mut self) -> Result<WorkspaceView, WorkspaceError> {
+        self.snapshot_with_startup_note(true)
+    }
+
     pub fn snapshot(&mut self) -> Result<WorkspaceView, WorkspaceError> {
+        self.snapshot_with_startup_note(false)
+    }
+
+    fn snapshot_with_startup_note(
+        &mut self,
+        prefer_current_note: bool,
+    ) -> Result<WorkspaceView, WorkspaceError> {
         #[cfg(feature = "perf-acceptance")]
         let _trace = crate::performance::Trace::new("workspace-snapshot");
         let mut loaded_generation = None;
+        let mut startup_pending = false;
         let pending_path = self
             .library
             .as_ref()
@@ -501,8 +529,12 @@ impl Workspace {
                         self.notice = Some("上次笔记身份无效，已返回笔记列表。".into());
                     }
                     let path = PathBuf::from(preference.library_path);
-                    match self.load_existing_library(&path) {
-                        Ok(library) => {
+                    let remembered = prefer_current_note
+                        .then_some(self.last_note_id.as_deref())
+                        .flatten();
+                    match self.prepare_library_with_current_note(&path, false, remembered) {
+                        Ok((library, startup_session)) => {
+                            startup_pending = startup_session.is_some();
                             loaded_generation = Some(library.search.generation);
                             if library.default_notebook_id.is_some()
                                 && library.metadata_warnings.is_empty()
@@ -525,7 +557,9 @@ impl Workspace {
                                 }
                             }
                             self.library = Some(library);
-                            if let Some(note_id) = self.last_note_id.clone() {
+                            if let Some(session) = startup_session {
+                                self.session = Some(session);
+                            } else if let Some(note_id) = self.last_note_id.clone() {
                                 let note_path = self
                                     .library
                                     .as_ref()
@@ -608,7 +642,11 @@ impl Workspace {
         // Initial loading already scanned every source and durable witness.
         // Later snapshots (and a concurrent invalidation) still perform a fresh
         // scan; do not repeat the same startup scan before the first response.
-        if loaded_generation != Some(self.search_generation.load(Ordering::Acquire)) {
+        // A startup projection is explicitly incomplete. The required external
+        // probe will validate every source, including changes during this read.
+        if !startup_pending
+            && loaded_generation != Some(self.search_generation.load(Ordering::Acquire))
+        {
             let _ = self.refresh_selected_library();
         }
         if !recovery_warnings.is_empty() {
@@ -678,7 +716,8 @@ impl Workspace {
         };
         let generation = self.search_generation.load(Ordering::Acquire);
         let mut dirty = generation != library.search.generation;
-        let mut status = if dirty {
+        let pending = library.view.scan_state == ScanState::Pending;
+        let mut status = if dirty || pending {
             SearchStatus::Building
         } else if library.search.available {
             SearchStatus::Ready
@@ -697,7 +736,9 @@ impl Workspace {
             total = 0;
         }
         let mut warnings = library.search.warnings.clone();
-        if dirty {
+        if pending {
+            warnings.push("正在读取笔记库，搜索索引尚未就绪。".into());
+        } else if dirty {
             warnings.push("笔记库内容已变化，搜索索引正在重建。".into());
         }
         Ok(SearchResults {
@@ -745,6 +786,7 @@ impl Workspace {
             }
             Err(error) => {
                 if let Some(library) = self.library.as_mut() {
+                    library.view.scan_state = ScanState::Unavailable;
                     library.search = SearchSnapshot::unavailable(
                         generation,
                         vec![format!("无法重建搜索索引：{}", error.message)],
@@ -913,13 +955,21 @@ impl Workspace {
     }
 
     fn stage_open_note(&self, note_id: &str) -> Result<ActiveNoteSession, WorkspaceError> {
-        if !is_canonical_uuid_v4(note_id) {
-            return Err(StorageError::new("invalidNoteId", "笔记身份格式无效。"));
-        }
         let library = self
             .library
             .as_ref()
             .ok_or_else(|| StorageError::new("noLibrary", "请先选择或使用默认笔记库。"))?;
+        self.stage_library_note(library, note_id)
+    }
+
+    fn stage_library_note(
+        &self,
+        library: &LibraryState,
+        note_id: &str,
+    ) -> Result<ActiveNoteSession, WorkspaceError> {
+        if !is_canonical_uuid_v4(note_id) {
+            return Err(StorageError::new("invalidNoteId", "笔记身份格式无效。"));
+        }
         let path = library
             .path
             .join("notes")
@@ -1189,6 +1239,7 @@ impl Workspace {
                 view
             }
             Err(error) => {
+                library.view.scan_state = ScanState::Unavailable;
                 library.search = SearchSnapshot::unavailable(
                     self.search_generation.load(Ordering::Acquire),
                     vec![format!("无法刷新搜索索引：{}", error.message)],
@@ -1369,6 +1420,7 @@ impl Workspace {
                 view
             }
             Err(error) => {
+                library.view.scan_state = ScanState::Unavailable;
                 library.search = SearchSnapshot::unavailable(
                     self.search_generation.load(Ordering::Acquire),
                     vec![format!("无法刷新搜索索引：{}", error.message)],
@@ -1532,6 +1584,7 @@ impl Workspace {
                 view
             }
             Err(error) => {
+                library.view.scan_state = ScanState::Unavailable;
                 library.search = SearchSnapshot::unavailable(
                     self.search_generation.load(Ordering::Acquire),
                     vec![format!("无法刷新搜索索引：{}", error.message)],
@@ -1818,6 +1871,7 @@ impl Workspace {
                     view
                 }
                 Err(error) => {
+                    library.view.scan_state = ScanState::Unavailable;
                     library.search = SearchSnapshot::unavailable(
                         self.search_generation.load(Ordering::Acquire),
                         vec![format!("无法刷新搜索索引：{}", error.message)],
@@ -2243,6 +2297,7 @@ impl Workspace {
                 view
             }
             Err(error) => {
+                library.view.scan_state = ScanState::Unavailable;
                 library.search = SearchSnapshot::unavailable(
                     self.search_generation.load(Ordering::Acquire),
                     vec![format!("无法刷新搜索索引：{}", error.message)],
@@ -2353,6 +2408,7 @@ impl Workspace {
                 view
             }
             Err(error) => {
+                library.view.scan_state = ScanState::Unavailable;
                 library.search = SearchSnapshot::unavailable(
                     self.search_generation.load(Ordering::Acquire),
                     vec![format!("无法刷新搜索索引：{}", error.message)],
@@ -2535,6 +2591,7 @@ impl Workspace {
                 view
             }
             Err(error) => {
+                library.view.scan_state = ScanState::Unavailable;
                 library.search = SearchSnapshot::unavailable(
                     self.search_generation.load(Ordering::Acquire),
                     vec![format!("无法刷新搜索索引：{}", error.message)],
@@ -2891,6 +2948,7 @@ impl Workspace {
             metadata_warnings: warnings.clone(),
             view: LibraryView {
                 path: display_path(&path),
+                scan_state: ScanState::Unavailable,
                 default_notebook_name: String::new(),
                 default_notebook_id: None,
                 notebooks: Vec::new(),
@@ -3007,6 +3065,7 @@ impl Workspace {
             Ok(scan) => install_library_scan(library, scan),
             Err(error) => {
                 library.view.warnings = vec![format!("无法刷新笔记列表：{}", error.message)];
+                library.view.scan_state = ScanState::Unavailable;
                 library.search = SearchSnapshot::unavailable(
                     self.search_generation.load(Ordering::Acquire),
                     vec![format!("无法刷新搜索索引：{}", error.message)],
@@ -3021,6 +3080,18 @@ impl Workspace {
         requested: &Path,
         initialize_if_new: bool,
     ) -> Result<LibraryState, WorkspaceError> {
+        self.prepare_library_with_current_note(requested, initialize_if_new, None)
+            .map(|(library, _)| library)
+    }
+
+    /// Only a freshly validated editable current note can precede the full
+    /// scan. All other cases retain the complete scan and its warning behavior.
+    fn prepare_library_with_current_note(
+        &self,
+        requested: &Path,
+        initialize_if_new: bool,
+        remembered_note: Option<&str>,
+    ) -> Result<(LibraryState, Option<ActiveNoteSession>), WorkspaceError> {
         let path = resolve_candidate_directory(requested, initialize_if_new)?;
         let new_path =
             fs::symlink_metadata(&path).is_err_and(|error| error.kind() == io::ErrorKind::NotFound);
@@ -3082,22 +3153,33 @@ impl Workspace {
         let mut metadata = read_library_metadata(&canonical);
         let default_notebook_id =
             resolved_default_notebook_id(&metadata.notebooks, &mut metadata.warnings);
-        let scan_context = self.search_scan_context();
-        let view = scan_library(
-            &canonical,
-            &metadata.notebooks,
-            default_notebook_id.as_deref(),
-            &self.recovery_root,
-            &metadata.warnings,
-            &scan_context,
-        )?;
-        let (view, search) = library_scan_parts(view);
+        let metadata_healthy = metadata.directory_available
+            && metadata.warnings.is_empty()
+            && default_notebook_id.is_some();
+        let view = LibraryView {
+            path: display_path(&canonical),
+            scan_state: ScanState::Pending,
+            default_notebook_name: default_notebook_id
+                .as_ref()
+                .and_then(|id| metadata.notebooks.get(id))
+                .map(|notebook| notebook.name.clone())
+                .unwrap_or_else(|| "默认笔记本".into()),
+            default_notebook_id: default_notebook_id.clone(),
+            notebooks: notebook_summaries(&metadata.notebooks),
+            notes: Vec::new(),
+            trash_notes: Vec::new(),
+            warnings: metadata.warnings.clone(),
+        };
+        let search = SearchSnapshot::unavailable(
+            self.search_generation.load(Ordering::Acquire),
+            metadata.warnings.clone(),
+        );
         let notebook_metadata_baselines = metadata
             .bytes
             .iter()
             .map(|(id, bytes)| (id.clone(), Some(bytes.clone())))
             .collect();
-        Ok(LibraryState {
+        let mut library = LibraryState {
             path: canonical,
             notebooks: metadata.notebooks,
             default_notebook_id,
@@ -3105,7 +3187,27 @@ impl Workspace {
             metadata_warnings: metadata.warnings,
             view,
             search,
-        })
+        };
+        if let Some(note_id) = remembered_note.filter(|_| metadata_healthy) {
+            if let Ok(session) = self.stage_library_note(&library, note_id) {
+                if session.view.read_only_reason.is_none() && session.view.trashed_at.is_none() {
+                    library.view.notes = vec![note_summary_from_package(note_id, &session.package)];
+                    return Ok((library, Some(session)));
+                }
+            }
+        }
+        // Keep the selection lease through the full scan. A fallback also
+        // preserves corrupt/newer-file and failed-witness diagnostics.
+        let scan = scan_library(
+            &library.path,
+            &library.notebooks,
+            library.default_notebook_id.as_deref(),
+            &self.recovery_root,
+            &library.metadata_warnings,
+            &self.search_scan_context(),
+        )?;
+        install_library_scan(&mut library, scan);
+        Ok((library, None))
     }
 
     fn load_existing_library(&self, path: &Path) -> Result<LibraryState, WorkspaceError> {
@@ -4479,6 +4581,11 @@ fn scan_library_with_previous_inner(
         .unwrap_or_else(|| "默认笔记本".into());
     let view = LibraryView {
         path: display_path(library_path),
+        scan_state: if notes_directory_available {
+            ScanState::Complete
+        } else {
+            ScanState::Unavailable
+        },
         default_notebook_name,
         default_notebook_id: default_notebook_id.map(str::to_owned),
         notebooks: notebook_summaries(notebooks),
@@ -4586,6 +4693,7 @@ fn preserve_unavailable_notes_view(
     reason: &str,
 ) -> LibraryView {
     let mut view = previous.clone();
+    view.scan_state = ScanState::Unavailable;
     view.default_notebook_id = default_notebook_id.map(str::to_owned);
     view.default_notebook_name = default_notebook_id
         .and_then(|id| notebooks.get(id))

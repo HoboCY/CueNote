@@ -66,6 +66,7 @@ impl PreparedProbeRefresh {
                     Err(error) => {
                         library.view.warnings =
                             vec![format!("无法刷新笔记列表：{}", error.message)];
+                        library.view.scan_state = ScanState::Unavailable;
                         library.search = SearchSnapshot::unavailable(
                             context.generation.load(Ordering::Acquire),
                             vec![format!("无法刷新搜索索引：{}", error.message)],

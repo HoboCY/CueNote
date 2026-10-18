@@ -1,14 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createExternalChangesCoordinator } from '../src/external-changes.ts';
+import type { ExternalChangeProbe, LibraryView } from '../src/workspace-api.ts';
 
-type Probe = {
-  sessionId: string | null;
-  status: 'unchanged' | 'changed' | 'missing' | 'unreadable' | 'deferred';
-  revision: string | null;
-  message: string | null;
-  library: null;
-};
+type Probe = ExternalChangeProbe;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -81,8 +76,141 @@ test('pending file notifications get a full quiet interval after foreground savi
 });
 
 function changedProbe(sessionId: string | null): Probe {
-  return { sessionId, status: 'changed', revision: 'rev-2', message: null, library: null };
+  return { sessionId, status: 'changed', revision: 'rev-2', message: null, library: null, sessionReadOnlyReason: null };
 }
+
+function scannedLibrary(scanState: LibraryView['scanState'] = 'complete'): LibraryView {
+  return {
+    path: '/library', scanState, defaultNotebookName: 'Notes', defaultNotebookId: null,
+    notebooks: [], notes: [], trashNotes: [], warnings: [],
+  };
+}
+
+test('initial library scan can finish during continuous typing without applying content or permissions', async () => {
+  const clock = new FakeClock();
+  const responses = [deferred<Probe>(), deferred<Probe>(), deferred<Probe>()];
+  const libraries: LibraryView[] = [];
+  let probes = 0, reconciled = 0;
+  const coordinator = createExternalChangesCoordinator({
+    getSessionId: () => 'session-1',
+    probe: async () => responses[probes++].promise,
+    onLibraryRefreshed: library => { libraries.push(library); },
+    onChanged: () => { reconciled += 1; },
+    onProbeResult: () => { reconciled += 1; },
+    setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
+  });
+  const complete = scannedLibrary();
+  void coordinator.checkNow();
+  for (let index = 0; index < 2; index += 1) {
+    coordinator.noteInputChanged();
+    responses[index].resolve({
+      ...changedProbe('session-1'), status: index === 0 ? 'changed' : 'unchanged',
+      sessionReadOnlyReason: 'metadata changed', library: complete,
+    });
+    await settlePromises();
+    assert.equal(libraries.length, index + 1, 'typing cannot starve the completed list');
+    assert.equal(reconciled, 0, 'content and read-only changes still require a current input token');
+    clock.fire();
+    await settlePromises();
+    assert.equal(probes, index + 2, 'a reconciliation retry remains queued');
+  }
+  responses[2].resolve({ ...changedProbe('session-1'), library: complete });
+  await settlePromises();
+  assert.equal(reconciled, 1, 'reconcile when the input token is current');
+  coordinator.dispose();
+});
+
+for (const invalidation of ['session', 'epoch', 'disposed', 'resumed', 'response-session'] as const) {
+  test(`library callbacks reject a stale ${invalidation}`, async () => {
+    const clock = new FakeClock();
+    const response = deferred<Probe>();
+    let sessionId = 'session-1', libraries = 0, reconciled = 0;
+    const coordinator = createExternalChangesCoordinator({
+      getSessionId: () => sessionId,
+      probe: async () => response.promise,
+      onLibraryRefreshed: () => { libraries += 1; },
+      onChanged: () => { reconciled += 1; },
+      onProbeResult: () => { reconciled += 1; },
+      setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
+    });
+    const operation = coordinator.checkNow();
+    if (invalidation === 'session') sessionId = 'session-2';
+    if (invalidation === 'epoch') coordinator.sessionChanged();
+    if (invalidation === 'disposed' || invalidation === 'resumed') coordinator.dispose();
+    if (invalidation === 'resumed') coordinator.resume();
+    response.resolve({
+      ...changedProbe(invalidation === 'response-session' ? 'session-2' : 'session-1'),
+      library: scannedLibrary(),
+    });
+    await operation;
+    assert.equal(libraries, 0);
+    assert.equal(reconciled, 0);
+    coordinator.dispose();
+  });
+}
+
+test('a deferred scan cannot publish a list, while an unavailable result can leave pending', async () => {
+  const clock = new FakeClock();
+  const states: LibraryView['scanState'][] = [];
+  let probes = 0;
+  const coordinator = createExternalChangesCoordinator({
+    getSessionId: () => 'session-1',
+    probe: async () => ({
+      ...changedProbe('session-1'), status: probes++ === 0 ? 'deferred' : 'unreadable',
+      library: scannedLibrary('unavailable'),
+    }),
+    onChanged: () => {},
+    onLibraryRefreshed: library => { states.push(library.scanState); },
+    setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
+  });
+  await coordinator.checkNow();
+  assert.deepEqual(states, []);
+  clock.fire();
+  await settlePromises();
+  assert.deepEqual(states, ['unavailable']);
+  coordinator.dispose();
+});
+
+test('startup notifications wait for the verified session and preserve input during the initial full probe', async () => {
+  const clock = new FakeClock();
+  let initializing = true;
+  let sessionId: string | null = null;
+  const first = deferred<Probe>();
+  const probed: (string | null)[] = [];
+  let applied = 0;
+  const coordinator = createExternalChangesCoordinator({
+    getSessionId: () => sessionId,
+    canProbe: () => !initializing,
+    probe: async id => {
+      probed.push(id);
+      return probed.length === 1 ? first.promise : { ...changedProbe(id), status: 'unchanged' };
+    },
+    onChanged: () => { applied += 1; },
+    onProbeResult: () => { applied += 1; },
+    setTimeout: clock.setTimeout,
+    clearTimeout: clock.clearTimeout,
+  });
+  coordinator.schedule(); // Focus/restore events may arrive before get_workspace.
+  clock.fire();
+  await settlePromises();
+  assert.deepEqual(probed, [], 'do not scan the whole library ahead of startup');
+  sessionId = 'verified-startup-session';
+  coordinator.sessionChanged();
+  initializing = false;
+  coordinator.schedule(); // The post-startup probe is mandatory, without a file event.
+  clock.fire();
+  await settlePromises();
+  assert.deepEqual(probed, [sessionId]);
+  coordinator.noteInputChanged();
+  first.resolve(changedProbe(sessionId));
+  await settlePromises();
+  assert.equal(applied, 0, 'the initial scan must not apply stale content over new input');
+  clock.fire();
+  await settlePromises();
+  assert.deepEqual(probed, [sessionId, sessionId], 'stale startup results still get a fresh full probe');
+  assert.equal(applied, 1);
+  coordinator.dispose();
+});
 
 test('a confirmed library save queues a full probe without any file notification', async () => {
   const clock = new FakeClock();

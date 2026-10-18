@@ -268,6 +268,9 @@ function App() {
   const trashDialogRef = useRef<HTMLDivElement | null>(null);
   const saveCoordinatorRef = useRef<SaveCoordinator | null>(null);
   const externalChangesCoordinatorRef = useRef<ExternalChangesCoordinator | null>(null);
+  // An early focus/restore notification must not queue a full scan ahead of
+  // the first workspace response. The required post-startup probe is retained.
+  const workspaceInitializingRef = useRef(true);
   const externalChangeHandlerRef = useRef<(
     result: ExternalChangeProbe,
     token: ExternalChangeToken,
@@ -841,9 +844,19 @@ function App() {
   if (externalChangesCoordinatorRef.current === null) {
     externalChangesCoordinatorRef.current = createExternalChangesCoordinator({
       getSessionId: () => sessionRef.current?.sessionId ?? null,
-      canProbe: () => !manualSaveInProgressRef.current
+      canProbe: () => !workspaceInitializingRef.current
+        && !manualSaveInProgressRef.current
         && saveCoordinatorRef.current?.getState().phase !== 'saving',
       probe: (sessionId) => workspaceApi.probeExternalChanges(sessionId),
+      onLibraryRefreshed: library => {
+        const current = workspaceRef.current;
+        if (libraryRestoreSuspendedRef.current || current?.libraryRestore
+          || current?.library?.scanState !== 'pending'
+          || current.library.path !== library.path || library.scanState === 'pending') return;
+        // Only finish the initial list. Never replace a newer save receipt or
+        // touch the session, draft, read-only state or conflict protection here.
+        updateLibraryFromExternalResult(library);
+      },
       onChanged: (result, token, isCurrent) => externalChangeHandlerRef.current(result, token, isCurrent),
       onProbeResult: handleExternalProbeResult,
       onError: handleExternalProbeError,
@@ -1489,11 +1502,15 @@ function App() {
     void searchProgressListener.then(async () => {
       if (!active) return;
       try {
-        applyWorkspace(await workspaceApi.get());
+        const initialWorkspace = await workspaceApi.get();
+        if (active) applyWorkspace(initialWorkspace);
       } catch (cause) {
         if (active) setError(toWorkspaceError(cause));
       } finally {
-        if (active) setIsInitializing(false);
+        if (active) {
+          workspaceInitializingRef.current = false;
+          setIsInitializing(false);
+        }
       }
     });
     void refreshRecoveryDrafts();
@@ -2303,6 +2320,10 @@ function App() {
   };
 
   const library = workspace?.library ?? null;
+  const libraryScanPending = library?.scanState === 'pending';
+  const libraryScanUnavailable = library?.scanState === 'unavailable';
+  const libraryCountLabel = libraryScanPending ? '正在读取笔记数量'
+    : libraryScanUnavailable ? '笔记数量暂不可用' : undefined;
   const notes = library?.notes ?? [];
   const trashNotes = library?.trashNotes ?? [];
   const notebooks = library?.notebooks ?? [];
@@ -2623,7 +2644,7 @@ function App() {
             >
               <span className="sidebar-item-icon" aria-hidden="true">⌂</span>
               <span>全部笔记</span>
-              {library && <span className="sidebar-nav-count">{notes.length}</span>}
+              {library && <span className="sidebar-nav-count" aria-label={libraryCountLabel}>{libraryScanPending ? '…' : libraryScanUnavailable ? '—' : notes.length}</span>}
             </button>
             <button
               className={`sidebar-current trash-nav${isTrashView ? ' is-current' : ''}`}
@@ -2635,7 +2656,7 @@ function App() {
             >
               <span className="sidebar-item-icon" aria-hidden="true">↺</span>
               <span>回收站</span>
-              {library && <span className="sidebar-nav-count">{trashNotes.length}</span>}
+              {library && <span className="sidebar-nav-count" aria-label={libraryCountLabel}>{libraryScanPending ? '…' : libraryScanUnavailable ? '—' : trashNotes.length}</span>}
             </button>
             <div className="sidebar-notebook-heading">
               <div>
@@ -2673,7 +2694,7 @@ function App() {
                         <span className="sidebar-notebook-icon" aria-hidden="true">▣</span>
                         <span className="sidebar-notebook-name">{notebook.name}</span>
                         {display.shortId && <span className="sidebar-notebook-id">{display.shortId}</span>}
-                        <span className="sidebar-nav-count">{notebookNoteCount}</span>
+                        <span className="sidebar-nav-count" aria-label={libraryCountLabel}>{libraryScanPending ? '…' : libraryScanUnavailable ? '—' : notebookNoteCount}</span>
                       </button>
                       {notebook.isDefault ? (
                         <span className="sidebar-default-label">默认</span>
@@ -2775,11 +2796,18 @@ function App() {
             {searchRebuildError && !isSearchActive && (
               <div className="search-result-error" role="alert">重建索引失败：{searchRebuildError.message}</div>
             )}
+            {libraryScanPending && (
+              <div className="sidebar-search-progress" role="status" data-testid="library-scan-pending">
+                正在读取完整笔记列表，当前笔记可以继续编辑。
+              </div>
+            )}
             <div className="sidebar-notebook-heading">
               <div>
                 <span className="sidebar-group-title">{isTrashView ? '回收站笔记' : isSearchActive ? '搜索结果' : '笔记列表'}</span>
                 {library && <span className="sidebar-note-count">{isSearchActive
                   ? searchState.results ? `${searchState.results.total} 条匹配 · ${searchScopeLabel}` : `${searchScopeLabel} · 搜索中`
+                  : libraryScanPending ? '正在读取列表'
+                  : libraryScanUnavailable ? '列表暂不可用'
                   : `${visibleNotes.length}${!isTrashView && selectedNotebook ? ` / ${notes.length}` : ''} 篇笔记`}</span>}
               </div>
               <button
@@ -2829,7 +2857,7 @@ function App() {
                   ))}
                 </ul>
               ) : (
-                <div className="sidebar-empty">{isTrashView ? '回收站为空' : selectedNotebook ? `“${selectedNotebook.name}”里还没有笔记` : '这里还没有笔记'}</div>
+                <div className="sidebar-empty">{libraryScanPending ? '正在读取笔记列表…' : libraryScanUnavailable ? '暂时无法读取笔记列表' : isTrashView ? '回收站为空' : selectedNotebook ? `“${selectedNotebook.name}”里还没有笔记` : '这里还没有笔记'}</div>
               )
             ) : (
               <div className="sidebar-empty">选择笔记库后开始记录</div>
@@ -3197,7 +3225,7 @@ function App() {
         ) : isInitializing ? (
           <section className="empty-workspace" aria-live="polite"><span className="loading-mark" aria-hidden="true" /><h2>正在读取笔记库</h2><p>请稍候，正在打开上次使用的位置。</p></section>
         ) : error && !workspace ? (
-          <section className="empty-workspace"><h2>暂时无法打开工作区</h2><p>请重试，或选择一个笔记库继续。</p><div className="empty-actions"><button className="primary-button" type="button" onClick={() => { setError(null); setIsInitializing(true); void workspaceApi.get().then(applyWorkspace).catch((cause: unknown) => setError(toWorkspaceError(cause))).finally(() => setIsInitializing(false)); }}>重试</button><button className="quiet-button" type="button" onClick={chooseLibrary}>选择笔记库</button></div></section>
+          <section className="empty-workspace"><h2>暂时无法打开工作区</h2><p>请重试，或选择一个笔记库继续。</p><div className="empty-actions"><button className="primary-button" type="button" onClick={() => { setError(null); workspaceInitializingRef.current = true; setIsInitializing(true); void workspaceApi.get().then(applyWorkspace).catch((cause: unknown) => setError(toWorkspaceError(cause))).finally(() => { workspaceInitializingRef.current = false; setIsInitializing(false); }); }}>重试</button><button className="quiet-button" type="button" onClick={chooseLibrary}>选择笔记库</button></div></section>
         ) : !library && !session ? (
           <section className="empty-workspace">
             <span className="empty-mark" aria-hidden="true">✳</span>
@@ -3211,8 +3239,13 @@ function App() {
           </section>
         ) : !sessionMatchesView || !session || !draft ? (
           <section className="empty-workspace" data-testid={isTrashView ? 'trash-empty-view' : undefined}>
-            <span className="empty-mark" aria-hidden="true">{isTrashView && trashNotes.length === 0 ? '✓' : '✳'}</span>
-            {isTrashView ? (
+            <span className="empty-mark" aria-hidden="true">{isTrashView && !libraryScanPending && !libraryScanUnavailable && trashNotes.length === 0 ? '✓' : '✳'}</span>
+            {libraryScanPending || libraryScanUnavailable ? (
+              <>
+                <h2>{libraryScanPending ? '正在读取笔记列表' : '笔记列表暂不可用'}</h2>
+                <p>{libraryScanPending ? '读取完成后会显示这个视图中的全部笔记。' : '请检查笔记库目录和上方提示，再检查更新。'}</p>
+              </>
+            ) : isTrashView ? (
               <>
                 <h2>{trashNotes.length === 0 ? '回收站为空' : '选择一篇回收站笔记'}</h2>
                 <p>{trashNotes.length === 0 ? '移入回收站的笔记会显示在左侧列表中。' : '回收站笔记只读，可恢复到原笔记本或永久删除。'}</p>

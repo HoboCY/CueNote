@@ -120,6 +120,7 @@ function restoreReceipt(libraryPath: string): BackupRestoreReceipt {
 function libraryToken(modifiedAt = '2026-10-15T00:00:00Z') {
   return {
     path: 'library-a',
+    scanState: 'complete' as const,
     defaultNotebookName: 'Notes',
     defaultNotebookId: 'default',
     notebooks: [],

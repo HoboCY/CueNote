@@ -29,6 +29,7 @@ function workspace(libraryRestore: WorkspaceView['libraryRestore'] = null): Work
     defaultLibraryPath: libraryPath,
     library: {
       path: libraryPath,
+      scanState: 'complete',
       defaultNotebookName: 'Notes',
       defaultNotebookId: 'default',
       notebooks: [],

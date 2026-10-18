@@ -1,4 +1,4 @@
-import type { ExternalChangeProbe } from './workspace-api';
+import type { ExternalChangeProbe, LibraryView } from './workspace-api';
 
 export interface ExternalChangeToken {
   sessionId: string | null;
@@ -17,6 +17,8 @@ export interface ExternalChangesCoordinatorOptions {
     isCurrent: () => boolean,
   ) => void | Promise<void>;
   onProbeResult?: (result: ExternalChangeProbe) => void;
+  /** List-only publication; must not change editor content or permissions. */
+  onLibraryRefreshed?: (library: LibraryView) => void;
   onError?: (
     error: unknown,
     token: ExternalChangeToken,
@@ -88,7 +90,13 @@ export function createExternalChangesCoordinator(options: ExternalChangesCoordin
           if (!disposed) queued = true;
           return;
         }
-        if (!isCurrent(token) || result.sessionId !== token.sessionId) return;
+        if (disposed || token.epoch !== epoch || token.sessionId !== options.getSessionId()
+          || result.sessionId !== token.sessionId) return;
+        // Typing must not starve the initial full list. This synchronous callback
+        // only publishes library data; content/permission changes retain the
+        // stricter input token, and noteInputChanged keeps their retry queued.
+        if (result.library) options.onLibraryRefreshed?.(result.library);
+        if (!isCurrent(token)) return;
         if (result.status !== 'unchanged') {
           await options.onChanged(result, token, () => isCurrent(token));
         } else {

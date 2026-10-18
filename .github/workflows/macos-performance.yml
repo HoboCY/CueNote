@@ -5,6 +5,10 @@ on:
     branches: [codex/project-foundation]
     paths:
       - '.github/workflows/macos-performance.yml'
+      - 'src/**'
+      - 'src-tauri/src/commands.rs'
+      - 'src-tauri/src/workspace.rs'
+      - 'src-tauri/src/workspace/**'
       - 'tools/performance/macos/**'
       - 'src-tauri/src/performance/**'
       - 'src-tauri/src/performance.rs'

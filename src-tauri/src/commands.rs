@@ -680,7 +680,7 @@ pub async fn get_workspace(
             .map_err(|_| command_error("笔记服务已中断。"))?;
         state.ensure_not_restoring()?;
         let _policy = crate::storage::NoCloudDownload::enter()?;
-        workspace.snapshot()
+        workspace.startup_snapshot()
     })
     .await
     .map_err(|error| command_error(format!("无法读取工作区：{error}")))??;

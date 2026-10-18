@@ -61,6 +61,7 @@ export interface ViewPreferences {
 
 export interface LibraryView {
   path: string;
+  scanState: 'pending' | 'complete' | 'unavailable';
   defaultNotebookName: string;
   defaultNotebookId: string | null;
   notebooks: NotebookSummary[];
