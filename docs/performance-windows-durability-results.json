@@ -1,0 +1,899 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "implementationCommit": "00c1e3f825503939648326607882186410545985",
+  "environment": {
+    "collectedUtc": "2026-10-18T02:47:40.9519104Z",
+    "os": {
+      "Caption": "Microsoft Windows 11 专业版",
+      "Version": "10.0.26200",
+      "BuildNumber": "26200",
+      "OSArchitecture": "64 位",
+      "TotalVisibleMemorySize": 33315680
+    },
+    "cpu": {
+      "Name": "13th Gen Intel(R) Core(TM) i7-13700KF",
+      "NumberOfCores": 16,
+      "NumberOfLogicalProcessors": 24
+    },
+    "build": {
+      "sourceCommit": "e45668880801034746cc9b5e9d43c2bb896cda85",
+      "sourceDirty": false,
+      "sha256": "bf93286f0b8145839953ed6a627df67cc5790590f2b542e60d076bb36386cb58",
+      "target": "x86_64-pc-windows-msvc",
+      "features": [
+        "perf-acceptance",
+        "tauri/custom-protocol"
+      ],
+      "traceEnabled": false,
+      "previousMeasuredSha256": "9c5d0e689a13501e4d8ccc2f8c1e363785450fdcdccb30ddd403b69ec1ac948c",
+      "formalCandidate": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+      "candidateComparison": "Includes 00c1e3f version-directory durability optimization and existing-member retry fix. Formal installed candidate remains unchanged. Requires new performance validation.",
+      "builtUtc": "2026-10-18T02:47:27.1980058Z"
+    },
+    "note": "Current installed WebView2, recorded in every startup.json; no system cache clearing. No local build/copy/test suite runs during measurement."
+  },
+  "webView2": [
+    "Edg/155.0.4283.60"
+  ],
+  "viewports": [
+    {
+      "width": 1280,
+      "height": 860,
+      "devicePixelRatio": 1
+    }
+  ],
+  "binarySha256": "bf93286f0b8145839953ed6a627df67cc5790590f2b542e60d076bb36386cb58",
+  "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+  "timingMatrixPassed": true,
+  "totalMetricSamples": 467,
+  "statistics": [
+    {
+      "metric": "startup",
+      "cacheState": "all",
+      "count": 10,
+      "minMs": 2054.8994,
+      "p95Ms": 2144.2981,
+      "maxMs": 2144.2981,
+      "requiredSamples": 10,
+      "limitMs": 3000,
+      "statistic": "max",
+      "status": "pass"
+    },
+    {
+      "metric": "initial-index",
+      "cacheState": "all",
+      "count": 3,
+      "minMs": 14411.677599999999,
+      "p95Ms": 14795.562899999999,
+      "maxMs": 14795.562899999999,
+      "requiredSamples": 3,
+      "limitMs": 60000,
+      "statistic": "max",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "all",
+      "count": 60,
+      "minMs": 99.8786,
+      "p95Ms": 117.13580000000002,
+      "maxMs": 279.77229999999986,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "all",
+      "count": 32,
+      "minMs": 1207.4424999999992,
+      "p95Ms": 1612.0396000000037,
+      "maxMs": 1617.674500000001,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "all",
+      "count": 40,
+      "minMs": 358.72119999999995,
+      "p95Ms": 403.8361,
+      "maxMs": 431.83770000000004,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "all",
+      "count": 32,
+      "minMs": 3581.603799999997,
+      "p95Ms": 7392.963099999994,
+      "maxMs": 7436.148799999995,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "search",
+      "cacheState": "all",
+      "count": 30,
+      "minMs": 116.87169999999969,
+      "p95Ms": 131.20710000000008,
+      "maxMs": 131.2275000000002,
+      "requiredSamples": 30,
+      "limitMs": 300,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-map",
+      "cacheState": "all",
+      "count": 30,
+      "minMs": 23.5649999999996,
+      "p95Ms": 31.479499999999916,
+      "maxMs": 32.10760000000005,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-map",
+      "cacheState": "all",
+      "count": 30,
+      "minMs": 54.410399999999754,
+      "p95Ms": 68.86450000000013,
+      "maxMs": 84.4984999999997,
+      "requiredSamples": 30,
+      "limitMs": 3000,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "ordinary-input",
+      "cacheState": "all",
+      "count": 100,
+      "minMs": 16.528199999999742,
+      "p95Ms": 21.14370000000008,
+      "maxMs": 23.22019999999975,
+      "requiredSamples": 100,
+      "limitMs": 100,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "stress-input",
+      "cacheState": "all",
+      "count": 100,
+      "minMs": 18.829999999999927,
+      "p95Ms": 30.09609999999998,
+      "maxMs": 34.84889999999996,
+      "requiredSamples": 100,
+      "limitMs": 200,
+      "statistic": "p95",
+      "status": "pass"
+    },
+    {
+      "metric": "initial-index",
+      "cacheState": "first",
+      "count": 3,
+      "minMs": 14411.677599999999,
+      "p95Ms": 14795.562899999999,
+      "maxMs": 14795.562899999999,
+      "requiredSamples": 3,
+      "limitMs": 60000,
+      "statistic": "max",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "first",
+      "count": 30,
+      "minMs": 103.75680000000011,
+      "p95Ms": 122.8449999999998,
+      "maxMs": 279.77229999999986,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-open",
+      "cacheState": "cached",
+      "count": 30,
+      "minMs": 99.8786,
+      "p95Ms": 117.13580000000002,
+      "maxMs": 117.88490000000002,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 1223.3236000000002,
+      "p95Ms": 1223.3236000000002,
+      "maxMs": 1223.3236000000002,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "cached",
+      "count": 28,
+      "minMs": 1207.4424999999992,
+      "p95Ms": 1254.4801999999981,
+      "maxMs": 1255.7747000000018,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-save",
+      "cacheState": "rotation",
+      "count": 3,
+      "minMs": 1607.7447999999931,
+      "p95Ms": 1617.674500000001,
+      "maxMs": 1617.674500000001,
+      "requiredSamples": 30,
+      "limitMs": 2000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-input",
+      "cacheState": "cached",
+      "count": 100,
+      "minMs": 16.528199999999742,
+      "p95Ms": 21.14370000000008,
+      "maxMs": 23.22019999999975,
+      "requiredSamples": 100,
+      "limitMs": 100,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-map",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 32.10760000000005,
+      "p95Ms": 32.10760000000005,
+      "maxMs": 32.10760000000005,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "ordinary-map",
+      "cacheState": "cached",
+      "count": 29,
+      "minMs": 23.5649999999996,
+      "p95Ms": 26.80789999999979,
+      "maxMs": 31.479499999999916,
+      "requiredSamples": 30,
+      "limitMs": 1000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "first",
+      "count": 10,
+      "minMs": 371.41789999999946,
+      "p95Ms": 431.83770000000004,
+      "maxMs": 431.83770000000004,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-open",
+      "cacheState": "cached",
+      "count": 30,
+      "minMs": 358.72119999999995,
+      "p95Ms": 395.2667000000001,
+      "maxMs": 395.85319999999956,
+      "requiredSamples": 30,
+      "limitMs": 5000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 3763.0369,
+      "p95Ms": 3763.0369,
+      "maxMs": 3763.0369,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "cached",
+      "count": 28,
+      "minMs": 3581.603799999997,
+      "p95Ms": 3655.7033999999985,
+      "maxMs": 3690.1659999999974,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-save",
+      "cacheState": "rotation",
+      "count": 3,
+      "minMs": 7345.458999999988,
+      "p95Ms": 7436.148799999995,
+      "maxMs": 7436.148799999995,
+      "requiredSamples": 30,
+      "limitMs": 10000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-input",
+      "cacheState": "cached",
+      "count": 100,
+      "minMs": 18.829999999999927,
+      "p95Ms": 30.09609999999998,
+      "maxMs": 34.84889999999996,
+      "requiredSamples": 100,
+      "limitMs": 200,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-map",
+      "cacheState": "first",
+      "count": 1,
+      "minMs": 62.072799999999916,
+      "p95Ms": 62.072799999999916,
+      "maxMs": 62.072799999999916,
+      "requiredSamples": 30,
+      "limitMs": 3000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "stress-map",
+      "cacheState": "cached",
+      "count": 29,
+      "minMs": 54.410399999999754,
+      "p95Ms": 68.86450000000013,
+      "maxMs": 84.4984999999997,
+      "requiredSamples": 30,
+      "limitMs": 3000,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "search",
+      "cacheState": "first",
+      "count": 6,
+      "minMs": 117.52620000000024,
+      "p95Ms": 131.2275000000002,
+      "maxMs": 131.2275000000002,
+      "requiredSamples": 30,
+      "limitMs": 300,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "search",
+      "cacheState": "cached",
+      "count": 24,
+      "minMs": 116.87169999999969,
+      "p95Ms": 129.8867999999993,
+      "maxMs": 131.20710000000008,
+      "requiredSamples": 30,
+      "limitMs": 300,
+      "statistic": "p95",
+      "status": "breakdown"
+    },
+    {
+      "metric": "startup",
+      "cacheState": "indexed",
+      "count": 10,
+      "minMs": 2054.8994,
+      "p95Ms": 2144.2981,
+      "maxMs": 2144.2981,
+      "requiredSamples": 10,
+      "limitMs": 3000,
+      "statistic": "max",
+      "status": "breakdown"
+    }
+  ],
+  "normalClosures": [
+    {
+      "pid": 81180,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-2/measurements/2026-10-18T02-47-42-259Z"
+    },
+    {
+      "pid": 76744,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-3/measurements/2026-10-18T02-48-04-031Z"
+    },
+    {
+      "pid": 80432,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-48-25-020Z"
+    },
+    {
+      "pid": 76924,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-47-984Z"
+    },
+    {
+      "pid": 80384,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-53-974Z"
+    },
+    {
+      "pid": 78592,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-59-925Z"
+    },
+    {
+      "pid": 77532,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-06-025Z"
+    },
+    {
+      "pid": 78440,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-12-093Z"
+    },
+    {
+      "pid": 81572,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-18-097Z"
+    },
+    {
+      "pid": 78016,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-24-190Z"
+    },
+    {
+      "pid": 75692,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-30-258Z"
+    },
+    {
+      "pid": 76788,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-36-202Z"
+    },
+    {
+      "pid": 80632,
+      "exitCode": 0,
+      "normalExit": true,
+      "run": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-42-271Z"
+    }
+  ],
+  "longSaveFeedback": {
+    "samples": 32,
+    "visibleAt1000ms": 32,
+    "visibleAt2000ms": 32
+  },
+  "cancelSaveWait": [
+    {
+      "operation": "cancel-switch-while-saving",
+      "elapsedMs": 36.98819999999978,
+      "save": "正在保存…",
+      "progress": [
+        "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+        "思维导图已保存到正文。关闭"
+      ]
+    },
+    {
+      "operation": "cancel-switch-still-finishes-safe-save",
+      "elapsedMs": 6987.782099999999,
+      "save": "已保存到本地",
+      "progress": [
+        "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+        "思维导图已保存到正文。关闭"
+      ]
+    },
+    {
+      "operation": "cancel-close-while-saving",
+      "elapsedMs": 42.94980000000032,
+      "save": "正在保存…",
+      "progress": [
+        "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+        "思维导图已保存到正文。关闭"
+      ]
+    },
+    {
+      "operation": "cancel-close-still-finishes-safe-save",
+      "elapsedMs": 5344.0877,
+      "save": "已保存到本地",
+      "progress": [
+        "OneDrive 提示：Windows 与 macOS 使用同一笔记库文件，请将整个目录设为“始终保留在此设备上”。CueNote 本机保存完成，不代表 OneDrive 云端同步完成。检查文件更新",
+        "思维导图已保存到正文。关闭"
+      ]
+    }
+  ],
+  "contentVerification": {
+    "editedNotes": [
+      {
+        "allOtherContentAndIdentityExact": true,
+        "assets": [
+          {
+            "bytes": 1048576,
+            "name": "10c4eaf6-3832-4bcb-bc4b-8e81bb23023b",
+            "sha256": "977388359993da3d2b6daefb0edcf1236cee76098d4055f1282a3b5114ff1792"
+          },
+          {
+            "bytes": 1048576,
+            "name": "776e7b15-c41e-47fd-8e9d-56fe79b11408",
+            "sha256": "ba43dbb2822b46d3765f94b7e8ffd176b869310289bc06ac7647ab7fe647f6ee"
+          },
+          {
+            "bytes": 1048576,
+            "name": "a262a1ea-fa33-48ee-94fa-a3844efe5635",
+            "sha256": "2681264d829858c8ab76637e8b1c5e0466619da0c63c0cb624208fc5fa438196"
+          },
+          {
+            "bytes": 1048576,
+            "name": "d45aa9f8-86e2-477a-a9d8-f431c078a3e9",
+            "sha256": "a4ad302ddf520f8f00984763897bc70f3db6f7ca9ab0f33226eb4bb187860f58"
+          },
+          {
+            "bytes": 1048576,
+            "name": "f8035b54-d239-4739-b47e-95ff2eb85b22",
+            "sha256": "4b39636db900a76c20913414f99e2b57f33abeed277ee7fa00f4fe30341b3931"
+          }
+        ],
+        "bytes": 5249357,
+        "heading": "内容区 · 普通样本 00",
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "sha256": "b7c612c73d401aa7882d21272cfca7adc76e5108544578e8c55164c0421a6dc0",
+        "title": "普通样本 32 · SHARED-Q51-ORDINARY"
+      },
+      {
+        "allOtherContentAndIdentityExact": true,
+        "assets": [
+          {
+            "bytes": 5242880,
+            "name": "4c584f74-5593-4fa4-82aa-bcfee8e11eef",
+            "sha256": "9824971acc0e1b518c1aa22ad3f3c9dab4329810651f73d800253157f4041b25"
+          },
+          {
+            "bytes": 5242880,
+            "name": "55594b5a-4aa5-429f-8956-e5031c0ef8e7",
+            "sha256": "9ce2a11cbb77898abf60ec62d0e0fe53580cd152c6b5ac81db2c6480ac01610c"
+          },
+          {
+            "bytes": 5242880,
+            "name": "711fbe1c-4a2f-4f32-9f36-0d4f72efb1be",
+            "sha256": "6e0a771781fd88c5bea3dca61acd249ad787e624dc5a4fc2d48113029ecb0714"
+          },
+          {
+            "bytes": 5242880,
+            "name": "7906facb-6440-482e-b7ca-5f9e5374a271",
+            "sha256": "50ab5f9f1745f3a53c78b8f2fd2cd47da1ef3c0e874f710f7e52b60f8cc1bdcc"
+          },
+          {
+            "bytes": 5242880,
+            "name": "887c72ab-e2d7-408a-9f7d-0d73dc5035d0",
+            "sha256": "b83214b840c917f3bcbfde9c8b4e5ce8e863c64427e20229e463692fe9f80dbe"
+          },
+          {
+            "bytes": 5242880,
+            "name": "91f20ce3-049e-4d3e-9bbb-0f6c89f1f833",
+            "sha256": "81e56da517cbb15bfb0347633ee7b7b85a9cd36c7cc95b0f4357a625d5e8c6de"
+          },
+          {
+            "bytes": 5242880,
+            "name": "9fa9d1f6-6f61-48e7-9802-741c1915e834",
+            "sha256": "a698202e892c05e871d8e42457c02709f824a30133d526461a0fd63aa9ed7bf0"
+          },
+          {
+            "bytes": 5242880,
+            "name": "ae420cc6-f4d5-45b0-9512-58a65ea4ac34",
+            "sha256": "fd8b2b8c51c2e89fae29224a9cec158c8c946904eff69f3d4eecfa0658fc981c"
+          },
+          {
+            "bytes": 5242880,
+            "name": "c2d9e4b2-777b-4f83-9b98-3d1048790a4e",
+            "sha256": "89991d0821a87a0d69e3c2e3029da2edd43e757fb8c243994830a973a803bef7"
+          },
+          {
+            "bytes": 5242880,
+            "name": "f3fb9039-ab06-4404-bccb-0f30ca0af842",
+            "sha256": "cc3a811190c00b0b4f95366b36990529094056d690505327f45a8f91149b5bbf"
+          }
+        ],
+        "bytes": 52456211,
+        "heading": "内容区 · 压力样本 00",
+        "noteId": "da509c0e-7713-4234-b8eb-ec5fd6f993d6",
+        "sha256": "99e41159fc1431df1d539f5e1881b6af13ed1799b61c3d11c54446a1add263b3",
+        "title": "压力样本 42 · SHARED-Q51-STRESS"
+      }
+    ],
+    "manifestSha256": "0e95e7288b26e37248899dedd09fe5c311866febc3d94d72f550bffbc28b0292",
+    "notebooksChecked": 10,
+    "notesChecked": 1000,
+    "scope": "Exact native package content after all normal exits/restarts"
+  },
+  "resources": {
+    "counts": [
+      {
+        "passed": 14,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 17,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0
+      },
+      {
+        "passed": 11,
+        "failed": 0,
+        "ignored": 0
+      }
+    ],
+    "totalPassed": 48,
+    "failed": 0,
+    "ignored": 0
+  },
+  "observations": [
+    "Automatic backup stayed enabled. A completed backup was observed; a later concurrent-library-change cancellation warning remained visible. Backup retry/recovery acceptance remains open."
+  ],
+  "evidence": [
+    {
+      "file": "windows-durability-runtime/index-2/measurements/2026-10-18T02-47-42-259Z/launcher.json",
+      "sha256": "2841a306cade4f118ef3825f2f2ee0f2c43ebd4702ea210449732cf6e6435144"
+    },
+    {
+      "file": "windows-durability-runtime/index-2/measurements/2026-10-18T02-47-42-259Z/startup.json",
+      "sha256": "81bf1a68f3ae46e5bff2cd3be7553c43ca8ade817688a295dd141f69a492fedf"
+    },
+    {
+      "file": "windows-durability-runtime/index-2/measurements/2026-10-18T02-47-42-259Z/exit-status.json",
+      "sha256": "1b25dab2c7cf52c04642c0031b7bffdea68120cdf29252aae14b3170801256f8"
+    },
+    {
+      "file": "windows-durability-runtime/index-2/measurements/2026-10-18T02-47-42-259Z/measurements.jsonl",
+      "sha256": "c17679047503a3af8649155705752a1bfe9f68462377b33738a3c080fd1ed967"
+    },
+    {
+      "file": "windows-durability-runtime/index-3/measurements/2026-10-18T02-48-04-031Z/launcher.json",
+      "sha256": "4300ec71cd794c7c20529497aff6a6e62eee27e509a58bc8300ef02a05bb913a"
+    },
+    {
+      "file": "windows-durability-runtime/index-3/measurements/2026-10-18T02-48-04-031Z/startup.json",
+      "sha256": "9af184643c48bb7577172f8b6b1c5d5ae1bdfb970f5389ba3822f48833edb522"
+    },
+    {
+      "file": "windows-durability-runtime/index-3/measurements/2026-10-18T02-48-04-031Z/exit-status.json",
+      "sha256": "46d12d93c9f0fd26e4d220e14a2e768918391813d9e99ee6b283cdeef147b575"
+    },
+    {
+      "file": "windows-durability-runtime/index-3/measurements/2026-10-18T02-48-04-031Z/measurements.jsonl",
+      "sha256": "ae8fe1a5b8661ac2f6dcdd73896f45f6b29978174bbe773ba6f17318a98da0ab"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-48-25-020Z/launcher.json",
+      "sha256": "717441877c0341ddb4372ecd480f29334153a964f7dc15f96471da674fc3d73b"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-48-25-020Z/startup.json",
+      "sha256": "e289a0a04376eeca7a872f730085c15f079ac9174146815625eed5c340217c8a"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-48-25-020Z/exit-status.json",
+      "sha256": "56139abae16c1e0c227912f99b060e13bf6dcb054a4f36a550a1bf097523f2b2"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-48-25-020Z/measurements.jsonl",
+      "sha256": "ff59f2722b8fcaff8d448a3a6df3cf7a10d8d12adf873ed56d319203f404c4d3"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-48-25-020Z/final-before-restarts.png",
+      "sha256": "b82972d58df64708a33936f1c5d48d919aaef37ff8f857063d35811720ec015d"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-48-25-020Z/close-save-wait.png",
+      "sha256": "f161a0ad369a30910cdb49351c2c2b772983c8c52ac3d580b6b25d0ae62838a0"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-48-25-020Z/switch-save-wait.png",
+      "sha256": "af6bc0c64be835873c46f9e57da27f1a250b2f6e8c113030397a251a5ce849ac"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-47-984Z/launcher.json",
+      "sha256": "44a1789ecd9a808880c9b1fff1f3f510c4ea2e137b90ca2c1015c3755794906f"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-47-984Z/startup.json",
+      "sha256": "32e359bb6cd475ef23402d378815d890d3a76b6d3adc4a29640d69bd62a7d2ad"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-47-984Z/exit-status.json",
+      "sha256": "bb2033983b77251abdfb0df65249d45360b0dadb82c59999a22af8bbef630de2"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-53-974Z/launcher.json",
+      "sha256": "5d17970394d3aafd58fa75ccbe2af0ca716dc3569c93d57e9c8be914ce2e57f3"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-53-974Z/startup.json",
+      "sha256": "d956ff8eef3256ace6e2379d0e28556c2981831a29a4d3729e13a7d6f06cbf3d"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-53-974Z/exit-status.json",
+      "sha256": "4530900e4cf7b13d4826369fd88f13bfa29d72a144633b97ba54be7d9a108499"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-59-925Z/launcher.json",
+      "sha256": "ec25591424e176c0951199f4ca0a2657d4a0fafdcf0513c7f48b4737ce157a1c"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-59-925Z/startup.json",
+      "sha256": "34a70147f836b239568aa11b50459b802b23ca95310040ea2952a3cd7800f462"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-53-59-925Z/exit-status.json",
+      "sha256": "879360f29a0f28e30ea865abdfef35909270fcc59cb4061fb324665b0caecc29"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-06-025Z/launcher.json",
+      "sha256": "aa8d8eb5ba0649d4533951524f8f4c746f2e42cecac30241b4c9ae9cdd99f8f4"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-06-025Z/startup.json",
+      "sha256": "e95517a30dbe0c80436d85381529b37d7c4fd4bf2411970c601c7dee6ad1507a"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-06-025Z/exit-status.json",
+      "sha256": "8bc45fa2d1aac4b38b47510e2519090148b6c96e3b7513699bbb712e32af09db"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-12-093Z/launcher.json",
+      "sha256": "ab31b7e85212620d5f403215a4431a40ad5c3e50a05df8cbc6e7defdb9851fc8"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-12-093Z/startup.json",
+      "sha256": "bb74f3c60973b2c9d2cb7a6dc6c29739016d43db32b63c364c7fc248ab9317fd"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-12-093Z/exit-status.json",
+      "sha256": "30cbce23afa82131b222e25ac4a3cf1635a1ab4a6fd0055eb15f2cb7e144fb65"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-18-097Z/launcher.json",
+      "sha256": "886bc0c1921816607d13200c4e74cb8ee80cf804836f697eadb9e766bc98963f"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-18-097Z/startup.json",
+      "sha256": "4694f691d06360889fa7dbcdd6bbb364813709d9ce38152ff9b7180b1ce10e9d"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-18-097Z/exit-status.json",
+      "sha256": "9fede9fd0766e3533e5ababc023bd18c7d68b6a78a351b3d7ab0caaae13afdf9"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-24-190Z/launcher.json",
+      "sha256": "9881d73c77a451282c7cf366c58634c6e3c1ff0e09c8836c5f68332f8d9464c8"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-24-190Z/startup.json",
+      "sha256": "481c15db7a9b77f207dac445a1fa2d1252e7c163cf26ffcd9197aa2ed6559d1c"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-24-190Z/exit-status.json",
+      "sha256": "7af69ad264c1fe4833cd40dfb8ec4475107eec1c836c123683977f54284f1534"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-30-258Z/launcher.json",
+      "sha256": "18c28181a80f7dfce0e15f869d4b03bcbb9715b67d1abca24ef63bde4fa818df"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-30-258Z/startup.json",
+      "sha256": "05bf7d11ed0c7e7dcedb9a95a925e4fe3b6ac1b3bb05cd5e0d75705b2a7f8853"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-30-258Z/exit-status.json",
+      "sha256": "1a0b79c4a1898a43e0b8330be551eb468486e29be8c6afef94e1a68ccf50b384"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-36-202Z/launcher.json",
+      "sha256": "e7ad429fc69cac315f27564ad26e42b3bc0b15916b7e0aaa31702f9325680f16"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-36-202Z/startup.json",
+      "sha256": "6ecc232cda7b7029639758415d546c8df82dbb1845f6473c70079ddfb01a0980"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-36-202Z/exit-status.json",
+      "sha256": "4624e76d4619e25d0361368ae71806b4b59b322b4c6db6c996f86e4f1632fdf0"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-42-271Z/launcher.json",
+      "sha256": "3815b717a6a059dde87ba525ff1234192d1176da6aa69a6570051b919145e4ac"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-42-271Z/startup.json",
+      "sha256": "d652980e4c3beb7d22013cdf90b618231f76fddec075366e5ac066c9ddfb5e45"
+    },
+    {
+      "file": "windows-durability-runtime/index-1/measurements/2026-10-18T02-54-42-271Z/exit-status.json",
+      "sha256": "07e2221b090a031e4897eb74e62141a08d68be76217ad3d2a4943dea4669b7e6"
+    },
+    {
+      "file": "windows-durability-runtime/summary.json",
+      "sha256": "6db7f89fe693038f10219acfea343784925efaf884ec46ee440fd8a13a84bd5b"
+    },
+    {
+      "file": "windows-durability-runtime/runs.json",
+      "sha256": "fa721306fc330a5840bf3daf4afb563bffcb0acb88de75dc2ff9d7311ae33d77"
+    },
+    {
+      "file": "windows-durability-runtime/environment.json",
+      "sha256": "b23ce8695bc884bd3f77f2ba25aeb042ed73f110ff1e1940bdbfb4739e8cb2e9"
+    },
+    {
+      "file": "windows-durability-runtime/content-verification.log",
+      "sha256": "400aa96b2d572006c3102752fa0e61c316506068334d71031d5a4a594dceaa13"
+    },
+    {
+      "file": "run-durability-windows.ps1",
+      "sha256": "9819af238b80f95affed065b2973d2a318e93c46eb78070c5db1844076acfdc7"
+    },
+    {
+      "file": "windows-durability-build/receipt.json",
+      "sha256": "a9446ef76230e2835e70a07f7ef7b96b769a0ad19008dec18521b34f01bc9982"
+    },
+    {
+      "file": "windows-durability-resources.log",
+      "sha256": "935e4bb5eda84065434df4fea7e61d7ddc349af5cc0e639a00870a518147f700"
+    }
+  ],
+  "scope": "Fresh synthetic Windows performance and native-content revalidation of the storage change. Does not establish Mac timing, OneDrive, manual input, installer lifecycle or full A23.",
+  "nonemptyApplicationNotices": {
+    "observations": 297,
+    "messages": [
+      "自动备份失败：笔记库发生变化，备份已取消；请重试。。稍后会重试。"
+    ],
+    "fullBackupAcceptancePassed": false
+  }
+}

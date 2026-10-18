@@ -411,11 +411,92 @@
             "file": "version-durability-interruptions.log",
             "sha256": "e0d066f4c81cd538b2e05c4d2c9c4dce1ece28f555203a42dfcd8c5b9d91a37e"
           }
-        ]
+        ],
+        "performanceReport": "performance-windows-durability-results.json"
       },
-      "macOSRuntimeValidation": "pending",
+      "macOSRuntimeValidation": "M1 resource tests 47/47 passed with verified logs; full performance matrix pending.",
       "ci": "https://github.com/HoboCY/CueNote/actions/runs/39090829180",
-      "powerLossProof": false
+      "powerLossProof": false,
+      "macOSKit": {
+        "sourceCommit": "00c1e3f825503939648326607882186410545985",
+        "ci": "https://github.com/HoboCY/CueNote/actions/runs/39090829180",
+        "ciConclusion": "success",
+        "archiveSha256": "ef1e895403289eb66ed754502b2c4a2ee4b118510a85f0f911fa23ed166b816b",
+        "receiptSha256": "394816bdaaad1a56f4921e9ef75062d35baf30718d108ffa96e6a6310e950dde",
+        "binaries": {
+          "cuenote-performance-driver": "241af0316b08e501d9f09ce3dd991ca784aefdc67e9fa835d0b352ad1b644983",
+          "performance_fixture": "3d44bd50af7303b58211bfe4a02951b527901b29dfc971f85946595ad186f778",
+          "CueNote Performance.app/Contents/MacOS/cuenote": "02f3c341828326d39c9b91758cc0ae87bf7153bf4f72feb1a47ac5981d5463c0",
+          "resource-tests/format_v1": "0e0fb9088d113b0eb009d7c6c34814b0294c12073f43a17d13e6fec384b7ffe3",
+          "resource-tests/image_content": "e5b6bba2d24d5e763af230f735d88e817dab87530cbda3534a8b5be85fa1f3ed",
+          "resource-tests/rich_content": "8cbc33b1747bd60e2874216cc4fe4186cdf521201038ec601922a7771b2ecd77",
+          "resource-tests/storage": "86a8388fead01555b16f7f2b23e03ee9130fe94c62f3df05c522effc8e64601c"
+        },
+        "binaryAndPlanHashesVerified": true,
+        "signatureIntegrity": "passed",
+        "resources": {
+          "hostedCI": false,
+          "os": "Version 26.6.2 (Build 25G83)",
+          "passed": true,
+          "scope": "Native Q52 format/image/storage regressions on this host; no UI, OneDrive or power-loss claim",
+          "sourceCommit": "00c1e3f825503939648326607882186410545985",
+          "suites": [
+            {
+              "logSha256": "0e6c0230a8ead3496d9b0a462933c1eb78d6d93fdf3a1488b9960c38310294b7",
+              "passed": true,
+              "sha256": "0e0fb9088d113b0eb009d7c6c34814b0294c12073f43a17d13e6fec384b7ffe3",
+              "suite": "format_v1"
+            },
+            {
+              "logSha256": "5a48991a0efaffbc0d36dedb9dc4413427281517a18a98f76e4c52fcf84fb504",
+              "passed": true,
+              "sha256": "e5b6bba2d24d5e763af230f735d88e817dab87530cbda3534a8b5be85fa1f3ed",
+              "suite": "image_content"
+            },
+            {
+              "logSha256": "d4343cb67ea47119f27e231a7d6ea6d3c3f7604738e060f1c518c497e2e51523",
+              "passed": true,
+              "sha256": "8cbc33b1747bd60e2874216cc4fe4186cdf521201038ec601922a7771b2ecd77",
+              "suite": "rich_content"
+            },
+            {
+              "logSha256": "50dba9f75bee6b22557c419d5367278c066575eee43b681b68104b356027fed5",
+              "passed": true,
+              "sha256": "86a8388fead01555b16f7f2b23e03ee9130fe94c62f3df05c522effc8e64601c",
+              "suite": "storage"
+            }
+          ],
+          "counts": [
+            {
+              "suite": "format_v1",
+              "passed": 14,
+              "failed": 0,
+              "ignored": 0
+            },
+            {
+              "suite": "image_content",
+              "passed": 17,
+              "failed": 0,
+              "ignored": 0
+            },
+            {
+              "suite": "rich_content",
+              "passed": 6,
+              "failed": 0,
+              "ignored": 0
+            },
+            {
+              "suite": "storage",
+              "passed": 10,
+              "failed": 0,
+              "ignored": 0
+            }
+          ],
+          "totalPassed": 47,
+          "rawLogHashesVerified": true
+        },
+        "fullPerformanceMatrix": "pending"
+      }
     }
   },
   "inputCalibration": {

@@ -71,7 +71,18 @@
         "file": "before-install-hashes.json",
         "sha256": "3ad017777013a5e78c5e65b64bf9dfda708ab0963f7c9603a5c836464cfe7701"
       }
-    ]
+    ],
+    "durabilityFollowup": {
+      "sourceCommit": "e45668880801034746cc9b5e9d43c2bb896cda85",
+      "implementationCommit": "00c1e3f825503939648326607882186410545985",
+      "timingMatrixPassed": true,
+      "metricSamples": 467,
+      "normalExits": 13,
+      "nativeContentVerified": true,
+      "nativeResourceTestsPassed": 48,
+      "backupRetryAcceptancePassed": false,
+      "report": "performance-windows-durability-results.json"
+    }
   },
   "mac": {
     "reportedChip": "Apple M1 Pro",
@@ -117,7 +128,13 @@
         "detail": "Covered target rejected; after removing overlay, real default-library click succeeded; held application Process exited normally. This does not establish full calibration or timing gates.",
         "report": "performance-macos-input-results.json"
       }
-    ]
+    ],
+    "durabilityFollowup": {
+      "sourceCommit": "00c1e3f825503939648326607882186410545985",
+      "nativeResourceTestsPassed": 47,
+      "fullPerformanceMatrix": "pending",
+      "report": "device-macos-results.json"
+    }
   },
   "cases": [
     {
@@ -256,7 +273,7 @@
       "id": "A23",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Windows Q51 and native content checks passed; Windows resource regression 47/47. M1 follow-up native resource checks 47/47; input calibration/reopen diagnostic passed, fresh-copy index 64.9s exceeds 60s. Full Mac Q51 and complete A23 remain unaccepted."
+      "notes": "Windows storage-change revalidation: 467 timing samples, 13 normal exits, native content and 48 resource checks passed; automatic-backup cancellation/retry remains separately open. M1 exact input driver passed; storage-change native resources 47/47 passed. Full Mac Q51 and complete A23 remain unaccepted."
     },
     {
       "id": "A24",
