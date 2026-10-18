@@ -28,9 +28,12 @@ pub(super) struct Checks<'a> {
     pending: BTreeMap<usize, bool>,
     workers: Vec<JoinHandle<()>>,
     cancelled: Arc<AtomicBool>,
+    #[cfg(feature = "perf-acceptance")]
+    trace: Option<Arc<crate::performance::scan_trace::ScanTrace>>,
 }
 
 impl<'a> Checks<'a> {
+    #[cfg_attr(feature = "perf-acceptance", track_caller)]
     pub fn new(
         entries: &'a [fs::DirEntry],
         cache: Option<&'a scan_cache::Cache>,
@@ -51,11 +54,15 @@ impl<'a> Checks<'a> {
         let (sender, output) = mpsc::channel();
         let mut workers = Vec::new();
         let cancelled = Arc::new(AtomicBool::new(false));
+        #[cfg(feature = "perf-acceptance")]
+        let trace = crate::performance::scan_trace::ScanTrace::new(entries.len(), count);
         for _ in 0..count {
             let receiver = Arc::clone(&receiver);
             let sender = sender.clone();
             let recovery = recovery.to_path_buf();
             let cancelled = Arc::clone(&cancelled);
+            #[cfg(feature = "perf-acceptance")]
+            let trace = trace.clone();
             if let Ok(worker) = std::thread::Builder::new()
                 .name("note-cache-check".into())
                 .spawn(move || loop {
@@ -69,11 +76,26 @@ impl<'a> Checks<'a> {
                     if cancelled.load(Ordering::Acquire) {
                         break;
                     }
+                    #[cfg(feature = "perf-acceptance")]
+                    let mut job_trace = trace
+                        .as_ref()
+                        .map(|trace| trace.job(job.index, &job.path, job.candidate.is_some()));
                     let hit = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                         job.candidate.as_ref().is_some_and(|candidate| {
-                            storage::source_matches_cached_revision(&job.path, &candidate.revision)
-                                .unwrap_or(false)
-                                && storage::versions::verify_observed_version_witness(
+                            let source_matches = storage::source_matches_cached_revision(
+                                &job.path,
+                                &candidate.revision,
+                            )
+                            .unwrap_or(false);
+                            #[cfg(feature = "perf-acceptance")]
+                            if let Some(trace) = &mut job_trace {
+                                trace.source(source_matches);
+                            }
+                            if !source_matches {
+                                return false;
+                            }
+                            let witness_matches =
+                                storage::versions::verify_observed_version_witness(
                                     &recovery,
                                     &candidate.witness,
                                     &candidate.revision,
@@ -81,10 +103,19 @@ impl<'a> Checks<'a> {
                                     &candidate.note_id,
                                     &candidate.title,
                                 )
-                                .unwrap_or(false)
+                                .unwrap_or(false);
+                            #[cfg(feature = "perf-acceptance")]
+                            if let Some(trace) = &mut job_trace {
+                                trace.witness();
+                            }
+                            witness_matches
                         })
                     }))
                     .unwrap_or(false);
+                    #[cfg(feature = "perf-acceptance")]
+                    if let Some(trace) = job_trace {
+                        trace.finish(hit);
+                    }
                     if sender.send((job.index, hit)).is_err() {
                         break;
                     }
@@ -106,6 +137,8 @@ impl<'a> Checks<'a> {
             pending: BTreeMap::new(),
             workers,
             cancelled,
+            #[cfg(feature = "perf-acceptance")]
+            trace,
         };
         for _ in 0..WINDOW.min(entries.len()) {
             checks.schedule();
@@ -151,6 +184,11 @@ impl<'a> Checks<'a> {
     // Called exactly once for each sorted directory entry, including skipped
     // extensions. Eligibility/duplicates are checked again by the scanner.
     pub fn verified(&mut self, index: usize) -> bool {
+        #[cfg(feature = "perf-acceptance")]
+        let _wait = self
+            .trace
+            .as_ref()
+            .map(|trace| trace.wait(index, self.next, self.pending.len()));
         while !self.pending.contains_key(&index) {
             match self.output.recv() {
                 Ok((index, hit)) => {
@@ -172,6 +210,10 @@ impl Drop for Checks<'_> {
         // Errors/early returns still release all handles and shared leases.
         for worker in self.workers.drain(..) {
             let _ = worker.join();
+        }
+        #[cfg(feature = "perf-acceptance")]
+        if let Some(trace) = &self.trace {
+            trace.emit();
         }
     }
 }

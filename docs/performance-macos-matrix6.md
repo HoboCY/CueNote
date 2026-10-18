@@ -12,7 +12,9 @@
 | 原生红窗 AXCloseButton / AXPress | 显示关闭前保存；取消后继续保存，正常退出并重开标题一致 |
 | NSRunningApplication.terminate | 直接退出，reason=exit、status=0；无关闭等待界面 |
 
-这不是崩溃：锁定的 Tao 0.37.1 delegate 未实现 `applicationShouldTerminate:`，原生 `terminate:` 未经过项目已有的 `CloseRequested` / `ExitRequested` 保护。修复在正式包与性能变体共用的 macOS 模块中拦截原生询问，保留原 delegate 对象与布局，转入现有异步保存/取消流程。当前实现待 Mac 编译与实机回归，不能据此宣布已修复。
+这不是崩溃：锁定的 Tao 0.37.1 delegate 未实现 `applicationShouldTerminate:`，原生 `terminate:` 未经过项目已有的 `CloseRequested` / `ExitRequested` 保护。修复在正式包与性能变体共用的 macOS 模块中拦截原生询问，保留原 delegate 对象与布局，转入现有异步保存/取消流程。
+
+后续 f6997c1 已完成 Mac 构建及独立三路回归：每条路径均在确认保存中后请求退出，重复请求仍可取消；之后保存并重开标题正确，共 6 次正常退出状态 0。每个合成库另核验 999 篇未编辑笔记、10 个笔记本字节不变，编辑包仅改变预期标题及内容时间戳。见[修复回归结果](macos-quit-regression-results.json)。这证明原生退出绕过问题的修复，不改变本页原矩阵失败结论，也不代替保存失败重试、完整 Q51 或 OneDrive 验收。
 
 只读比较第 6 轮的全部原生笔记：998 篇逐字节相同；两篇编辑笔记仅标题和内容时间戳发生变化，其余结构、身份和图片完全一致；10 个笔记本逐字节相同。压力笔记只保存到标题 41，最终标题 42 未写入原文件，也未找到含该编辑的完整恢复包。已有文件未损坏，但最后一次编辑丢失，属于阻断日用的问题。
 

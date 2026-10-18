@@ -1,0 +1,104 @@
+{
+  "format": 1,
+  "issue": 33,
+  "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+  "date": "2026-10-18",
+  "applicationPath": "D:\\Apps\\CueNote\\cuenote.exe",
+  "applicationSha256": "d01c08d6880683ba5c85e9376505d743074d2d698fde649c8ada9857b76110a4",
+  "userConfirmedManualInstallAndLaunch": true,
+  "ordinaryLibraryInitializationPassed": true,
+  "titleSaveAndReopenPassed": true,
+  "preferenceError17Reproduced": false,
+  "automaticBackupUI": "Initial missing-notes warning during empty-library initialization was followed by completed, integrity-checked automatic backup; reopened UI reported no new saved content today.",
+  "restart": {
+    "originalPid": 77576,
+    "previousCloseRequestAccepted": true,
+    "previousProcessEnded": true,
+    "previousExitCode": null,
+    "normalExitConfirmed": false,
+    "note": "Previous helper stopped on unavailable .NET exit code. Process disappearance is established; no crash or normal-exit assertion.",
+    "reopenedPid": 74792,
+    "parentPid": 11056,
+    "parentPath": "C:\\Windows\\Explorer.EXE",
+    "launch": "ShellExecute dispatched by existing Explorer window",
+    "utc": "2026-10-18T05:32:08.2322255Z"
+  },
+  "nativeNote": {
+    "noteId": "984870d1-8516-450e-855b-e5330b3a7231",
+    "sha256": "dd163abd84aa2e32fca58142e652915508401611ebf4986a68fec2e504e5c030",
+    "title": "Windows 普通启动保存验证 20261018",
+    "sections": {
+      "cue": [],
+      "content": [],
+      "summary": []
+    }
+  },
+  "interpretation": "User-launched app and Explorer restart succeeded, whereas Codex-launched AppData preference publication failed. No production path/copy fallback was applied.",
+  "scope": "Basic ordinary-package installation, empty-library initialization, title save and reopen only. Not human IME/clipboard, complete backup recovery, rich-content or OneDrive acceptance. First close exit status was unavailable, not asserted as normal.",
+  "evidence": [
+    {
+      "file": "windows-user-launch-welcome-3/inspection.json",
+      "sha256": "02345642281d53f9343b33fdbfe90a809351cb57092311225aa103d22dde6a59"
+    },
+    {
+      "file": "windows-user-launch-welcome-3/accessibility.json",
+      "sha256": "dac75f6845c3c6043cfadebcbfa05a5e49affbbcab76e06d25f07aace96cf08a"
+    },
+    {
+      "file": "windows-user-launch-welcome-3/window.png",
+      "sha256": "b27b3ae0f7b93afc90fb75a3cf990c5f0a315d4eeef119307deda97bcc44a0a8"
+    },
+    {
+      "file": "windows-user-selected-library-1/inspection.json",
+      "sha256": "66135638b7aa1f3c389f40f16d5d329bf7629ecb3df15a4546c704873809d6a5"
+    },
+    {
+      "file": "windows-user-selected-library-1/accessibility.json",
+      "sha256": "1c6f8e381327ca211f46a518f2e4006af09659fe1b04a606d96a311198100db2"
+    },
+    {
+      "file": "windows-user-selected-library-1/window.png",
+      "sha256": "52c3dd0ce37465fdf1994299d96ef3ed1255cfb88e7612331d015e5e235d3f82"
+    },
+    {
+      "file": "windows-user-initialize-1/inspection.json",
+      "sha256": "1c067ee542424a055340699200f238d868e1ebf678adc39475e2dc2c25936cde"
+    },
+    {
+      "file": "windows-user-initialize-1/accessibility.json",
+      "sha256": "5800a267180677437a97df3ff0deeeab594563f4de50054a36a1667fed6aea29"
+    },
+    {
+      "file": "windows-user-initialize-1/window.png",
+      "sha256": "d24f89259335c79e85a3849060c68cc02f9887dd6324afe8ab65a270087bd24a"
+    },
+    {
+      "file": "windows-user-title-saved-1/inspection.json",
+      "sha256": "bc9238380221edb90a37ec412884d2b07c67b1f217ddf562b3a273831f5157c4"
+    },
+    {
+      "file": "windows-user-title-saved-1/accessibility.json",
+      "sha256": "f0193112561baad5691b725fcb1c143a948b118ddaa65d1c0088d01743c0bbef"
+    },
+    {
+      "file": "windows-user-title-saved-1/window.png",
+      "sha256": "6943c021e2ef5de96700cee98a339406a19417752514b2c28fc31e629988c3e9"
+    },
+    {
+      "file": "windows-user-reopened-2/inspection.json",
+      "sha256": "80fa9a214fad3195758a19b784a24a65a161b463fc7d22c5c14793d981e37c24"
+    },
+    {
+      "file": "windows-user-reopened-2/accessibility.json",
+      "sha256": "1787eda4e0ef816b6226795464c422818b819c9ad7474da5f178ea4c2e6983fe"
+    },
+    {
+      "file": "windows-user-reopened-2/window.png",
+      "sha256": "d28082359aeb964a5407e822dd43a74a11d996643168a63b596e6ccc81280f27"
+    },
+    {
+      "file": "windows-user-reopen.json",
+      "sha256": "7b4edfe0df0a90978db1976cdcb83417828cf3e63b13bc8da5b5297031a65fe2"
+    }
+  ]
+}

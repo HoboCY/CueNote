@@ -100,10 +100,12 @@
       "installerSha256": "9bfc7cb3b3aea9dc385714c3f326213c1dc1a7c74b8af609f117802df88d83b7",
       "toolContextInstallationExitCode": 0,
       "cacheFilesPreserved": 283,
-      "ordinaryLibraryInitializationPassed": false,
       "failure": "Publishing app preferences returned Windows error 17. GetFinalPathNameByHandle showed AppData redirection into Codex LocalCache in the tool-launched environment.",
-      "independentUserLaunch": "pending; user could not find a Start Menu entry; verified installer copied to D drive for user launch",
-      "scope": "Tool-context install/start is not independent user installation acceptance. No copy/delete fallback or production path fix applied."
+      "independentUserLaunch": "passed basic empty-library initialization, title save and Explorer restart; see windows-user-launch-results.json",
+      "scope": "Tool-context install/start is not independent user installation acceptance. No copy/delete fallback or production path fix applied.",
+      "toolContextLibraryInitializationPassed": false,
+      "normalLaunchLibraryInitializationPassed": true,
+      "report": "windows-user-launch-results.json"
     }
   },
   "mac": {
@@ -184,6 +186,19 @@
       "nativeQuitProtectionPassed": false,
       "latestEditLostInSyntheticQuit": true,
       "report": "performance-macos-matrix6-results.json"
+    },
+    "nativeQuitFix": {
+      "sourceCommit": "f6997c1fcfba2fc3056c22b9e24eb6d435a02902",
+      "threeRoutesPassed": true,
+      "normalExits": 6,
+      "nativeContentVerified": true,
+      "dirtyAndFailureFollowup": "passed: dirty close, repeated quit, actual write failure, cancellation, retry and reopen",
+      "report": "macos-quit-regression-results.json",
+      "extendedNormalExits": 2
+    },
+    "savePerformanceDiagnosis": {
+      "formalOrdinarySavePassed": false,
+      "report": "performance-macos-save-diagnosis.md"
     }
   },
   "cases": [
@@ -345,7 +360,7 @@
     }
   ],
   "pending": [
-    "Initial-index durability optimization and complete frozen Q51 matrix; exact Mac driver regression passed",
+    "Mac ordinary-save performance and complete frozen Q51 matrix; native quit bypass fixed and actual-device normal/dirty/failure regressions passed",
     "Real IME and cross-application clipboard on both target devices",
     "Same-account real OneDrive round trips and conflict scenarios",
     "Full A01-A26, Q51/Q52 target-device evidence",

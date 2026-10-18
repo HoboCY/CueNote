@@ -693,6 +693,8 @@ fn rotate_observed_versions_locked(
     note_id: &str,
     origin_key: &str,
 ) {
+    #[cfg(feature = "perf-acceptance")]
+    let mut trace = crate::performance::rotation_trace::RotationTrace::new();
     let group_id = match make_group_id(note_id, origin_key) {
         Ok(group_id) => group_id,
         Err(_) => return,
@@ -721,8 +723,20 @@ fn rotate_observed_versions_locked(
         .take(VERSION_SCAN_LIMIT + 1)
         .collect::<Result<Vec<_>, _>>()
     {
-        Ok(entries) if entries.len() <= 30 => return,
-        Ok(entries) if entries.len() <= VERSION_SCAN_LIMIT => entries,
+        Ok(entries) if entries.len() <= 30 => {
+            #[cfg(feature = "perf-acceptance")]
+            if let Some(trace) = &mut trace {
+                trace.members = entries.len();
+            }
+            return;
+        }
+        Ok(entries) if entries.len() <= VERSION_SCAN_LIMIT => {
+            #[cfg(feature = "perf-acceptance")]
+            if let Some(trace) = &mut trace {
+                trace.members = entries.len();
+            }
+            entries
+        }
         _ => return,
     };
     let mut matching = Vec::new();
@@ -755,7 +769,14 @@ fn rotate_observed_versions_locked(
         {
             continue;
         }
-        let Ok(stored) = read_stored_version(versions, &id) else {
+        #[cfg(feature = "perf-acceptance")]
+        let started = trace.as_ref().map(|_| std::time::Instant::now());
+        let stored = read_stored_version(versions, &id);
+        #[cfg(feature = "perf-acceptance")]
+        if let (Some(trace), Some(started)) = (&mut trace, started) {
+            trace.parsed(started, false);
+        }
+        let Ok(stored) = stored else {
             continue;
         };
         let _ = stored;
@@ -765,6 +786,10 @@ fn rotate_observed_versions_locked(
         matching.push((id, saved_at));
     }
     matching.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
+    #[cfg(feature = "perf-acceptance")]
+    if let Some(trace) = &mut trace {
+        trace.eligible = matching.len();
+    }
     for (id, _) in matching.into_iter().skip(30) {
         if id == protected_id {
             continue;
@@ -780,7 +805,14 @@ fn rotate_observed_versions_locked(
             continue;
         }
         // Rotation removes only complete, verified, unleased observed versions.
-        if let Ok(stored) = read_stored_version(versions, &id) {
+        #[cfg(feature = "perf-acceptance")]
+        let started = trace.as_ref().map(|_| std::time::Instant::now());
+        let stored = read_stored_version(versions, &id);
+        #[cfg(feature = "perf-acceptance")]
+        if let (Some(trace), Some(started)) = (&mut trace, started) {
+            trace.parsed(started, true);
+        }
+        if let Ok(stored) = stored {
             if stored.metadata.conflict
                 || stored.metadata.note_id != note_id
                 || stored.metadata.origin_key != origin_key
@@ -795,6 +827,10 @@ fn rotate_observed_versions_locked(
                 continue;
             }
             if fs::remove_dir(&directory).is_ok() {
+                #[cfg(feature = "perf-acceptance")]
+                if let Some(trace) = &mut trace {
+                    trace.deleted += 1;
+                }
                 let _ = fs::remove_file(group.join(&id));
                 let _ = sync_directory_chain(&group);
             }

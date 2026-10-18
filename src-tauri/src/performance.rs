@@ -5,10 +5,16 @@ use std::{error::Error, fs, path::PathBuf};
 
 #[cfg(target_os = "macos")]
 pub(crate) mod macos;
+pub(crate) mod rotation_trace;
+pub(crate) mod scan_trace;
 
 use sha2::{Digest, Sha256};
 
 const IDENTIFIER: &str = "com.hobocy.cuenote.performance";
+
+pub(crate) fn trace_enabled() -> bool {
+    std::env::var_os("CUENOTE_PERF_TRACE").as_deref() == Some(std::ffi::OsStr::new("1"))
+}
 
 /// Optional coarse diagnostics. Never used as desktop acceptance measurements.
 pub(crate) struct Trace {
@@ -25,8 +31,7 @@ impl Trace {
             operation,
             start: now,
             last: now,
-            enabled: std::env::var_os("CUENOTE_PERF_TRACE").as_deref()
-                == Some(std::ffi::OsStr::new("1")),
+            enabled: trace_enabled(),
         }
     }
 

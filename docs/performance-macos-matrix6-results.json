@@ -313,9 +313,11 @@
     "harnessAttempt1": "Rejected input before editing because the diagnostic omitted NSApplication initialization; preserved separately, not counted as product failure."
   },
   "fix": {
-    "status": "implemented-awaiting-macos-build-and-runtime-verification",
+    "status": "macos-build-and-three-route-plus-dirty-save-failure-runtime-regressions-passed; full-matrix rerun pending",
     "path": "src-tauri/src/macos_quit.rs",
-    "scope": "Keep Tao delegate identity and layout; install only its missing termination query, cancel native quit and notify the existing frontend close flow. Unknown delegates/existing handlers fail setup."
+    "scope": "Keep Tao delegate identity and layout; install only its missing termination query, cancel native quit and notify the existing frontend close flow. Unknown delegates/existing handlers fail setup.",
+    "sourceCommit": "f6997c1fcfba2fc3056c22b9e24eb6d435a02902",
+    "report": "macos-quit-regression-results.json"
   },
   "evidence": [
     {

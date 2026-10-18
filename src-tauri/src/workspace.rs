@@ -3900,6 +3900,7 @@ fn emit_search_progress(
     }
 }
 
+#[cfg_attr(feature = "perf-acceptance", track_caller)]
 fn scan_library(
     library_path: &Path,
     notebooks: &BTreeMap<String, NotebookMetadata>,
@@ -3919,6 +3920,7 @@ fn scan_library(
     )
 }
 
+#[cfg_attr(feature = "perf-acceptance", track_caller)]
 fn scan_library_with_previous(
     library_path: &Path,
     notebooks: &BTreeMap<String, NotebookMetadata>,
@@ -3943,6 +3945,7 @@ fn scan_library_with_previous(
     result
 }
 
+#[cfg_attr(feature = "perf-acceptance", track_caller)]
 fn scan_library_with_previous_inner(
     library_path: &Path,
     notebooks: &BTreeMap<String, NotebookMetadata>,

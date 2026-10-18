@@ -1,0 +1,191 @@
+{
+  "sourceCommit": "f6997c1fcfba2fc3056c22b9e24eb6d435a02902",
+  "completed": true,
+  "routes": [
+    {
+      "route": "cmd-q",
+      "quitIntervalMs": 0.1287078857421875,
+      "transitionObserved": true,
+      "repeatQuitProtected": true,
+      "cancelled": true,
+      "normalExits": [
+        {
+          "exitStatusAvailable": true,
+          "normalExit": true,
+          "pid": 92088,
+          "quitRequested": true,
+          "status": 0,
+          "terminationReason": 1
+        },
+        {
+          "exitStatusAvailable": true,
+          "normalExit": true,
+          "pid": 92294,
+          "quitRequested": true,
+          "status": 0,
+          "terminationReason": 1
+        }
+      ],
+      "unchangedNotes": 999,
+      "unchangedNotebooks": 10,
+      "changed": [
+        {
+          "path": "library/notes/da509c0e-7713-4234-b8eb-ec5fd6f993d6.cuenote",
+          "sha256": "d9694067383ff67b5ac81b21a51be3f8672838c6b4c7784b67339a19c36ce922",
+          "members": [
+            {
+              "member": "document.json",
+              "paths": [
+                "/title",
+                "/timestamps/contentModifiedAt"
+              ]
+            }
+          ],
+          "title": "退出修复回归 cmd-q · SHARED-Q51-STRESS"
+        }
+      ]
+    },
+    {
+      "route": "red-window",
+      "quitIntervalMs": 225.74325013160706,
+      "transitionObserved": true,
+      "repeatQuitProtected": true,
+      "cancelled": true,
+      "normalExits": [
+        {
+          "exitStatusAvailable": true,
+          "normalExit": true,
+          "pid": 92311,
+          "quitRequested": true,
+          "status": 0,
+          "terminationReason": 1
+        },
+        {
+          "exitStatusAvailable": true,
+          "normalExit": true,
+          "pid": 92425,
+          "quitRequested": true,
+          "status": 0,
+          "terminationReason": 1
+        }
+      ],
+      "unchangedNotes": 999,
+      "unchangedNotebooks": 10,
+      "changed": [
+        {
+          "path": "library/notes/da509c0e-7713-4234-b8eb-ec5fd6f993d6.cuenote",
+          "sha256": "db6359132a197f68ce719fe07db78c218c202314917027d71f54f6dd26fdae99",
+          "members": [
+            {
+              "member": "document.json",
+              "paths": [
+                "/title",
+                "/timestamps/contentModifiedAt"
+              ]
+            }
+          ],
+          "title": "退出修复回归 red-window · SHARED-Q51-STRESS"
+        }
+      ]
+    },
+    {
+      "route": "external-terminate",
+      "quitIntervalMs": 7.8325841426849365,
+      "transitionObserved": true,
+      "repeatQuitProtected": true,
+      "cancelled": true,
+      "normalExits": [
+        {
+          "exitStatusAvailable": true,
+          "normalExit": true,
+          "pid": 92441,
+          "quitRequested": true,
+          "status": 0,
+          "terminationReason": 1
+        },
+        {
+          "exitStatusAvailable": true,
+          "normalExit": true,
+          "pid": 92549,
+          "quitRequested": true,
+          "status": 0,
+          "terminationReason": 1
+        }
+      ],
+      "unchangedNotes": 999,
+      "unchangedNotebooks": 10,
+      "changed": [
+        {
+          "path": "library/notes/da509c0e-7713-4234-b8eb-ec5fd6f993d6.cuenote",
+          "sha256": "d4ad715049443962736eaf2198e4861e03e96bc9d704e69fd28dc09eb1123014",
+          "members": [
+            {
+              "member": "document.json",
+              "paths": [
+                "/title",
+                "/timestamps/contentModifiedAt"
+              ]
+            }
+          ],
+          "title": "退出修复回归 external-terminate · SHARED-Q51-STRESS"
+        }
+      ]
+    }
+  ],
+  "scope": "Native save/quit protection on three independent frozen-library copies; not Q51 timing or OneDrive acceptance.",
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "applicationSha256": "64315b10e008ef06e568afdcd53f23d21a03771931c29f5678a27e3d0fc6b118",
+  "receiptSha256": "e00e22c334d335349b8bfe4a2cc8ac98e96e2ec00dfeaa0cca1d976c85d0d3e1",
+  "evidence": {
+    "archive": "mac-quit-regression-20261018.tar.gz",
+    "sha256": "ac3b569256246143f04a9a6729bda14da69a912a479af302d2533faef608eedb",
+    "files": 73,
+    "allHashesVerified": true
+  },
+  "dirtyAndFailureFollowup": {
+    "passed": true,
+    "sourceCommit": "f6997c1fcfba2fc3056c22b9e24eb6d435a02902",
+    "checks": [
+      "Unsaved-title Cmd+Q enters existing save/cancel flow",
+      "Repeated quit request remains cancellable",
+      "Actual directory-write error leaves original file SHA unchanged and edited title visible",
+      "Cancel quit, restore original directory permissions, native Cmd+S retry succeeds",
+      "Reopen preserves retried title and ready first image"
+    ],
+    "normalExits": [
+      {
+        "exitStatusAvailable": true,
+        "normalExit": true,
+        "pid": 95832,
+        "quitRequested": true,
+        "status": 0,
+        "terminationReason": 1
+      },
+      {
+        "exitStatusAvailable": true,
+        "normalExit": true,
+        "pid": 95864,
+        "quitRequested": true,
+        "status": 0,
+        "terminationReason": 1
+      }
+    ],
+    "recoveryScope": "Failure UI displayed the recovery draft location; draft package was not separately opened before successful retry. Does not establish complete recovery acceptance.",
+    "firstAttempt": {
+      "outcome": "driver failure: retry button outside viewport after cancellation",
+      "permissionsRestored": true,
+      "draftSavedDuringSeparateCleanup": true,
+      "cleanupExitStatusAvailable": false
+    },
+    "evidence": {
+      "archive": "mac-quit-failure-regression-20261018.tar.gz",
+      "sha256": "75d16b52cccbd6b3a995091e24905515a9726b63dc09eb60ecba0f94964d72fb",
+      "files": 57,
+      "allHashesVerified": true
+    },
+    "scope": "Focused quit protection and retry regression, not Q51 or full A01-A26 acceptance"
+  },
+  "dailyUseApproved": false
+}
