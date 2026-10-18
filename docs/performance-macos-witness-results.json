@@ -1,0 +1,95 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "hostedCI": false,
+  "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+  "applicationSha256": "b415e4b3a22742af95718355a7371ced38cca232b4282924bbca8e395315edfe",
+  "driverSha256": "f6ab5311d3ee074a1fb1ed907ece4d8493e87c29dad043d2b90aa8c4bfb43baf",
+  "diagnosticIndex": {
+    "elapsedMs": 54593.33162498474,
+    "formalQ51Sample": false,
+    "completeThreeRunGatePassed": false
+  },
+  "versionLockSideEffects": {
+    "cold": {
+      "allNames": [
+        "d288ef1620894f1ded984e1bd7f9b28aa75df3c53038a71f18b894d52b28905d.library.lock",
+        "versions.lock"
+      ],
+      "versionLocks": []
+    },
+    "secondScan": {
+      "allNames": [
+        "d288ef1620894f1ded984e1bd7f9b28aa75df3c53038a71f18b894d52b28905d.library.lock",
+        "versions.lock"
+      ],
+      "versionLocks": []
+    },
+    "scope": "Second scan does not by itself prove a cache hit."
+  },
+  "input": {
+    "ordinarySaveSamples": 32,
+    "searchSamples": 30,
+    "exactQueryStringsVerified": true,
+    "contentVerification": {
+      "notesChecked": 1000,
+      "untouchedNotesByteExact": 999,
+      "notebooksChecked": 10,
+      "editedNotes": [
+        {
+          "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+          "sha256": "6f95cc5918f276f3ba5f4fb37404969ec4fff496fa2c9e8db54fea89aacc42fc",
+          "allOtherContentAndIdentityExact": true,
+          "assetsAndManifestByteExact": true
+        }
+      ],
+      "scope": "Read-only exact package comparison after 32 title replacements and 30 exact search queries and later read-only clear-button diagnostics/reopens. Clear-search regression failed; no full regression or Q51 pass."
+    },
+    "fullRegressionPassed": false,
+    "failure": "Clear-search did not restore the list; original run later stopped on document focus/visibility loss. Independent reproduction timed out with target hovered and document/native foreground still focused."
+  },
+  "pointerExperiment": {
+    "immediateAndWaitComparisons": [
+      {
+        "mode": "immediate",
+        "samples": 3,
+        "cleared": 0
+      },
+      {
+        "mode": "hover-paint",
+        "samples": 3,
+        "cleared": 0
+      },
+      {
+        "mode": "down-paint",
+        "samples": 3,
+        "cleared": 3
+      },
+      {
+        "mode": "dwell-100ms",
+        "samples": 3,
+        "cleared": 3
+      }
+    ],
+    "activeAcknowledgment": {
+      "samples": 5,
+      "cleared": 5,
+      "normalExit": true
+    },
+    "interpretation": "Targeted :active confirmation after native down supported; waits after move alone did not help. No application DOM writes or synthetic DOM clicks."
+  },
+  "followup": {
+    "change": "Wait for original target :active before mouse-up; bound observer I/O to the remaining deadline; record guarded cleanup separately.",
+    "runtimeValidation": "Native controls, bounded timeout cleanup, normal reopen and exact package comparison passed in separately retained diagnostic runs. Full regression interrupted by unexplained focus loss.",
+    "fullPerformanceMatrix": "pending",
+    "report": "performance-macos-pointer-results.json"
+  },
+  "evidence": {
+    "archive": "mac-witness-diagnostics-20261018.tar.gz",
+    "sha256": "206a9a9e574c7c18c34dd759f013b11f1337bd07b9bb65b780ed97a3ce353a13",
+    "rawFiles": 131,
+    "allHashesVerified": true
+  },
+  "dailyUseApproved": false
+}

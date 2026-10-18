@@ -1,0 +1,115 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-18",
+  "hostedCI": false,
+  "applicationSourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+  "driverSha256": "f698563237807955dd6c4d5aa3bbeb81bee2b2f35a592d5177876561aa6795bb",
+  "driverSourceSha256": "1ac2f13d7c175f273b8911fdd4a0773fe65af7eac9123f918cea8bee79f1229f",
+  "controls": {
+    "ordinarySaveSamples": 1,
+    "mapExpandCollapseCycles": 30,
+    "searchQueries": 30,
+    "repeatedLastQuery": 1,
+    "exactQueryStringsVerified": true,
+    "clearSearchPassed": true,
+    "normalExits": 3
+  },
+  "timeoutCleanup": {
+    "cleanup": {
+      "operationFailed": true,
+      "pointerButtonMayRemainDown": false,
+      "selector": ".sidebar-search-clear:not(:active)",
+      "sessionLeftButtonDown": false,
+      "upPosted": true
+    },
+    "elapsedMs": 5015.284291028976,
+    "error": "Observation response timeout/size failure",
+    "expectedRejection": true,
+    "scope": "Timeout cleanup mouse-up may activate the clear button; it is not a successful test click.",
+    "sessionLeftButtonDownAfterWait": false,
+    "sessionReleasedAfterMs": 5015.673040866852
+  },
+  "contentVerification": {
+    "notesChecked": 1000,
+    "untouchedNotesByteExact": 999,
+    "notebooksChecked": 10,
+    "editedNotes": [
+      {
+        "noteId": "c54da484-4c2b-46d1-855f-b84ac08cb0a2",
+        "sha256": "6c978977b77a3fda06c5592677f5ea7132ff515780fee3c2ec64477666b17d87",
+        "allOtherContentAndIdentityExact": true,
+        "assetsAndManifestByteExact": true
+      }
+    ],
+    "scope": "Read-only exact package comparison after interrupted saves, final title replacement, 30 map cycles, 30 exact queries plus one repeat, clear-search and deliberate active timeout cleanup. Narrow controls passed; interrupted full regression is not Q51 evidence."
+  },
+  "resourceTests": {
+    "passed": 47,
+    "failed": 0,
+    "ignored": 0,
+    "suites": [
+      {
+        "logSha256": "cf4e2153bd7fc6626d5ec879474b26704fd1cf984c78b9009873ce4f924ee4f4",
+        "passed": true,
+        "sha256": "bfa0a56fe54c0f8ec2560be3beebb9ce4f5f216ea2bac3362685fadc53ab2e02",
+        "suite": "format_v1"
+      },
+      {
+        "logSha256": "65b6ba642b81610b428aa16d7cf2a93f7960ea43640d214bb0f202fc78a5fdb2",
+        "passed": true,
+        "sha256": "724199c22efa3a5ad8879ec9f7bdd8d3e487c8bbaf6e2af78d7ebc3b5eb171a4",
+        "suite": "image_content"
+      },
+      {
+        "logSha256": "e862bd550e49e44fba0c53992b1c92e893b830caa67c359f8681ce930ea5799d",
+        "passed": true,
+        "sha256": "3f8ba653b3042fc09526767c72aefbf3a5878e06670ad0cd40c15e8aa94a5ad8",
+        "suite": "rich_content"
+      },
+      {
+        "logSha256": "f20d5d1005078a54e44f743900c3ebae8631fc5fcc5f2448061f927b71ab2579",
+        "passed": true,
+        "sha256": "0895253af012d9b2399ba9440f4ae26bcd7c240cd3acb73df67a50243f428e09",
+        "suite": "storage"
+      }
+    ]
+  },
+  "preservedAttempts": [
+    {
+      "name": "pressed-regression-1",
+      "result": "Calibration passed; harness then selected the same first title, so dirty-title could not occur."
+    },
+    {
+      "name": "pressed-regression-2",
+      "result": "30 saves passed; document focus/visibility lost during save 31. User confirms no Mac interaction. Normal exit 0; cause unresolved."
+    },
+    {
+      "name": "pressed-controls-1",
+      "result": "Harness selected already saved title 31; dirty-title correctly timed out. No focus failure."
+    },
+    {
+      "name": "pressed-controls-2",
+      "result": "Save, 30 map cycles, 30 exact searches plus repeat and clear passed. Immediate post-mouse-up button-state assertion was premature; subsequent bounded cleanup run passed."
+    }
+  ],
+  "review": {
+    "baseline": "32688e66e0b1f3a3875eebfc5a3f20b6760a8d1e",
+    "standards": "Primary reviewed; no remaining findings.",
+    "spec": "Primary reviewed; native input and read-only observations retained, frozen plans and thresholds unchanged. Full Q51 and focus diagnosis remain open.",
+    "architecture": "Architect identified original-window cleanup, blocking connect and upPosted accounting gaps; all addressed and rereviewed."
+  },
+  "checks": {
+    "nodeTestsPassed": 136,
+    "typecheckPassed": true,
+    "macNativeCompilePassed": true
+  },
+  "evidence": {
+    "archive": "mac-pointer-controls-20261018.tar.gz",
+    "sha256": "456d761c18eccc1491400b8d7d9fa4c3c036d842e0da2f4e7563e74a44a8aea6",
+    "rawFiles": 175,
+    "allHashesVerified": true
+  },
+  "fullQ51Passed": false,
+  "dailyUseApproved": false
+}

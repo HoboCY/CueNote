@@ -150,6 +150,20 @@
       "report": "performance-macos-matrix00-results.json",
       "metricSamples": 66,
       "timingGatesPassed": false
+    },
+    "witnessFollowup": {
+      "sourceCommit": "cbd9c08293830652a2cdf066b537bbcec8481ff6",
+      "diagnosticIndexMs": 54593.33162498474,
+      "formalQ51Samples": 0,
+      "exactTitleAndSearchRegression": "32 saved titles and 30 exact queries plus native package verification passed; clear-search input remains under driver repair.",
+      "report": "performance-macos-witness-results.json"
+    },
+    "pointerFollowup": {
+      "report": "performance-macos-pointer-results.json",
+      "nativeControls": "passed in bounded diagnostic runs",
+      "resourceTestsPassed": 47,
+      "fullQ51Passed": false,
+      "focusInterruption": "Unexplained; user confirms no Mac interaction. Failure-only window/document observations added."
     }
   },
   "cases": [

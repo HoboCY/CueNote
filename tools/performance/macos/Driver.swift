@@ -86,25 +86,65 @@ final class Driver {
               String(cString: path) == text(record["exe"]), try hash(text(record["exe"])) == text(record["sha256"]) else { throw Failure("Application process or binary ownership changed") }
     }
     func foreground() throws {
-        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else { throw Failure("CueNote lost foreground focus; measurement stopped") }
+        guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else {
+            recordFocusFailure("native-foreground",observation:[:])
+            throw Failure("CueNote lost foreground focus; measurement stopped")
+        }
+    }
+    func recordFocusFailure(_ stage: String, observation: Object) {
+        let front=NSWorkspace.shared.frontmostApplication
+        var evidence:Object=["stage":stage,"expectedPid":pid,"monotonicMs":monotonicMs(),"observation":observation,
+            "foregroundPid":front?.processIdentifier ?? 0,"foregroundBundleId":front?.bundleIdentifier ?? "",
+            "targetActive":NSRunningApplication(processIdentifier:pid)?.isActive ?? false]
+        // This read happens only after failure and never changes the verdict or
+        // restores focus. Keep the failing observation distinct from the next one.
+        if !pointerButtonDown,let next=try? request("snapshot",timeoutMs:1000) {evidence["followingObservation"]=next}
+        try? append(run+"/focus-failures.jsonl",evidence)
     }
     func requireInput() throws {
         guard AXIsProcessTrusted(), CGPreflightPostEventAccess() else { throw Failure("Native input permission is unavailable. Allow the driver/Terminal in macOS Accessibility, then start a new run; no JS input fallback.") }
     }
-    func request(_ operation: String, selector: String? = nil, paint: Bool = false, override: Object? = nil) throws -> Object {
+    func request(_ operation: String, selector: String? = nil, paint: Bool = false, override: Object? = nil, timeoutMs: Double = 35000) throws -> Object {
         let fd = socket(AF_INET, SOCK_STREAM, 0); guard fd >= 0 else { throw Failure("Cannot create observation socket") }; defer { Darwin.close(fd) }
-        var timeout = timeval(tv_sec: 35, tv_usec: 0)
-        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
-        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+        guard timeoutMs.isFinite, timeoutMs>0, timeoutMs<=35000 else {throw Failure("Invalid observation timeout")}
+        let deadline=monotonicMs()+timeoutMs
+        func boundIO() throws {
+            let remaining=deadline-monotonicMs()
+            guard remaining>0 else {throw Failure("Observation deadline exceeded")}
+            let micros=Int(ceil(remaining*1000))
+            var timeout=timeval(tv_sec:time_t(micros/1_000_000),tv_usec:suseconds_t(micros%1_000_000))
+            guard setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&timeout,socklen_t(MemoryLayout<timeval>.size))==0,
+                  setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&timeout,socklen_t(MemoryLayout<timeval>.size))==0 else {throw Failure("Cannot bound observation wait")}
+        }
+        try boundIO()
         var noSignal: Int32 = 1
         setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSignal, socklen_t(MemoryLayout<Int32>.size))
         var address = sockaddr_in(); address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         address.sin_family = sa_family_t(AF_INET); address.sin_port = port.bigEndian
         address.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
+        // Darwin's blocking connect does not use SO_SNDTIMEO. Keep connection
+        // establishment within the same deadline as the observer response.
+        let flags=fcntl(fd,F_GETFL,0)
+        guard flags>=0,fcntl(fd,F_SETFL,flags|O_NONBLOCK)==0 else {throw Failure("Cannot bound observation connect")}
         let connected = withUnsafePointer(to: &address) { pointer in
             pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) }
         }
-        guard connected == 0 else { throw Failure("Cannot connect to the owned observer") }
+        if connected != 0 {
+            guard errno==EINPROGRESS || errno==EINTR else {throw Failure("Cannot connect to the owned observer")}
+            while true {
+                let remaining=deadline-monotonicMs()
+                guard remaining>0 else {throw Failure("Observation connect deadline exceeded")}
+                var pending=pollfd(fd:fd,events:Int16(POLLOUT),revents:0)
+                let ready=Darwin.poll(&pending,1,Int32(ceil(remaining)))
+                if ready<0 && errno==EINTR {continue}
+                guard ready>0,monotonicMs()<deadline else {throw Failure("Observation connect timeout/failure")}
+                var connectionError:Int32=0,length=socklen_t(MemoryLayout<Int32>.size)
+                guard getsockopt(fd,SOL_SOCKET,SO_ERROR,&connectionError,&length)==0,connectionError==0,
+                      pending.revents & Int16(POLLOUT) != 0 else {throw Failure("Cannot connect to the owned observer")}
+                break
+            }
+        }
+        guard fcntl(fd,F_SETFL,flags)==0 else {throw Failure("Cannot restore observation socket mode")}
         var payload: Object = ["token":token,"operation":operation,"paint":paint]
         if let selector { payload["selector"] = selector }
         if let override { payload = override }
@@ -112,20 +152,87 @@ final class Driver {
         try data.withUnsafeBytes { buffer in
             var offset = 0
             while offset < buffer.count {
+                try boundIO()
                 let sent = Darwin.send(fd, buffer.baseAddress!.advanced(by: offset), buffer.count-offset, 0)
                 if sent <= 0 { throw Failure("Observation request write failed") }; offset += sent
             }
         }
         var response = Data(), buffer = [UInt8](repeating: 0, count: 8192)
         while response.last != 10 {
+            try boundIO()
             let count = Darwin.recv(fd, &buffer, buffer.count, 0)
             guard count > 0, response.count + count <= 2 * 1024 * 1024 else { throw Failure("Observation response timeout/size failure") }
             response.append(contentsOf: buffer.prefix(count))
         }
+        guard monotonicMs()<deadline else {throw Failure("Observation deadline exceeded")}
         let result = try object(JSONSerialization.jsonObject(with: response))
         guard number(result["pid"]) == Double(pid) else { throw Failure("Unexpected observer PID") }
         if result["error"] != nil { throw Failure(text(result["error"])) }
         return result
+    }
+    func click(_ selector: String) throws {
+        let response=try request("element",selector:selector), state=try object(response["value"])
+        guard yes(state["visible"]),state.keys.contains("textFocus") else {throw Failure("Click target is unavailable or observer is outdated")}
+        let rect=try object(state["rect"]), x=number(rect["x"])+number(rect["width"])/2, y=number(rect["y"])+number(rect["height"])/2
+        let location=try point(response,x:x,y:y), originalWindow=pointerWindow
+        func mouse(_ kind:CGEventType) throws {
+            // A failed observation can update point()'s shared window field.
+            // All events, including cleanup, remain bound to the original hit.
+            pointerWindow=originalWindow
+            let event=CGEvent(mouseEventSource:nil,mouseType:kind,mouseCursorPosition:location,mouseButton:.left)
+            if kind != .mouseMoved {event?.setIntegerValueField(.mouseEventClickState,value:1)}
+            try post(event)
+        }
+        do {
+            try mouse(.mouseMoved);try mouse(.leftMouseDown)
+            // Posting mouse-down does not mean WKWebView has received it. In
+            // particular, an immediate mouse-up can lose a button click on M1.
+            let start=monotonicMs(),deadline=start+5000
+            while true {
+                try foreground()
+                let observed=try request("element",selector:":is("+selector+"):active",paint:true,timeoutMs:max(1,deadline-monotonicMs()))
+                guard monotonicMs()<deadline else {throw Failure("Native mouse-down was not acknowledged in time")}
+                let pressed=try object(observed["value"])
+                if !yes(pressed["missing"]) {
+                    let currentRect=try object(pressed["rect"])
+                    guard yes(pressed["visible"]),x>=number(currentRect["left"]),x<=number(currentRect["right"]),
+                          y>=number(currentRect["top"]),y<=number(currentRect["bottom"]) else {throw Failure("Pressed click target moved or became unavailable")}
+                    let currentPoint=try point(observed,x:x,y:y)
+                    guard pointerWindow==originalWindow,abs(currentPoint.x-location.x)<=1,abs(currentPoint.y-location.y)<=1 else {throw Failure("Pressed native window geometry changed")}
+                    let document=try object(request("snapshot",timeoutMs:max(1,deadline-monotonicMs()))["value"])
+                    guard monotonicMs()<deadline,yes(document["focused"]),text(document["visibility"])=="visible" else {throw Failure("Pressed document lost focus or exceeded its deadline")}
+                    try append(run+"/native-pointer.jsonl",["selector":selector,"downAcknowledged":true,"elapsedMs":monotonicMs()-start,"target":pressed])
+                    break
+                }
+                pause(5)
+            }
+            try mouse(.leftMouseUp)
+        }catch{
+            // A cleanup mouse-up can itself activate the button, so this click
+            // remains failed even if cleanup is posted successfully. Never send
+            // input to a different foreground window merely to release a button.
+            let originalError=error
+            var cleanup:Object=["selector":selector,"operationFailed":true,"upPosted":false]
+            if pointerButtonDown {
+                do {try mouse(.leftMouseUp)}
+                catch {cleanup["cleanupError"]=String(describing:error)}
+                cleanup["upPosted"] = !pointerButtonDown
+            }
+            cleanup["pointerButtonMayRemainDown"]=pointerButtonDown
+            cleanup["sessionLeftButtonDown"]=CGEventSource.buttonState(.combinedSessionState,button:.left)
+            try? append(run+"/pointer-cleanup.jsonl",cleanup)
+            throw originalError
+        }
+        if state["textFocus"] is Object {
+            let deadline=monotonicMs()+5000
+            while true {
+                try foreground()
+                let current=try object(request("element",selector:selector,paint:true)["value"])
+                if let focus=current["textFocus"] as? Object,yes(focus["focused"]) {break}
+                guard !yes(current["missing"]),monotonicMs()<deadline else {throw Failure("Native text click did not acquire focus")}
+                pause(5)
+            }
+        }
     }
     func snapshot(_ paint: Bool = false) throws -> Object { try object(request("snapshot", paint: paint)["value"]) }
     func point(_ response: Object, x: Double, y: Double) throws -> CGPoint {
@@ -290,25 +397,7 @@ final class Driver {
         try foreground()
         switch text(value["kind"]) {
         case "click":
-            let response = try request("element", selector: text(value["selector"])), state = try object(response["value"])
-            guard yes(state["visible"]) else { throw Failure("Click target is unavailable/obstructed") }
-            guard state.keys.contains("textFocus") else {throw Failure("Observer lacks native text focus observations")}
-            let rect = try object(state["rect"]), whereTo = try point(response, x:number(rect["x"])+number(rect["width"])/2, y:number(rect["y"])+number(rect["height"])/2)
-            for kind in [CGEventType.mouseMoved,.leftMouseDown,.leftMouseUp] {
-                let event=CGEvent(mouseEventSource:nil,mouseType:kind,mouseCursorPosition:whereTo,mouseButton:.left)
-                if kind != .mouseMoved {event?.setIntegerValueField(.mouseEventClickState,value:1)}
-                try post(event)
-            }
-            if state["textFocus"] is Object {
-                let deadline=monotonicMs()+5000
-                while true {
-                    try foreground()
-                    let current=try object(request("element",selector:text(value["selector"]),paint:true)["value"])
-                    if let focus=current["textFocus"] as? Object, yes(focus["focused"]) {break}
-                    guard !yes(current["missing"]), monotonicMs()<deadline else {throw Failure("Native text click did not acquire focus")}
-                    pause(5)
-                }
-            }
+            try click(text(value["selector"]))
         case "key": try key(value)
         case "text":
             let characters = Array(text(value["text"]).utf16)
@@ -349,8 +438,11 @@ final class Driver {
     func until(_ expected: Object, timeout: Double = 240000, timings: inout Object) throws -> Object {
         let start=monotonicMs(); var revealed=false, state: Object=[:]
         while monotonicMs()-start < timeout {
-            try foreground(); state=try snapshot()
-            guard text(state["visibility"]) == "visible", yes(state["focused"]) else { throw Failure("Application document lost focus/visibility") }
+            try foreground(); let observation=try request("snapshot"); state=try object(observation["value"])
+            guard text(state["visibility"]) == "visible", yes(state["focused"]) else {
+                recordFocusFailure("document",observation:observation)
+                throw Failure("Application document lost focus/visibility")
+            }
             let elapsed=monotonicMs()-start
             for threshold in [1000,2000] where elapsed >= Double(threshold) && timings["feedback\(threshold)"] == nil {
                 timings["feedback\(threshold)"]=["elapsedMs":elapsed,"save":state["save"] ?? NSNull(),"savingFeedback":state["savingFeedback"] ?? NSNull(),"progress":state["progress"] ?? NSNull()]
@@ -359,9 +451,12 @@ final class Driver {
                 try scroll(".rich-image-preview"); revealed=true; timings["firstImageScrolledMs"]=monotonicMs()-start; continue
             }
             if ready(state,expected) {
-                state=try snapshot(true)
+                let painted=try request("snapshot",paint:true); state=try object(painted["value"])
                 try foreground()
-                guard text(state["visibility"])=="visible", yes(state["focused"]), number(state["observedFrames"])==2 else {throw Failure("Paint completed without a focused visible document")}
+                guard text(state["visibility"])=="visible", yes(state["focused"]), number(state["observedFrames"])==2 else {
+                    recordFocusFailure("paint",observation:painted)
+                    throw Failure("Paint completed without a focused visible document")
+                }
                 if ready(state,expected) {timings["readyMs"]=monotonicMs()-start; return state}
             }
             pause(5)

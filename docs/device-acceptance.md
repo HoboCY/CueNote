@@ -29,6 +29,10 @@
 取消后，同会话自动重试生成完整快照；恢复及完整备份场景仍待验收。
 [Mac 验证工具](performance-macos-tools.md)已在 M1 Pro 完成更新后的四组原生资源测试 47/47，
 原始日志已回收并核对哈希；输入和截图授权已通过，UI 矩阵仍有索引超时与重复输入问题待复验。
+后续[版本读取与输入诊断](performance-macos-witness-results.json)已完成 32 次标题保存及
+30 次精确搜索；[原生点击回归](performance-macos-pointer.md)已验证导图、清空搜索及
+有界失败清理，当前资源测试 47/47。一次无人操作期间的失焦仍未定位，完整 Mac
+矩阵尚未通过。[Windows 最新复验](performance-windows-witness.md)的 467 个指标已通过。
 这些子步骤不改变普通安装包候选，也不自动勾选完整 A23 或人工编辑用例。
 
 Windows 安装/启动原始记录、备份、哈希和窗口截图保存在仓库外
