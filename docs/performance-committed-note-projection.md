@@ -19,4 +19,4 @@
 - 使用真实 128 MiB 搜索预算验证增长超限及缩小恢复；未降低测试预算或放宽资源限制。
 - 复核中另发现：打开笔记/暂存图片可先刷新笔记本元数据，单次保存前后的比较会漏掉这一变化。已用失败测试复现，并让索引记住元数据失配，只有完整扫描重新安装索引后才清除；针对性测试及最终完整回归通过。
 
-原始日志位于本机 `implementation-execution/issue-33/committed-projection-*.log`。上述结果是代码回归，尚不是新构建的 Q51 实机成绩。双端性能、Mac 失焦观察及普通安装包/OneDrive 完整验收继续进行，#33 保持开放。
+原始日志位于本机 `implementation-execution/issue-33/committed-projection-*.log`。上述结果是代码回归。随后新构建已完成 [Windows Q51 实机复验](performance-windows-committed-projection.md)：467 个指标、11 项门槛、13 次正常退出和原生内容核对通过。Mac 性能及失焦观察、同版本普通安装包与 OneDrive 完整验收继续进行，#33 保持开放。

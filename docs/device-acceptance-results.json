@@ -107,6 +107,18 @@
       "normalLaunchLibraryInitializationPassed": true,
       "report": "windows-user-launch-results.json",
       "humanEditing": "User confirmed three-section Chinese IME, independent undo/redo, two image sources, and text/images after reopening. Later reduction was intentional cleanup; see report. Full A06/A07 remains open."
+    },
+    "committedProjectionFollowup": {
+      "sourceCommit": "cf350d8451d19583072998ce3c78cdebbf7930ea",
+      "timingMatrixPassed": true,
+      "metricSamples": 467,
+      "normalExits": 13,
+      "nativeContentVerified": true,
+      "nativeResourceTestsPassed": 48,
+      "relatedNativeRegressionPassed": 242,
+      "frontendRegressionPassed": 142,
+      "report": "performance-windows-committed-projection-results.json",
+      "scope": "Independent performance variant only; same-version ordinary packages and cross-device acceptance remain open"
     }
   },
   "mac": {

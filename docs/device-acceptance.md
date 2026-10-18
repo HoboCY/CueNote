@@ -12,9 +12,10 @@
 `package-output/personal-f1308f4/Windows` 和 `Mac`，已忽略 Git。下表保留这次安装的历史结果。
 
 截至 2026-10-18 本轮检查，Windows 普通安装版已由用户安装为 `cbd9c08`，Mac 普通安装版
-仍为 `f1308f4`；两端尚未更新到同一最新候选。`3013f3c` 的独立 Windows 性能版已完成
-[467 样本实测](performance-windows-probe-yield.md)：内容核对及正常退出通过，启动和普通保存
-两项计时失败。不能以旧候选或独立性能变体的子步骤宣布当前双端日用验收通过。
+仍为 `f1308f4`；两端尚未更新到同一最新候选。`3013f3c` 的独立 Windows 性能版
+[启动与普通保存失败记录](performance-windows-probe-yield.md)保留。后续 `cf350d8` 已完成
+[467 样本实测](performance-windows-committed-projection.md)：11 项计时门槛、内容核对及
+13 次正常退出全部通过。Mac 同版本矩阵待完成，不能以独立性能变体宣布双端日用验收通过。
 
 | 记录 | Windows 目标实机 | M1 Pro 目标实机 |
 | --- | --- | --- |
