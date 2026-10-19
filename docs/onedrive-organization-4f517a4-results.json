@@ -1,0 +1,921 @@
+{
+  "date": "2026-10-20",
+  "case": "A14",
+  "windowsOrdinaryCandidate": "3518441",
+  "macOrdinaryCandidate": "4f517a4",
+  "passed": 226,
+  "failed": 0,
+  "verifiedFactFiles": 72,
+  "pairedCloudSnapshots": 7,
+  "fullRichPackages": 14,
+  "bothA14Accepted": true,
+  "scope": "Native notebook creation, Windows move/pin, Mac trash, Windows restore, independent sidebar preference; controlled synthetic note-first/book-later fixture passed through real OneDrive. No offline claim.",
+  "archive": "organization-723-760-4f517a4.tar.gz",
+  "archiveSha256": "982d9473501917bc4a422cdec4812d0fe266663e37a92d363dba64d2331a8eee",
+  "checks": [
+    {
+      "name": "fact windows-reverse-4f517a4-offline-before-699/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-offline-before-699/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-offline-before-699/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "formula untouched windows-reverse-4f517a4-offline-before-699",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged windows-reverse-4f517a4-offline-before-699",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged windows-reverse-4f517a4-offline-before-699",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged windows-reverse-4f517a4-offline-before-699",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-offline-before-699/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-offline-before-699/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "fact offline-before-720/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact offline-before-720/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact offline-before-720/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "formula untouched offline-before-720",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged offline-before-720",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged offline-before-720",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged offline-before-720",
+      "passed": true
+    },
+    {
+      "name": "rich asset offline-before-720/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset offline-before-720/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "cloud convergence offline-before-699=offline-before-720",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-converged-700/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-converged-700/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-converged-700/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-converged-700/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-converged-700/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "formula untouched windows-reverse-4f517a4-organization-converged-700",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged windows-reverse-4f517a4-organization-converged-700",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged windows-reverse-4f517a4-organization-converged-700",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged windows-reverse-4f517a4-organization-converged-700",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-converged-700/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-converged-700/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "fact organization-converged-726/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-converged-726/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-converged-726/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-converged-726/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-converged-726/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "formula untouched organization-converged-726",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged organization-converged-726",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged organization-converged-726",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged organization-converged-726",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-converged-726/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-converged-726/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "cloud convergence organization-converged-700=organization-converged-726",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-moved-pinned-704/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-moved-pinned-704/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-moved-pinned-704/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-moved-pinned-704/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-moved-pinned-704/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "formula untouched windows-reverse-4f517a4-organization-moved-pinned-704",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged windows-reverse-4f517a4-organization-moved-pinned-704",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged windows-reverse-4f517a4-organization-moved-pinned-704",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged windows-reverse-4f517a4-organization-moved-pinned-704",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-moved-pinned-704/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-moved-pinned-704/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "fact organization-moved-pinned-731/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-moved-pinned-731/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-moved-pinned-731/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-moved-pinned-731/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-moved-pinned-731/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "formula untouched organization-moved-pinned-731",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged organization-moved-pinned-731",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged organization-moved-pinned-731",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged organization-moved-pinned-731",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-moved-pinned-731/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-moved-pinned-731/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "cloud convergence organization-moved-pinned-704=organization-moved-pinned-731",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-trashed-705/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-trashed-705/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-trashed-705/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-trashed-705/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-trashed-705/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "formula untouched windows-reverse-4f517a4-organization-trashed-705",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged windows-reverse-4f517a4-organization-trashed-705",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged windows-reverse-4f517a4-organization-trashed-705",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged windows-reverse-4f517a4-organization-trashed-705",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-trashed-705/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-trashed-705/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "fact organization-trashed-745/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-trashed-745/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-trashed-745/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-trashed-745/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-trashed-745/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "formula untouched organization-trashed-745",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged organization-trashed-745",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged organization-trashed-745",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged organization-trashed-745",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-trashed-745/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-trashed-745/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "cloud convergence organization-trashed-705=organization-trashed-745",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-restored-708/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-restored-708/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-restored-708/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-restored-708/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-restored-708/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "formula untouched windows-reverse-4f517a4-organization-restored-708",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged windows-reverse-4f517a4-organization-restored-708",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged windows-reverse-4f517a4-organization-restored-708",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged windows-reverse-4f517a4-organization-restored-708",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-restored-708/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-restored-708/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "fact organization-restored-746/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-restored-746/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-restored-746/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-restored-746/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-restored-746/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "formula untouched organization-restored-746",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged organization-restored-746",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged organization-restored-746",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged organization-restored-746",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-restored-746/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-restored-746/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "cloud convergence organization-restored-708=organization-restored-746",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-note-first-711/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-note-first-711/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-note-first-711/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-note-first-711/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-note-first-711/notes/5917601f-122f-4915-a4ea-7c5353e4981f.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-note-first-711/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "formula untouched windows-reverse-4f517a4-organization-note-first-711",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged windows-reverse-4f517a4-organization-note-first-711",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged windows-reverse-4f517a4-organization-note-first-711",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged windows-reverse-4f517a4-organization-note-first-711",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-note-first-711/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-note-first-711/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "fact organization-note-open-757/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-note-open-757/notes/5917601f-122f-4915-a4ea-7c5353e4981f.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-note-open-757/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-note-open-757/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-note-open-757/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-note-open-757/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "formula untouched organization-note-open-757",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged organization-note-open-757",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged organization-note-open-757",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged organization-note-open-757",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-note-open-757/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-note-open-757/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "cloud convergence organization-note-first-711=organization-note-open-757",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-book-settled-713/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-book-settled-713/notebooks/5486c676-161e-4530-b1f4-026e73419cd4.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-book-settled-713/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-book-settled-713/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-book-settled-713/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-book-settled-713/notes/5917601f-122f-4915-a4ea-7c5353e4981f.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact windows-reverse-4f517a4-organization-book-settled-713/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "formula untouched windows-reverse-4f517a4-organization-book-settled-713",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged windows-reverse-4f517a4-organization-book-settled-713",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged windows-reverse-4f517a4-organization-book-settled-713",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged windows-reverse-4f517a4-organization-book-settled-713",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-book-settled-713/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset windows-reverse-4f517a4-organization-book-settled-713/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "fact organization-book-arrived-760/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-book-arrived-760/notes/5917601f-122f-4915-a4ea-7c5353e4981f.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-book-arrived-760/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "fact organization-book-arrived-760/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-book-arrived-760/notebooks/5486c676-161e-4530-b1f4-026e73419cd4.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-book-arrived-760/notebooks/964c965b-638b-4e87-9830-5a5ff86666f6.json",
+      "passed": true
+    },
+    {
+      "name": "fact organization-book-arrived-760/notebooks/a0f407a7-d71f-45da-8dae-2230b83cf40e.json",
+      "passed": true
+    },
+    {
+      "name": "formula untouched organization-book-arrived-760",
+      "passed": true
+    },
+    {
+      "name": "default notebook unchanged organization-book-arrived-760",
+      "passed": true
+    },
+    {
+      "name": "rich content unchanged organization-book-arrived-760",
+      "passed": true
+    },
+    {
+      "name": "rich entries unchanged organization-book-arrived-760",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-book-arrived-760/assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "rich asset organization-book-arrived-760/assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "cloud convergence organization-book-settled-713=organization-book-arrived-760",
+      "passed": true
+    },
+    {
+      "name": "both native empty notebooks arrived windows-reverse-4f517a4-",
+      "passed": true
+    },
+    {
+      "name": "move pin propagated windows-reverse-4f517a4-",
+      "passed": true
+    },
+    {
+      "name": "trash propagated windows-reverse-4f517a4-",
+      "passed": true
+    },
+    {
+      "name": "restore propagated windows-reverse-4f517a4-",
+      "passed": true
+    },
+    {
+      "name": "both native empty notebooks arrived ",
+      "passed": true
+    },
+    {
+      "name": "move pin propagated ",
+      "passed": true
+    },
+    {
+      "name": "trash propagated ",
+      "passed": true
+    },
+    {
+      "name": "restore propagated ",
+      "passed": true
+    },
+    {
+      "name": "late reference preserved windows-reverse-4f517a4-organization-note-first-711",
+      "passed": true
+    },
+    {
+      "name": "notebook arrival order windows-reverse-4f517a4-organization-note-first-711",
+      "passed": true
+    },
+    {
+      "name": "empty Mac notebook retained windows-reverse-4f517a4-organization-note-first-711",
+      "passed": true
+    },
+    {
+      "name": "late reference preserved organization-note-open-757",
+      "passed": true
+    },
+    {
+      "name": "notebook arrival order organization-note-open-757",
+      "passed": true
+    },
+    {
+      "name": "empty Mac notebook retained organization-note-open-757",
+      "passed": true
+    },
+    {
+      "name": "late reference preserved windows-reverse-4f517a4-organization-book-settled-713",
+      "passed": true
+    },
+    {
+      "name": "notebook arrival order windows-reverse-4f517a4-organization-book-settled-713",
+      "passed": true
+    },
+    {
+      "name": "empty Mac notebook retained windows-reverse-4f517a4-organization-book-settled-713",
+      "passed": true
+    },
+    {
+      "name": "late reference preserved organization-book-arrived-760",
+      "passed": true
+    },
+    {
+      "name": "notebook arrival order organization-book-arrived-760",
+      "passed": true
+    },
+    {
+      "name": "empty Mac notebook retained organization-book-arrived-760",
+      "passed": true
+    },
+    {
+      "name": "Windows unknown notebook visible readonly",
+      "passed": true
+    },
+    {
+      "name": "Mac unknown notebook visible readonly",
+      "passed": true
+    },
+    {
+      "name": "Windows notebook late arrival unlocks",
+      "passed": true
+    },
+    {
+      "name": "Mac notebook late arrival unlocks",
+      "passed": true
+    },
+    {
+      "name": "device sidebar preferences independent",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 723",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 724",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 725",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 726",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 727",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 728",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 729",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 730",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 731",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 732",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 733",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 734",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 735",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 736",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 737",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 738",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 739",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 740",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 741",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 742",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 743",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 744",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 745",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 746",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 747",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 748",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 749",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 750",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 751",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 752",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 753",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 754",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 755",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 756",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 757",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 758",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 759",
+      "passed": true
+    },
+    {
+      "name": "Mac native job 760",
+      "passed": true
+    }
+  ]
+}

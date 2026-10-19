@@ -615,9 +615,9 @@
     },
     {
       "id": "A14",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": ""
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "真实 OneDrive 普通安装版双端组织同步、迟到笔记本信息及设备偏好独立，226 项核对通过；见 onedrive-organization-4f517a4-results.json。"
     },
     {
       "id": "A15",
@@ -693,9 +693,9 @@
     }
   ],
   "pending": [
-    "A06 accepted on both devices using cumulative native editor evidence and prior explicit human IME results. Full A25/A26 offline/cross-direction/export/search requirements remain open.",
-    "079fa6e full Q51 passed on Windows and M1; two separate M1 immediate-startup save diagnostics while list-pending also passed. Full A23 Q52 UI boundaries remain open.",
-    "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and late organization metadata; one ordinary rich-note sequential round trip has passed.",
+    "A25 cumulative formula editing/cross-device/export/search evidence passed; actual offline rendering on both devices remains open. A26 is complete.",
+    "079fa6e full Q51 passed on Windows and M1; targeted Q52 preservation supplement passed on Windows. The new M1 resource suites remain pending.",
+    "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and remaining abnormal-file cases remain. Sequential round trips and A14 organization metadata are complete.",
     "Full A01-A26, Q51/Q52 target-device evidence",
     "Interactive installation, actual upgrade/uninstall data retention and remaining formal-candidate UI cases on both devices"
   ],
@@ -801,8 +801,8 @@
     "fullA09Accepted": false,
     "otherFactsUnchanged": 11
   },
-  "currentCompletedBothPlatforms": 17,
-  "currentRemainingFullCases": 9,
+  "currentCompletedBothPlatforms": 18,
+  "currentRemainingFullCases": 8,
   "autosaveAndReverseSyncFollowup": {
     "fullCasesRemaining": 13,
     "bothA10Accepted": true,
@@ -880,5 +880,12 @@
     "acceptedCase": "A19",
     "report": "macos-backup-edit-4f517a4-results.json",
     "checksPassed": 1038
+  },
+  "organizationSyncFollowup": {
+    "acceptedCase": "A14",
+    "pairedCloudSnapshots": 7,
+    "verifiedFactFiles": 72,
+    "report": "onedrive-organization-4f517a4-results.json",
+    "checksPassed": 226
   }
 }
