@@ -79,7 +79,13 @@
     "Job432 saved the failed draft but attempted extra text missed the moved editor; only Job434 is counted as later continued input.",
     "Close helper failures at424/450 are expected observations of app refusing quit; no force kill.",
     "No application exit code is claimed.",
-    "Windows corresponding current ordinary scenarios and explicit conflict behavior remain to be consolidated; full A09/A16/#33 not accepted."
+    "Mac A09 passed including the ordinary conflict supplement; Windows A09 and full A16/#33 remain open."
   ],
-  "scope": "Mac ordinary candidate autosave and real filesystem wait/failure substeps; no product change, fault build, injected IPC response or physical power-cut claim."
+  "scope": "Mac ordinary candidate autosave and real filesystem wait/failure substeps; no product change, fault build, injected IPC response or physical power-cut claim.",
+  "macA09": "通过",
+  "conflictSupplement": {
+    "report": "macos-external-conflict-4f517a4-results.json",
+    "conflictNeverClaimsSaved": true,
+    "completeDraftRestoredAndReopened": true
+  }
 }

@@ -1,0 +1,94 @@
+{
+  "format": 1,
+  "date": "2026-10-19",
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "macBinarySha256": "fc323333171cefbacd3822b1fdd6a99468b8b0a8cb23ad9715c80a22b8243df0",
+  "archive": {
+    "file": "management-through-527-4f517a4.tar.gz",
+    "sha256": "69d1c64eb31970e7250dc1beb4bdf1ebd049bce3dda2980018398922739cf924",
+    "bytes": 101476725,
+    "filesVerified": 6182
+  },
+  "originalNoteId": "30491cab-8b23-4ff7-b8c1-72dd8e2b5a02",
+  "restoredNoteId": "e4d388db-32e3-4feb-a146-2d002463c10c",
+  "revisions": {
+    "originalA": "1c1877dbbe5a8d62443046068356feffed80b06aee30c0c697f767e372437c04",
+    "cleanB": "b1e7fe05127727b258c2fe52aa99816521e6808648c8aff40e95d868db11d8b3",
+    "externalC": "258d93d96276da2b9448349b4c82f34106ea01dbd4e89e116bf0e384f0754eaf",
+    "restoredLocalD": "4205885f2f04dfe887f2d4c946b551911c0fd26d72428c4a13fa20fc501e1c85"
+  },
+  "protected": {
+    "externalSources": {
+      "1c1877dbbe5a8d62443046068356feffed80b06aee30c0c697f767e372437c04": [
+        "600772c70ca995b436f58e7520f582bbbf73571dc8785f4468aea095c74db679"
+      ],
+      "b1e7fe05127727b258c2fe52aa99816521e6808648c8aff40e95d868db11d8b3": [
+        "178354dc92b3aa435ddd8c9f161f183da5b4f7ec7c32418f94b8a021f02c9375",
+        "76074b6c1ba36996b136667aeeff18b70d36af91cf6c1094ca3f77d9baaaab72"
+      ],
+      "258d93d96276da2b9448349b4c82f34106ea01dbd4e89e116bf0e384f0754eaf": [
+        "8157b838ad826e7546816811108e41056087cb432b1a9f267ee17ab8657a5fc5",
+        "e8864314957d920e3e10d6a7a624966fe0c83cc6d05df73403e7ac8f1173a729"
+      ]
+    },
+    "localDraftVersions": [
+      "00d2f80ae819ab0ac5bcd8934de0b5157c2e106f50bcf3a693e24d54507b7b12",
+      "f06f24dd49732b661e65d8908adda4b8d25eb8eb30cecd5ef041c798f85bd916"
+    ],
+    "allAssetsVerified": true,
+    "sourceFileStillExternalC": true
+  },
+  "preview": {
+    "passed": true,
+    "snapshots": 8,
+    "facts": 80,
+    "unchangedOtherFactsPerSnapshot": 9,
+    "nativePreviewJobs": [
+      488,
+      496,
+      502
+    ],
+    "readonlyAttemptDidNotChangePreview": true,
+    "returnShowsExternalC": true,
+    "dirtyConflictNeverClaimsSaved": true,
+    "scope": "Actual installed Mac native UI; isolated external-file fixture, not OneDrive."
+  },
+  "restoration": {
+    "passed": true,
+    "snapshots": 7,
+    "facts": 77,
+    "originalFactsUnchanged": 10,
+    "newNoteId": "e4d388db-32e3-4feb-a146-2d002463c10c",
+    "restoredFromRevision": "4205885f2f04dfe887f2d4c946b551911c0fd26d72428c4a13fa20fc501e1c85",
+    "sectionsAndAllPayloadsExact": true,
+    "protectedVersionsRetained": 10,
+    "renamedIndependently": true,
+    "normalCloseJob": 520,
+    "normalReopenJob": 521,
+    "reopenAllFilesByteExact": true
+  },
+  "verifiedSelectedSnapshots": 15,
+  "verifiedSelectedFacts": 157,
+  "screenshotReviewed": "job-527-inspect/window.png",
+  "checks": [
+    "verify-external-protected.py",
+    "verify-external-preview.py",
+    "verify-external-restoration.py"
+  ],
+  "accepted": {
+    "macA09": true,
+    "fullA12": false
+  },
+  "excluded": [
+    {
+      "job": 504,
+      "reason": "WeCom PID62111 took foreground before step3; helper stopped. Completed scroll only, no completed-stage claim; resumed at506 after explicit user confirmation."
+    }
+  ],
+  "limitations": [
+    "External replacement fixture is an isolated local library, not OneDrive delivery.",
+    "Startup/refocus missed-event fallback and full real OneDrive A12 remain open.",
+    "No application exit code or physical power-cut claim.",
+    "Full Windows A09 remains open until its ordinary UI supplement is verified."
+  ]
+}

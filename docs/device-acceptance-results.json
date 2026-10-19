@@ -586,8 +586,8 @@
     {
       "id": "A09",
       "windows": "未测",
-      "mac": "未测",
-      "notes": "Mac ordinary4f517a4 idle autosave, immediate switch/quit, readonly failure/cancel/retry, real per-note-lock in-flight editing/cancel-wait/newer-save/reopen passed:23 snapshots230 facts,3 failed drafts retained. Explicit conflicts and Windows ordinary consolidation remain; full A09 open. See macos-autosave-4f517a4-results.json."
+      "mac": "通过",
+      "notes": "Mac ordinary4f517a4 idle autosave/immediate switch and quit/real readonly failure/cancel/retry/in-flight newer input and cancel-wait passed (23 snapshots230 facts); explicit native conflict never claims saved, preview/read-only/restore-to-copy and reopen passed (15 selected snapshots157 facts). Mac frozen A09 complete; Windows ordinary supplement in progress. See macos-autosave-4f517a4-results.json and macos-external-conflict-4f517a4-results.json."
     },
     {
       "id": "A10",
@@ -605,7 +605,7 @@
       "id": "A12",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Mac isolated ordinary local-file fixture clean B preserves A; dirty external C preserves local D and all obtained versions, read-only preview and independent copy/reopen verified. This is not OneDrive delivery or missed-event startup/refocus acceptance; full A12 remains open. See macos-external-conflict-4f517a4-results.json."
     },
     {
       "id": "A13",
@@ -782,5 +782,11 @@
     "macAutosaveSubstepsPassed": true,
     "fullA09Accepted": false,
     "scope": "Overall #33 open; daily use not yet approved."
+  },
+  "externalConflictFollowup": {
+    "report": "macos-external-conflict-4f517a4-results.json",
+    "macA09": "通过",
+    "fullA12": "未测",
+    "overallFullyPassedCases": 11
   }
 }
