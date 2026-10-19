@@ -683,13 +683,13 @@
       "id": "A25",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Windows079fa6e ordinary UI input/source/save/reopen substeps recorded in windows-editor-079fa6e-results.json; full cross-platform/offline/export/search case remains open."
+      "notes": "Formula types, source editing/undo/error, escaped dollars, cross-platform native package fidelity and Markdown export covered. Physical offline rendering on both ordinary installed platforms remains pending. See code-acceptance-cumulative-results.json."
     },
     {
       "id": "A26",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": "Windows079fa6e ordinary UI input/source/save/reopen substeps recorded in windows-editor-079fa6e-results.json; full cross-platform/offline/export/search case remains open."
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "Frozen A26 fulfilled cumulatively: eight-language ordinary editing, exact special characters, Mac-origin full-set real OneDrive round trip, both-platform export fences, code and formula generic search. Main re-viewed original ordinary Windows screenshot for all seven highlights and unknown plain text; Mac ordinary visual evidence already recorded. Relevant paths unchanged through3518441. No claim of new complete run, per-language search, or same-note full chain. See code-acceptance-cumulative-results.json."
     }
   ],
   "pending": [
@@ -801,8 +801,8 @@
     "fullA09Accepted": false,
     "otherFactsUnchanged": 11
   },
-  "currentCompletedBothPlatforms": 14,
-  "currentRemainingFullCases": 12,
+  "currentCompletedBothPlatforms": 15,
+  "currentRemainingFullCases": 11,
   "autosaveAndReverseSyncFollowup": {
     "fullCasesRemaining": 13,
     "bothA10Accepted": true,
@@ -861,5 +861,12 @@
     "completedBothPlatforms": 14,
     "report": "windows-backup-edit-3518441-results.json",
     "windowsA19Accepted": true
+  },
+  "codeCumulativeFollowup": {
+    "A25OfflinePendingBoth": true,
+    "bothA26Accepted": true,
+    "remainingFullCases": 11,
+    "completedBothPlatforms": 15,
+    "report": "code-acceptance-cumulative-results.json"
   }
 }

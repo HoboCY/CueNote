@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-19",
+  "case": "A26",
+  "windows": "通过",
+  "mac": "通过",
+  "mode": "Cumulative acceptance; reuse of verified ordinary evidence, not a new complete run",
+  "languages": [
+    "javascript",
+    "typescript",
+    "python",
+    "rust",
+    "csharp",
+    "sql",
+    "json",
+    "unknown"
+  ],
+  "ordinaryWindowsCandidate": "35184413dcad8e7ee14da18206101106bb82811f",
+  "ordinaryMacCandidate": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "editingSources": [
+    "079fa6e",
+    "4f517a4"
+  ],
+  "exportSources": [
+    "9760cf6",
+    "4f517a4"
+  ],
+  "fullEightLanguageRoundTrip": "Mac to Windows to Mac; native note1a7ec137-17d5-43f1-be3f-11f4fbe036c3",
+  "searchQueries": [
+    "console.log",
+    "\\frac{1}{3}"
+  ],
+  "perLanguageSearchClaim": false,
+  "sameNoteForAllStepsClaim": false,
+  "windowsHighlightingReview": {
+    "allSevenSyntaxColorsVisible": true,
+    "captureUtc": "2026-10-18T17:06:34.7185461Z",
+    "evidence": "windows-editor-079fa6e-code/window.png",
+    "unknownPlainTextVisible": true,
+    "reviewedDate": "2026-10-19",
+    "ordinaryApp": true,
+    "sha256": "a53ead51b2a2f32c2e0e64106dea1c40ce9bedd23d5d86286643b2f37651ad1c"
+  },
+  "sourceChangeScope": [
+    "task-item input rule",
+    "image focus",
+    "canonical publication journal"
+  ],
+  "evidence": [
+    {
+      "file": "windows-editor-079fa6e-results.json",
+      "sha256": "94d153220d9676168eb3892b009e9785d62c7bd51c78bef52e7e01128bc79b59"
+    },
+    {
+      "file": "macos-editor-4f517a4-results.json",
+      "sha256": "4043aaced6fc08361839ffb5d9a71542e1082964bddd367bd9666ebc68b86e0b"
+    },
+    {
+      "file": "onedrive-reverse-4f517a4-results.json",
+      "sha256": "1f9b0d754f394f6c1c5d64c8f8731b9dbdfe119324e34e698472b85b35650c73"
+    },
+    {
+      "file": "windows-markdown-export-9760cf6-results.json",
+      "sha256": "db2e97a1452c546c04323858ac3536e35a7fbd1b4b66cf79dc067e7b590fda7f"
+    },
+    {
+      "file": "macos-markdown-export-4f517a4-results.json",
+      "sha256": "7c774fca1d8e61ae4c36ce67848cbc2a42cbd15b78d21a73741b918f013ca131"
+    },
+    {
+      "file": "windows-functional-followup-9760cf6-results.json",
+      "sha256": "9cb1545f037685be4030654caa5223370f1e0e4b9949c82e4db43d51b48df49a"
+    },
+    {
+      "file": "macos-management-4f517a4-results.json",
+      "sha256": "95d2d12c16a5a65a0cc6b25a5b9e28193612ee0d9a9e6d063e4a20c1ded3bdeb"
+    }
+  ],
+  "independentReview": {
+    "scope": "Frozen A25/A26 evidence mapping; no new GUI or tests",
+    "hasMore": false,
+    "status": "Completed",
+    "taskId": "7393b6d2d4164feb8321d2ced91aa9f9",
+    "cursor": 210
+  },
+  "A25OfflineRenderingStillPendingOnBoth": true,
+  "bothCompleted": 15,
+  "remainingFullCases": 11,
+  "dailyUseApproved": false
+}
