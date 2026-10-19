@@ -639,9 +639,9 @@
     },
     {
       "id": "A18",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json. Mac ordinary GUI automatic/manual backup outside OneDrive observed; same-day saves retain one automatic backup. Native rotation evidence remains separate; full case not promoted."
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "Cumulative native history/31-day rotation evidence on both devices reused with unchanged backup modules. Mac ordinary scheduling already verified; Windows4f517a4 now observed one automatic, no duplicate after same-day native save, independent manual snapshot outside OneDrive, exact manifest/file checks. See windows-backup-restore-4f517a4-results.json and macos-backup-restore-ui-4f517a4-results.json."
     },
     {
       "id": "A19",
@@ -651,9 +651,9 @@
     },
     {
       "id": "A20",
-      "windows": "未测",
+      "windows": "失败",
       "mac": "未测",
-      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json. Mac ordinary single-note restore57 checks passed; exact source document/assets restored, complete pre-restore manual backup retains edit. Whole-library preview/cancel preserves4 active facts and21 backup files; replacement not executed because foreign window covered input. Initial two comparisons selected the wrong code note and are not product failures. See macos-backup-restore-ui-4f517a4-results.json."
+      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json. Mac ordinary single-note restore57 checks passed; exact source document/assets restored, complete pre-restore manual backup retains edit. Whole-library preview/cancel preserves4 active facts and21 backup files; replacement not executed because foreign window covered input. Initial two comparisons selected the wrong code note and are not product failures. See macos-backup-restore-ui-4f517a4-results.json. Windows ordinary single-note restore passed, including full pre-restore snapshot and source assets. Whole-library confirmation returned publication-journal unsafePath before backup/replacement; all4 library facts and13 backup files unchanged. Fix pending; no whole-restore pass claim."
     },
     {
       "id": "A21",
@@ -800,8 +800,8 @@
     "fullA09Accepted": false,
     "otherFactsUnchanged": 11
   },
-  "currentCompletedBothPlatforms": 13,
-  "currentRemainingFullCases": 13,
+  "currentCompletedBothPlatforms": 14,
+  "currentRemainingFullCases": 12,
   "autosaveAndReverseSyncFollowup": {
     "fullCasesRemaining": 13,
     "bothA10Accepted": true,
@@ -820,5 +820,14 @@
     "wholeRestoreExecuted": false,
     "wholeRestoreCancellationPassed": true,
     "singleNoteRestoreSubstepPassed": true
+  },
+  "windowsBackupRestoreFollowup": {
+    "passedChecks": 71,
+    "fullCasesRemaining": 12,
+    "fullA18Accepted": true,
+    "report": "windows-backup-restore-4f517a4-results.json",
+    "wholeRestorePassed": false,
+    "singleRestorePassed": true,
+    "completedBothPlatforms": 14
   }
 }

@@ -39,6 +39,41 @@ fn native_files(root: &Path) -> BTreeMap<String, Vec<u8>> {
     files
 }
 
+#[cfg(windows)]
+fn write_pending_intent(recovery: &Path, intent: &serde_json::Value) -> (PathBuf, Vec<u8>) {
+    let journal = recovery.join(".pending-publications");
+    fs::create_dir_all(&journal).unwrap();
+    let path = journal.join(format!("{}.json", uuid::Uuid::new_v4().simple()));
+    let bytes = serde_json::to_vec(intent).unwrap();
+    fs::write(&path, &bytes).unwrap();
+    (path, bytes)
+}
+
+#[cfg(windows)]
+fn unrelated_pending_intent(other_library: &Path) -> serde_json::Value {
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let notes = other_library.join("notes");
+    let target = notes.join(format!("{note_id}.cuenote"));
+    let candidate = notes.join(format!(
+        ".cuenote-candidate-{}.tmp",
+        uuid::Uuid::new_v4().simple()
+    ));
+    let displaced = notes.join(format!(
+        ".cuenote-publish-backup-{}.tmp",
+        uuid::Uuid::new_v4().simple()
+    ));
+    serde_json::json!({
+        "version": 1,
+        "note_id": note_id,
+        "target": target,
+        "candidate": candidate,
+        "displaced": displaced,
+        "expected_revision": "1".repeat(64),
+        "candidate_revision": "2".repeat(64),
+        "directory_identity": "synthetic-unobserved-directory"
+    })
+}
+
 struct InterruptedFixture {
     _temp: tempfile::TempDir,
     workspace: Workspace,
@@ -447,6 +482,90 @@ fn whole_library_restore_protects_current_facts_and_reopens_the_exact_source_set
     assert_eq!(session.text.title, "Source note");
     assert_eq!(session.text.content, "Source body before replacement");
     assert_eq!(native_files(&library), source_facts);
+}
+
+#[cfg(windows)]
+#[test]
+fn unrelated_pending_publication_does_not_block_other_library_restore() {
+    let mut fixture = interrupted_fixture();
+    let recovery = fixture._temp.path().join("recovery");
+    let other_library = fixture
+        ._temp
+        .path()
+        .join("ordinary-win-management-9760cf6/library");
+    let (record_path, record_bytes) =
+        write_pending_intent(&recovery, &unrelated_pending_intent(&other_library));
+    assert_ne!(
+        fs::canonicalize(&recovery).unwrap(),
+        recovery,
+        "the recovery root must remain in non-extended form to exercise the Windows journal-path regression"
+    );
+
+    let job = fixture.control.begin_job(None).unwrap();
+    let restored = fixture
+        .workspace
+        .restore_library_from_backup(
+            &fixture.source_id,
+            &fixture.manifest_revision,
+            "2026-10-15",
+            &job,
+        )
+        .unwrap();
+    assert_eq!(native_files(&fixture.library), fixture.source_facts);
+    assert_eq!(
+        fs::read(&record_path).unwrap(),
+        record_bytes,
+        "unrelated pending publication bytes must remain untouched"
+    );
+    assert!(restored.workspace.library_restore.is_none());
+}
+
+#[cfg(windows)]
+#[test]
+fn related_pending_publication_with_changed_directory_blocks_library_restore() {
+    let mut fixture = interrupted_fixture();
+    let recovery = fixture._temp.path().join("recovery");
+    let library = fs::canonicalize(&fixture.library).unwrap();
+    let (record_path, record_bytes) =
+        write_pending_intent(&recovery, &unrelated_pending_intent(&library));
+    let job = fixture.control.begin_job(None).unwrap();
+    let error = fixture
+        .workspace
+        .restore_library_from_backup(
+            &fixture.source_id,
+            &fixture.manifest_revision,
+            "2026-10-15",
+            &job,
+        )
+        .unwrap_err();
+    assert_eq!(error.kind, "unsafePath");
+    assert!(error.message.contains("目录身份已变化"));
+    assert_eq!(native_files(&fixture.library), fixture.before_facts);
+    assert_eq!(fs::read(record_path).unwrap(), record_bytes);
+}
+
+#[cfg(windows)]
+#[test]
+fn malformed_unrelated_pending_publication_still_blocks_library_restore() {
+    let mut fixture = interrupted_fixture();
+    let recovery = fixture._temp.path().join("recovery");
+    let other_library = fixture._temp.path().join("OtherLibrary");
+    let mut intent = unrelated_pending_intent(&other_library);
+    intent["candidate"] = serde_json::json!(other_library.join("outside-notes.tmp"));
+    let (record_path, record_bytes) = write_pending_intent(&recovery, &intent);
+    let job = fixture.control.begin_job(None).unwrap();
+    let error = fixture
+        .workspace
+        .restore_library_from_backup(
+            &fixture.source_id,
+            &fixture.manifest_revision,
+            "2026-10-15",
+            &job,
+        )
+        .unwrap_err();
+    assert_eq!(error.kind, "unsafePath");
+    assert_eq!(native_files(&fixture.library), fixture.before_facts);
+    assert_eq!(fs::read(record_path).unwrap(), record_bytes);
 }
 
 #[test]

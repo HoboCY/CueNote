@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-19",
+  "trigger": "Ordinary Windows whole-library restore with valid pending single-note records from another library",
+  "rootCause": "Journal was constructed before canonicalizing recovery_root; Windows verbatim prefix caused validate_intent parent-path mismatch",
+  "fix": "Enumerate journal from canonical recovery root; validation and record retention unchanged",
+  "reproduction": {
+    "errorKind": "unsafePath",
+    "command": "cargo test --offline --locked --manifest-path src-tauri/Cargo.toml --test library_restore unrelated_pending_publication_does_not_block_other_library_restore -- --nocapture",
+    "testSeconds": 0.19,
+    "failedBeforeFix": true
+  },
+  "validation": {
+    "failed": 0,
+    "command": "cargo test --offline --locked --manifest-path src-tauri/Cargo.toml --lib --test library_restore --test storage --test backup_restore --test backups",
+    "ignored": 0,
+    "unsafeRecordStillBlocks": true,
+    "relatedUnresolvedRecordStillBlocks": true,
+    "passed": 107,
+    "newRegressionTests": 4,
+    "unrelatedValidRecordPreserved": true,
+    "changedDirectoryStillBlocks": true,
+    "formatCheckPassed": true
+  },
+  "logs": [
+    {
+      "sha256": "dafdac53d4f6a8fdfba8cb0db1d5bda9caf5fcac3c63f653ce4ba308e585943c",
+      "file": "red-main.txt"
+    },
+    {
+      "sha256": "000862c6d0bbc5aaff8b50f297703856301af29be7f40e4adef4239e7a91d68c",
+      "file": "green-final-main.txt"
+    }
+  ],
+  "ordinaryCandidateRetestPassed": false,
+  "scope": "Local Windows regression only; packaging and ordinary Windows/Mac follow-up remain separate."
+}

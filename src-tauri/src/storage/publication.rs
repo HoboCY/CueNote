@@ -855,6 +855,8 @@ pub(crate) fn ensure_no_pending_publications(
         Ok(_) => {}
     }
     let recovery_root = canonical_recovery_root(recovery_root)?;
+    // Windows adds a verbatim prefix; enumerate and validate the same path form.
+    let journal = recovery_root.join(JOURNAL_DIRECTORY);
     let library = fs::canonicalize(library)
         .map_err(|error| StorageError::io("无法解析待恢复笔记库", error))?;
     let mut records = Vec::new();
@@ -1400,6 +1402,42 @@ fn canonical_recovery_root(path: &Path) -> Result<PathBuf, StorageError> {
         ));
     }
     fs::canonicalize(path).map_err(|error| StorageError::io("无法解析本机恢复目录", error))
+}
+
+#[cfg(test)]
+#[test]
+fn unresolved_owned_publication_still_blocks_library_restore() {
+    let temp = tempfile::tempdir().unwrap();
+    let recovery = temp.path().join("recovery");
+    let journal = recovery.join(JOURNAL_DIRECTORY);
+    let library = temp.path().join("Library");
+    fs::create_dir_all(&journal).unwrap();
+    fs::create_dir_all(library.join("notes")).unwrap();
+    let notes = fs::canonicalize(library.join("notes")).unwrap();
+    let directory = StableDirectory::open(&notes).unwrap();
+    let note_id = Uuid::new_v4().to_string();
+    let candidate = notes.join(format!(
+        ".cuenote-candidate-{}.tmp",
+        Uuid::new_v4().simple()
+    ));
+    let intent = Intent {
+        version: INTENT_VERSION,
+        target: notes.join(format!("{note_id}.cuenote")),
+        note_id,
+        displaced: Some(candidate.clone()),
+        candidate,
+        expected_revision: Some("1".repeat(64)),
+        candidate_revision: "2".repeat(64),
+        directory_identity: directory.identity.clone(),
+    };
+    let record = journal.join(format!("{}.json", Uuid::new_v4().simple()));
+    let bytes = serde_json::to_vec(&intent).unwrap();
+    fs::write(&record, &bytes).unwrap();
+    let error = ensure_no_pending_publications(&recovery, &library).unwrap_err();
+    assert_eq!(error.kind, "publish");
+    assert!(error.message.contains("状态不确定"));
+    assert_eq!(fs::read(record).unwrap(), bytes);
+    assert_eq!(fs::read_dir(&notes).unwrap().count(), 0);
 }
 
 fn remove_intent(path: &Path) -> Result<(), StorageError> {

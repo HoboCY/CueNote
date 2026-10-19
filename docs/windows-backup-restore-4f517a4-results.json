@@ -1,0 +1,42 @@
+{
+  "date": "2026-10-19",
+  "candidateSource": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "ordinaryBinarySha256": "ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68",
+  "verification": {
+    "failed": 0,
+    "sha256": "92459020a3c32118efe81e5dc49c74848f72846a1b27237ccc6f93e60f03f30a",
+    "localReport": "windows-backup-restore-665-results.json",
+    "passed": 71
+  },
+  "automaticBackup": {
+    "manifestFilesVerified": true,
+    "count": 1,
+    "outsideOneDrive": true,
+    "sameDayNativeSaveDidNotDuplicate": true
+  },
+  "singleNoteRestore": {
+    "actualConfirmationTargetVerified": true,
+    "originalBackupsUnchanged": true,
+    "fullDocumentAndAssetsRestored": true,
+    "completePreRestoreBackupRetainsNativeEdit": true,
+    "passed": true
+  },
+  "wholeLibraryRestore": {
+    "preReplacementFailure": true,
+    "fixVerified": false,
+    "backupFilesUnchanged": 13,
+    "passed": false,
+    "attempted": true,
+    "libraryFactsUnchanged": 4,
+    "error": "发布恢复记录中的目标或候选路径不符合安全边界；原记录已保留。"
+  },
+  "normalClose": {
+    "requested": true,
+    "processEnded": true,
+    "exitCode": null
+  },
+  "fullA18Accepted": true,
+  "fullA19Accepted": false,
+  "fullA20Accepted": false,
+  "scope": "A18 cumulative with existing dual-device native rotation evidence and Mac ordinary evidence. Single restore is a passed Windows substep. Whole replacement failed before writes; issue33 remains open."
+}
