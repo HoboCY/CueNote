@@ -24,14 +24,14 @@ cpSync(path.join(release, 'bundle/macos/CueNote Performance.app'), app, { recurs
 run('cargo', ['build','--locked','--release','--manifest-path','src-tauri/Cargo.toml','--target',input.target,'--example','performance_fixture']);
 copyFileSync(path.join(release,'examples/performance_fixture'), path.join(delivery,'performance_fixture'));
 run('codesign', ['--force','--sign','-',path.join(delivery,'performance_fixture')]);
-const suites=['format_v1','image_content','rich_content','storage'];
+const suites=['format_v1','image_content','rich_content','storage','mind_map_content','resource_preservation'];
 const compiled=capture('cargo',['test','--locked','--release','--no-run','--manifest-path','src-tauri/Cargo.toml',
   '--target',input.target,...suites.flatMap(name=>['--test',name]),'--message-format=json'],{maxBuffer:20*1024*1024});
 const testArtifacts=compiled.split(/\r?\n/u).filter(Boolean).map(line=>JSON.parse(line))
   .filter(row=>row.reason==='compiler-artifact' && row.profile.test && row.executable && suites.includes(row.target.name));
 mkdirSync(path.join(delivery,'resource-tests'));
 if(testArtifacts.length!==suites.length || new Set(testArtifacts.map(row=>row.target.name)).size!==suites.length)
-  throw new Error('Expected all four resource test binaries');
+  throw new Error(`Expected all ${suites.length} resource test binaries`);
 for(const artifact of testArtifacts) {
   const dest=path.join(delivery,'resource-tests',artifact.target.name);
   copyFileSync(artifact.executable,dest); run('codesign',['--force','--sign','-',dest]);

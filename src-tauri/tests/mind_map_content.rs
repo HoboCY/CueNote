@@ -5,14 +5,10 @@ use cuenote_lib::storage;
 use cuenote_lib::workspace::Workspace;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
+mod support;
 
 fn workspace_temp() -> tempfile::TempDir {
-    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("target/testdata");
-    std::fs::create_dir_all(&base).unwrap();
-    tempfile::Builder::new()
-        .prefix("mind-map-content-")
-        .tempdir_in(base)
-        .unwrap()
+    support::tempdir("mind-map-content-")
 }
 
 fn selected_workspace(temp: &tempfile::TempDir) -> (Workspace, PathBuf) {
@@ -300,7 +296,14 @@ fn preflight_enforces_the_aggregate_map_node_budget_across_maps_and_images() {
     );
     assert_eq!(
         workspace
-            .preflight_note_content(&exact_reopened.session_id, over_budget)
+            .preflight_note_content(&exact_reopened.session_id, over_budget.clone())
+            .unwrap_err()
+            .kind,
+        "resource_limit"
+    );
+    assert_eq!(
+        workspace
+            .save_note_content(&exact_reopened.session_id, over_budget)
             .unwrap_err()
             .kind,
         "resource_limit"

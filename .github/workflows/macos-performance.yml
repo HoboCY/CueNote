@@ -18,6 +18,8 @@ on:
       - 'src-tauri/tests/image_content.rs'
       - 'src-tauri/tests/rich_content.rs'
       - 'src-tauri/tests/storage.rs'
+      - 'src-tauri/tests/mind_map_content.rs'
+      - 'src-tauri/tests/resource_preservation.rs'
       - 'src-tauri/tests/support/**'
   workflow_dispatch:
 

@@ -83,7 +83,7 @@ func resources(kit: String, base: String) throws {
     try localPath(kit); try localPath(base); try directory(base)
     try createExclusive(base+"/.cuenote-resource-tests",Data("CueNote isolated resource tests v1\n".utf8))
     let receipt=try read(kit+"/receipt.json"), binaries=try object(receipt["binaries"])
-    let suites=["format_v1","image_content","rich_content","storage"]
+    let suites=["format_v1","image_content","rich_content","storage","mind_map_content","resource_preservation"]
     guard (receipt["resourceSuites"] as? [String])==suites else {throw Failure("Missing frozen resource suites")}
     var env=ProcessInfo.processInfo.environment
     env["CUENOTE_ACCEPTANCE_TEST_ROOT"]=base
@@ -100,7 +100,7 @@ func resources(kit: String, base: String) throws {
         }
         try write(base+"/results.json",["sourceCommit":receipt["sourceCommit"] ?? "", "os":ProcessInfo.processInfo.operatingSystemVersionString,
             "suites":results,"passed":true,"hostedCI":env["RUNNER_ENVIRONMENT"]=="github-hosted",
-            "scope":"Native Q52 format/image/storage regressions on this host; no UI, OneDrive or power-loss claim"])
+            "scope":"Native Q52 format/image/mind-map/storage/external-resource regressions on this host; no UI, OneDrive or power-loss claim"])
     } catch {
         try? write(base+"/results.json",["suites":results,"passed":false,"error":String(describing:error)])
         throw error
