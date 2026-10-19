@@ -623,7 +623,7 @@
       "id": "A15",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Real Mac OneDrive transient unreadable state displayed actual cloud-download reason, kept protected drafts, and reopened valid files after explicit retry without blank overwrite. Full placeholder/offline/external-deletion/corrupt/future-version/missing-image matrix remains open."
+      "notes": "Real Mac OneDrive transient unreadable state displayed actual cloud-download reason, kept protected drafts, and reopened valid files after explicit retry without blank overwrite. Full placeholder/offline/external-deletion/corrupt/future-version/missing-image matrix remains open. 2026-10-20 真实 OneDrive 外部删除：两端均不创建空文件，各保留2份完整版本，共4份文档/附件核对通过；见 onedrive-external-delete-4f517a4-results.json。仍未通过整个A15。"
     },
     {
       "id": "A16",
@@ -669,9 +669,9 @@
     },
     {
       "id": "A23",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": "079fa6e: both target devices passed the full Q51 timing matrix, 11/11 gates and 467 samples each. Windows startup max783.76ms, 13 normal exits, 48 native resource tests. M1 matrix11 startup max2744.83ms, 15 normal exits, 47 native resource tests. All 1000 notes and 10 notebooks checked on each device. Full Q52 UI boundaries and full A23 remain unaccepted."
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "Q51 两端各467样本、11/11门槛复用；Q52 Windows复用48项加新增8项，M1实际设备60760ee六套55项全部通过，0失败0跳过。资源测试含支持性回归，不等同于相同数量的独立边界。原始日志经主执行人哈希核验，独立静态复核无阻断；见 resource-preservation-60760ee-results.json。"
     },
     {
       "id": "A24",
@@ -694,9 +694,7 @@
   ],
   "pending": [
     "A25 cumulative formula editing/cross-device/export/search evidence passed; actual offline rendering on both devices remains open. A26 is complete.",
-    "079fa6e full Q51 passed on Windows and M1; targeted Q52 preservation supplement passed on Windows. The new M1 resource suites remain pending.",
     "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and remaining abnormal-file cases remain. Sequential round trips and A14 organization metadata are complete.",
-    "Full A01-A26, Q51/Q52 target-device evidence",
     "Interactive installation, actual upgrade/uninstall data retention and remaining formal-candidate UI cases on both devices"
   ],
   "syncReadiness": {
@@ -801,8 +799,8 @@
     "fullA09Accepted": false,
     "otherFactsUnchanged": 11
   },
-  "currentCompletedBothPlatforms": 18,
-  "currentRemainingFullCases": 8,
+  "currentCompletedBothPlatforms": 19,
+  "currentRemainingFullCases": 7,
   "autosaveAndReverseSyncFollowup": {
     "fullCasesRemaining": 13,
     "bothA10Accepted": true,
@@ -887,5 +885,13 @@
     "verifiedFactFiles": 72,
     "report": "onedrive-organization-4f517a4-results.json",
     "checksPassed": 226
+  },
+  "resourcePreservationFollowup": {
+    "acceptedCase": "A23",
+    "macTests": 55,
+    "windowsSupplementTests": 8,
+    "report": "resource-preservation-60760ee-results.json",
+    "windowsReusedTests": 48,
+    "independentReview": "Static code and evidence mapping, no blockers; actual logs verified by main agent"
   }
 }

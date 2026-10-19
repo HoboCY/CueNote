@@ -1,0 +1,43 @@
+{
+  "bothSourcesAbsentDuringCheck": true,
+  "scope": "Actual OneDrive deletion of a synthetic active note; both ordinary apps report removal, retain complete protected versions and do not recreate empty files. Other A15 scenarios remain.",
+  "fullA15Accepted": false,
+  "passed": true,
+  "versions": [
+    {
+      "reason": "笔记库中取得的有效版本",
+      "fullDocumentAndAssetsMatch": true,
+      "conflict": false,
+      "sha256": "97862152967ba78a98b96ddd5ba1334c051e26a28165d9329608b1c239318dab",
+      "platform": "windows",
+      "versionId": "05806337c90a0a2997a6f744fed7c9a7704946a937afcc616d248a0f217eef6f"
+    },
+    {
+      "reason": "外部变化前的编辑基线",
+      "fullDocumentAndAssetsMatch": true,
+      "conflict": true,
+      "sha256": "97862152967ba78a98b96ddd5ba1334c051e26a28165d9329608b1c239318dab",
+      "platform": "windows",
+      "versionId": "3733cb34a78a8f1f02a0cae466dbd56a56e76268f3f67114710179c24787ea52"
+    },
+    {
+      "reason": "笔记库中取得的有效版本",
+      "fullDocumentAndAssetsMatch": true,
+      "conflict": false,
+      "sha256": "b959e3fea718cb69e35864c709ffd36a2e762dc1958be0f1705c002e0aa1e8b1",
+      "platform": "mac",
+      "versionId": "02f9a804315ec8368e7bf82c24c31572c365dc8c089855920d65213645c2e587"
+    },
+    {
+      "reason": "外部变化前的编辑基线",
+      "fullDocumentAndAssetsMatch": true,
+      "conflict": true,
+      "sha256": "b959e3fea718cb69e35864c709ffd36a2e762dc1958be0f1705c002e0aa1e8b1",
+      "platform": "mac",
+      "versionId": "9b84c1af413386c3efde5e306e2fd41e871c44b5f1fd204837da0e6f28bea1bf"
+    }
+  ],
+  "heldOriginalSha256": "33b42671dc83d080b1c12c205c04aed53838d1b67984d40cb907f06cf86f5682",
+  "noteId": "5917601f-122f-4915-a4ea-7c5353e4981f",
+  "date": "2026-10-20"
+}

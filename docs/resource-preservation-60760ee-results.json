@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-20",
+  "sourceCommit": "60760ee835590dc7fb3f5daf2c89a5987d59543e",
+  "productionCodeChanged": false,
+  "frozenQ51": {
+    "windowsReport": "performance-windows-startup-current-results.json",
+    "bothPassed": true,
+    "gatesPerDevice": 11,
+    "rerun": false,
+    "macReport": "performance-macos-matrix11-results.json",
+    "samplesPerDevice": 467
+  },
+  "windows": {
+    "cumulativeTestsPassed": 56,
+    "newResourceTests": {
+      "mind_map_content": 6,
+      "resource_preservation": 2,
+      "ignored": 0,
+      "failed": 0,
+      "logSha256": "1d2380baf0a6c1feaae8d027e3454f56b001555910600b230509488754a6d33b"
+    },
+    "reusedResourceTests": {
+      "sourceCommit": "079fa6e76511aa9bea1e79edb1221a8d5bba768f",
+      "suites": [
+        {
+          "suite": "format_v1",
+          "passed": 14,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "suite": "image_content",
+          "passed": 17,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "suite": "rich_content",
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "suite": "storage",
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "totalPassed": 48,
+      "failed": 0,
+      "ignored": 0,
+      "scope": "Same Windows host, native Q52 suites included in the 292-test perf-acceptance and storage-fault-injection feature run before timing; not UI resource-boundary acceptance."
+    }
+  },
+  "mac": {
+    "githubRunId": 39281928648,
+    "kitArchiveSha256": "1b7b42147a51c3d4917092daf85ee13bb3f8bd3f7e92e86a7080d683eca9010d",
+    "ignored": 0,
+    "memoryBytes": 17179869184,
+    "resultsSha256": "0a98f0b7f5d3dcb83f2345a36c6bbb311a5d5f23e12f5dceb5847b3931aa77e6",
+    "testsPassed": 55,
+    "receiptSha256": "0e7c639352b4e8f756cd5cc8c709ea6a08c06ea9b2f79807848026d0567285bf",
+    "architecture": "arm64",
+    "failed": 0,
+    "result": {
+      "hostedCI": false,
+      "os": "Version 26.6.2 (Build 25G83)",
+      "passed": true,
+      "scope": "Native Q52 format/image/mind-map/storage/external-resource regressions on this host; no UI, OneDrive or power-loss claim",
+      "sourceCommit": "60760ee835590dc7fb3f5daf2c89a5987d59543e",
+      "suites": [
+        {
+          "logSha256": "06b8ad42dc48649d00485d7649140dfccb5efd1abfe090df7afe102e23b7cdf0",
+          "passed": true,
+          "sha256": "bff14b97197809cfe6daec05aeaff621841f25934b98ac6495559bbe7c1dbe39",
+          "suite": "format_v1",
+          "testsPassed": 14
+        },
+        {
+          "logSha256": "4d07eae45593922b3d264b7a0e079b8337c44b47ba2117bb72fe6e95872d122e",
+          "passed": true,
+          "sha256": "cce26ff1986d60d25134a1be293571cfbf080f14b646d1c617084c06b18f06ca",
+          "suite": "image_content",
+          "testsPassed": 17
+        },
+        {
+          "logSha256": "cad29a0c4bec34a8ad9e812391891b20f8e5b34b8ceac43949e264c63a4ef213",
+          "passed": true,
+          "sha256": "a4ad22ac1aab62efb05ac6aeac9985f0a9bc4af4e0418aff6d6a7dabc4ff714f",
+          "suite": "rich_content",
+          "testsPassed": 6
+        },
+        {
+          "logSha256": "ed019eb7f0a866cf34a682c141963c2bb2183f27097013e35e80baa95175a648",
+          "passed": true,
+          "sha256": "2b034f03282a1ab47f46426e3ae0bb171a8e4501ec6bdd1c7e6336ef28288266",
+          "suite": "storage",
+          "testsPassed": 10
+        },
+        {
+          "logSha256": "0c4ae16c7bb0a5775ebc92d8b1d9106ab875155fad436f83e0bcddacd3d92c45",
+          "passed": true,
+          "sha256": "676751389a6c3049bac3f2d54ac981e3cbeabac1be79b1333b392652c20a92b4",
+          "suite": "mind_map_content",
+          "testsPassed": 6
+        },
+        {
+          "logSha256": "5eb9d173d77383fb0186638951d3b1769d3a004a5c0d954a8ff03cc106eb912f",
+          "passed": true,
+          "sha256": "992d34960dea967550c2ee1421257381906da8b7ce491db58bef525464ef3779",
+          "suite": "resource_preservation",
+          "testsPassed": 2
+        }
+      ]
+    },
+    "cpu": "Apple M1 Pro"
+  },
+  "scope": "Cumulative frozen Q51 performance and native Q52 boundary/preservation evidence on both actual devices. Counts include supporting storage/rich-content tests; not all are separate boundary checks. No OneDrive/offline or installation lifecycle claim."
+}
