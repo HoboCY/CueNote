@@ -1,0 +1,1129 @@
+{
+  "report": "windows-autosave-4f517a4-results",
+  "generatedAt": "2026-10-19T04:15:06.9058484Z",
+  "evidenceRoot": "C:\\Users\\Hobo\\.codex\\visualizations\\2026\\10\\10\\01a12393-3b57-76e3-afff-50bd8ef5f539\\implementation-execution\\issue-33",
+  "evidenceSubdir": "mac-management-4f517a4",
+  "exeSha256": "ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68",
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "method": "独立断言脚本用 .NET System.IO.Compression 打开全部 .cuenote ZIP（document.json/assets/manifest.json 及资产 SHA），重算 native-snapshot 全文件 SHA/字节，逐项核对 accessibility.json 与只读 UIA。",
+  "assertionScript": "C:/Users/Hobo/.codex/visualizations/2026/10/10/01a12393-3b57-76e3-afff-50bd8ef5f539/implementation-execution/issue-33/mac-management-4f517a4/windows-a09-verifier/verify-windows-a09-4f517a4.ps1",
+  "fullMachineResults": "C:/Users/Hobo/.codex/visualizations/2026/10/10/01a12393-3b57-76e3-afff-50bd8ef5f539/implementation-execution/issue-33/mac-management-4f517a4/windows-a09-verifier/verify-windows-a09-4f517a4.results.json",
+  "machineLog": "C:/Users/Hobo/.codex/visualizations/2026/10/10/01a12393-3b57-76e3-afff-50bd8ef5f539/implementation-execution/issue-33/mac-management-4f517a4/windows-a09-verifier/verify-windows-a09-4f517a4.log",
+  "summary": {
+    "total": 164,
+    "pass": 162,
+    "fail": 0,
+    "notTested": 2
+  },
+  "overall": "PASS_WITH_UNTESTED",
+  "windowsA09FullyPassed": false,
+  "blockers": [
+    "explicit conflict case not retested (A09 cannot be marked fully passed)",
+    "observable unsaved-close completion path not established (foreground guard error; close causality ambiguous; only full reopen proven)"
+  ],
+  "notTested": [
+    {
+      "id": "lim-explicit-conflict",
+      "desc": "explicit conflict case retested",
+      "detail": "NOT TESTED: assignment states 明确冲突尚未补测; no conflict evidence in the allowed inputs"
+    },
+    {
+      "id": "lim-unsaved-close-path",
+      "desc": "observable unsaved-close completion path proven",
+      "detail": "NOT TESTED: Alt+F4 plan returned foreground guard error; program exit and 005 persisted 2026-10-19T03:57:52.338Z cannot be attributed strictly to an automation close; reopened only proves full reopen; no a09 failed-close success dir"
+    }
+  ],
+  "stages": [
+    {
+      "stage": "initial",
+      "diskMarkers": "—",
+      "noteSha256": "—",
+      "uiaMemoryMarkers": "—",
+      "uiaStatus": "—"
+    },
+    {
+      "stage": "new",
+      "diskMarkers": "空",
+      "noteSha256": "325ad05b5f4b058e7597ce33a01b2af1132f37932349555391ff63ceb4fdf509",
+      "uiaMemoryMarkers": "—",
+      "uiaStatus": "—"
+    },
+    {
+      "stage": "idle",
+      "diskMarkers": "001",
+      "noteSha256": "be922eaf99bf99910f2031c3b4ee758b5b54b631412fb9916301b9b44a2e79e2",
+      "uiaMemoryMarkers": "001",
+      "uiaStatus": "已保存到本地"
+    },
+    {
+      "stage": "switched",
+      "diskMarkers": "001,002",
+      "noteSha256": "0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614",
+      "uiaMemoryMarkers": "列表摘要001,002；返回后另行核对编辑区",
+      "uiaStatus": "已保存到本地"
+    },
+    {
+      "stage": "returned",
+      "diskMarkers": "001,002",
+      "noteSha256": "0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614",
+      "uiaMemoryMarkers": "001,002",
+      "uiaStatus": "已保存到本地"
+    },
+    {
+      "stage": "wait",
+      "diskMarkers": "001,002",
+      "noteSha256": "0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614",
+      "uiaMemoryMarkers": "001,002,003",
+      "uiaStatus": "正在保存… / 无已保存到本地"
+    },
+    {
+      "stage": "newer",
+      "diskMarkers": "001,002",
+      "noteSha256": "0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614",
+      "uiaMemoryMarkers": "001,002,003,004",
+      "uiaStatus": "正在保存… / 无已保存到本地"
+    },
+    {
+      "stage": "switch-wait",
+      "diskMarkers": "001,002",
+      "noteSha256": "0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614",
+      "uiaMemoryMarkers": "001,002,003,004",
+      "uiaStatus": "正在保存… / 无已保存到本地"
+    },
+    {
+      "stage": "switch-cancelled",
+      "diskMarkers": "001,002",
+      "noteSha256": "0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614",
+      "uiaMemoryMarkers": "001,002,003,004",
+      "uiaStatus": "正在保存… / 无已保存到本地"
+    },
+    {
+      "stage": "close-wait",
+      "diskMarkers": "001,002",
+      "noteSha256": "0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614",
+      "uiaMemoryMarkers": "001,002,003,004",
+      "uiaStatus": "正在保存… / 无已保存到本地"
+    },
+    {
+      "stage": "close-cancelled",
+      "diskMarkers": "001,002",
+      "noteSha256": "0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614",
+      "uiaMemoryMarkers": "001,002,003,004",
+      "uiaStatus": "正在保存… / 无已保存到本地"
+    },
+    {
+      "stage": "latest-saved",
+      "diskMarkers": "001,002,003,004",
+      "noteSha256": "c3015d10c0eceff8def0f433833ce49fc5152e0a0f75021ec2e725666bfe4470",
+      "uiaMemoryMarkers": "001,002,003,004",
+      "uiaStatus": "已保存到本地"
+    },
+    {
+      "stage": "occupied-failed",
+      "diskMarkers": "001,002,003,004",
+      "noteSha256": "c3015d10c0eceff8def0f433833ce49fc5152e0a0f75021ec2e725666bfe4470",
+      "uiaMemoryMarkers": "001,002,003,004,005",
+      "uiaStatus": "保存失败，请保留当前内容 + os error 32 / 无已保存"
+    },
+    {
+      "stage": "reopened",
+      "diskMarkers": "001,002,003,004,005",
+      "noteSha256": "5be26531cbe00e2c8cdbfbfaf55a0d22d15368c4dc645cd365bc5b764a98a0ba",
+      "uiaMemoryMarkers": "—",
+      "uiaStatus": "已保存到本地（只读 UIA：PID 48204，五标记齐全）"
+    }
+  ],
+  "assertions": [
+    {
+      "id": "files-initial",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=11 mismatches="
+    },
+    {
+      "id": "zipdocs-initial",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=9 books=2 issues="
+    },
+    {
+      "id": "assets-initial",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-initial",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=9 notes=9"
+    },
+    {
+      "id": "c8-note-initial",
+      "desc": "test note absent in initial snapshot",
+      "status": "PASS",
+      "detail": "matchedFiles="
+    },
+    {
+      "id": "files-new",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-new",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-new",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-new",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-new",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-idle",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-idle",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-idle",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-idle",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-idle",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-switched",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-switched",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-switched",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-switched",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-switched",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-returned",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-returned",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-returned",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-returned",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-returned",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-wait",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-wait",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-wait",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-wait",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-wait",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-newer",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-newer",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-newer",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-newer",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-newer",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-switch-wait",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-switch-wait",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-switch-wait",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-switch-wait",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-switch-wait",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-switch-cancelled",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-switch-cancelled",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-switch-cancelled",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-switch-cancelled",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-switch-cancelled",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-close-wait",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-close-wait",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-close-wait",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-close-wait",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-close-wait",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-close-cancelled",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-close-cancelled",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-close-cancelled",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-close-cancelled",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-close-cancelled",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-latest-saved",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=12 mismatches="
+    },
+    {
+      "id": "zipdocs-latest-saved",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-latest-saved",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-latest-saved",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-latest-saved",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-occupied-failed",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=13 mismatches="
+    },
+    {
+      "id": "zipdocs-occupied-failed",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-occupied-failed",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-occupied-failed",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-occupied-failed",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "files-reopened",
+      "desc": "native-snapshot file hashes/lengths match disk",
+      "status": "PASS",
+      "detail": "n=13 mismatches="
+    },
+    {
+      "id": "zipdocs-reopened",
+      "desc": "ZIP document.json matches native-snapshot notes (id/title/modified/texts)",
+      "status": "PASS",
+      "detail": "notes=10 books=2 issues="
+    },
+    {
+      "id": "assets-reopened",
+      "desc": "ZIP asset SHA/byteLength match manifest",
+      "status": "PASS",
+      "detail": "assetIssues=0"
+    },
+    {
+      "id": "notecount-reopened",
+      "desc": "native .cuenote count equals snapshot notes count (tmp excluded)",
+      "status": "PASS",
+      "detail": ".cuenote=10 notes=10"
+    },
+    {
+      "id": "c8-note-reopened",
+      "desc": "test note c8e46c7c-5699-4e9e-a2da-4f664aba5c21 present with expected title",
+      "status": "PASS",
+      "detail": "title=Windows 自动保存与关闭保护 · 4f517a4"
+    },
+    {
+      "id": "markers-disk-new",
+      "desc": "test note on-disk markers exactly ",
+      "status": "PASS",
+      "detail": "actual= sha=325ad05b5f4b058e7597ce33a01b2af1132f37932349555391ff63ceb4fdf509"
+    },
+    {
+      "id": "markers-disk-idle",
+      "desc": "test note on-disk markers exactly 0",
+      "status": "PASS",
+      "detail": "actual=0 sha=be922eaf99bf99910f2031c3b4ee758b5b54b631412fb9916301b9b44a2e79e2"
+    },
+    {
+      "id": "markers-disk-switched",
+      "desc": "test note on-disk markers exactly 0,1",
+      "status": "PASS",
+      "detail": "actual=0,1 sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "markers-disk-returned",
+      "desc": "test note on-disk markers exactly 0,1",
+      "status": "PASS",
+      "detail": "actual=0,1 sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "markers-disk-wait",
+      "desc": "test note on-disk markers exactly 0,1",
+      "status": "PASS",
+      "detail": "actual=0,1 sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "markers-disk-newer",
+      "desc": "test note on-disk markers exactly 0,1",
+      "status": "PASS",
+      "detail": "actual=0,1 sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "markers-disk-switch-wait",
+      "desc": "test note on-disk markers exactly 0,1",
+      "status": "PASS",
+      "detail": "actual=0,1 sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "markers-disk-switch-cancelled",
+      "desc": "test note on-disk markers exactly 0,1",
+      "status": "PASS",
+      "detail": "actual=0,1 sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "markers-disk-close-wait",
+      "desc": "test note on-disk markers exactly 0,1",
+      "status": "PASS",
+      "detail": "actual=0,1 sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "markers-disk-close-cancelled",
+      "desc": "test note on-disk markers exactly 0,1",
+      "status": "PASS",
+      "detail": "actual=0,1 sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "markers-disk-latest-saved",
+      "desc": "test note on-disk markers exactly 0,1,2,3",
+      "status": "PASS",
+      "detail": "actual=0,1,2,3 sha=c3015d10c0eceff8def0f433833ce49fc5152e0a0f75021ec2e725666bfe4470"
+    },
+    {
+      "id": "markers-disk-occupied-failed",
+      "desc": "test note on-disk markers exactly 0,1,2,3",
+      "status": "PASS",
+      "detail": "actual=0,1,2,3 sha=c3015d10c0eceff8def0f433833ce49fc5152e0a0f75021ec2e725666bfe4470"
+    },
+    {
+      "id": "markers-disk-reopened",
+      "desc": "test note on-disk markers exactly 0,1,2,3,4",
+      "status": "PASS",
+      "detail": "actual=0,1,2,3,4 sha=5be26531cbe00e2c8cdbfbfaf55a0d22d15368c4dc645cd365bc5b764a98a0ba"
+    },
+    {
+      "id": "stable-initial",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-idle",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-switched",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-returned",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-wait",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-newer",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-switch-wait",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-switch-cancelled",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-close-wait",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-close-cancelled",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-latest-saved",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-occupied-failed",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "stable-reopened",
+      "desc": "other 11 notes/notebooks unchanged vs new",
+      "status": "PASS",
+      "detail": "changed= extra="
+    },
+    {
+      "id": "wait-keep-002-switched",
+      "desc": "switched keeps returned 002 file",
+      "status": "PASS",
+      "detail": "sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "wait-keep-002-wait",
+      "desc": "wait keeps returned 002 file",
+      "status": "PASS",
+      "detail": "sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "wait-keep-002-newer",
+      "desc": "newer keeps returned 002 file",
+      "status": "PASS",
+      "detail": "sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "wait-keep-002-switch-wait",
+      "desc": "switch-wait keeps returned 002 file",
+      "status": "PASS",
+      "detail": "sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "wait-keep-002-switch-cancelled",
+      "desc": "switch-cancelled keeps returned 002 file",
+      "status": "PASS",
+      "detail": "sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "wait-keep-002-close-wait",
+      "desc": "close-wait keeps returned 002 file",
+      "status": "PASS",
+      "detail": "sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "wait-keep-002-close-cancelled",
+      "desc": "close-cancelled keeps returned 002 file",
+      "status": "PASS",
+      "detail": "sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "uia-saved-idle",
+      "desc": "idle UIA shows '已保存到本地' and no in-flight",
+      "status": "PASS",
+      "detail": "saved=True saving=0"
+    },
+    {
+      "id": "uia-saved-switched",
+      "desc": "switched UIA shows '已保存到本地' and no in-flight",
+      "status": "PASS",
+      "detail": "saved=True saving=0"
+    },
+    {
+      "id": "uia-saved-returned",
+      "desc": "returned UIA shows '已保存到本地' and no in-flight",
+      "status": "PASS",
+      "detail": "saved=True saving=0"
+    },
+    {
+      "id": "uia-saved-latest-saved",
+      "desc": "latest-saved UIA shows '已保存到本地' and no in-flight",
+      "status": "PASS",
+      "detail": "saved=True saving=0"
+    },
+    {
+      "id": "uia-memory-switched",
+      "desc": "switched UIA visible editor text contains markers 0,1",
+      "status": "PASS",
+      "detail": "type=ControlType.ListItem bounds=223,729,192,74"
+    },
+    {
+      "id": "uia-memory-close-wait",
+      "desc": "close-wait UIA visible editor text contains markers 0,1,2,3",
+      "status": "PASS",
+      "detail": "type=ControlType.Text bounds=791,699,569,39"
+    },
+    {
+      "id": "uia-memory-returned",
+      "desc": "returned UIA visible editor text contains markers 0,1",
+      "status": "PASS",
+      "detail": "type=ControlType.ListItem bounds=223,729,192,74"
+    },
+    {
+      "id": "uia-memory-close-cancelled",
+      "desc": "close-cancelled UIA visible editor text contains markers 0,1,2,3",
+      "status": "PASS",
+      "detail": "type=ControlType.Text bounds=791,699,569,39"
+    },
+    {
+      "id": "uia-memory-switch-wait",
+      "desc": "switch-wait UIA visible editor text contains markers 0,1,2,3",
+      "status": "PASS",
+      "detail": "type=ControlType.Text bounds=791,699,569,39"
+    },
+    {
+      "id": "uia-memory-switch-cancelled",
+      "desc": "switch-cancelled UIA visible editor text contains markers 0,1,2,3",
+      "status": "PASS",
+      "detail": "type=ControlType.Text bounds=791,699,569,39"
+    },
+    {
+      "id": "uia-memory-occupied-failed",
+      "desc": "occupied-failed UIA visible editor text contains markers 0,1,2,3,4",
+      "status": "PASS",
+      "detail": "type=ControlType.Text bounds=791,699,569,60"
+    },
+    {
+      "id": "uia-memory-wait",
+      "desc": "wait UIA visible editor text contains markers 0,1,2",
+      "status": "PASS",
+      "detail": "type=ControlType.Text bounds=791,699,569,39"
+    },
+    {
+      "id": "uia-memory-idle",
+      "desc": "idle UIA visible editor text contains markers 0",
+      "status": "PASS",
+      "detail": "type=ControlType.ListItem bounds=223,729,192,74"
+    },
+    {
+      "id": "uia-memory-latest-saved",
+      "desc": "latest-saved UIA visible editor text contains markers 0,1,2,3",
+      "status": "PASS",
+      "detail": "type=ControlType.ListItem bounds=223,729,192,74"
+    },
+    {
+      "id": "uia-memory-newer",
+      "desc": "newer UIA visible editor text contains markers 0,1,2,3",
+      "status": "PASS",
+      "detail": "type=ControlType.Text bounds=791,699,569,39"
+    },
+    {
+      "id": "uia-inflight-wait",
+      "desc": "wait UIA shows 正在保存 and not 已保存到本地",
+      "status": "PASS",
+      "detail": "saving=3 saved=False"
+    },
+    {
+      "id": "uia-inflight-newer",
+      "desc": "newer UIA shows 正在保存 and not 已保存到本地",
+      "status": "PASS",
+      "detail": "saving=3 saved=False"
+    },
+    {
+      "id": "uia-inflight-switch-wait",
+      "desc": "switch-wait UIA shows 正在保存 and not 已保存到本地",
+      "status": "PASS",
+      "detail": "saving=5 saved=False"
+    },
+    {
+      "id": "uia-inflight-switch-cancelled",
+      "desc": "switch-cancelled UIA shows 正在保存 and not 已保存到本地",
+      "status": "PASS",
+      "detail": "saving=3 saved=False"
+    },
+    {
+      "id": "uia-inflight-close-wait",
+      "desc": "close-wait UIA shows 正在保存 and not 已保存到本地",
+      "status": "PASS",
+      "detail": "saving=5 saved=False"
+    },
+    {
+      "id": "uia-inflight-close-cancelled",
+      "desc": "close-cancelled UIA shows 正在保存 and not 已保存到本地",
+      "status": "PASS",
+      "detail": "saving=3 saved=False"
+    },
+    {
+      "id": "uia-switch-prompt",
+      "desc": "switch-wait shows cancelable switch prompt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "uia-close-prompt",
+      "desc": "close-wait shows cancelable close prompt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "uia-draft-kept-switch-cancelled",
+      "desc": "switch-cancelled keeps unsaved draft 003/004 after cancel",
+      "status": "PASS",
+      "detail": "bounds=791,699,569,39"
+    },
+    {
+      "id": "uia-draft-kept-close-cancelled",
+      "desc": "close-cancelled keeps unsaved draft 003/004 after cancel",
+      "status": "PASS",
+      "detail": "bounds=791,699,569,39"
+    },
+    {
+      "id": "uia-failed-text",
+      "desc": "occupied-failed shows exact '保存失败，请保留当前内容'",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "uia-failed-exact-old",
+      "desc": "no node is exactly '保存失败' (old exact assertion impossible)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "uia-failed-wildcard",
+      "desc": "corrected wildcard 保存失败* self-check matches existing UIA",
+      "status": "PASS",
+      "detail": "matches=2"
+    },
+    {
+      "id": "uia-failed-os32",
+      "desc": "occupied-failed shows os error 32 and recovery preserved",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "uia-failed-no-saved",
+      "desc": "occupied-failed does not show 已保存到本地",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "inspection-sha",
+      "desc": "all 13 stages run ordinary exe sha ed2391ed... (pid 39092)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "reopened-fileonly",
+      "desc": "reopened has no accessibility/inspection/window.png",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "reopened-now",
+      "desc": "reopened test note saved 001..005",
+      "status": "PASS",
+      "detail": "modified=2026-10-19T03:57:52.338Z"
+    },
+    {
+      "id": "reopened-time",
+      "desc": "reopened 005 persisted at 2026-10-19T03:57:52.338Z",
+      "status": "PASS",
+      "detail": "modified=2026-10-19T03:57:52.338Z"
+    },
+    {
+      "id": "history-count",
+      "desc": "history has 5 snapshots",
+      "status": "PASS",
+      "detail": "0a15938f=0,1; 325ad05b=; bb1482fc=0,1,2; be922eaf=0; c3015d10=0,1,2,3"
+    },
+    {
+      "id": "history-inflight",
+      "desc": "one genuine in-flight snapshot has 003 without 004",
+      "status": "PASS",
+      "detail": "bb1482fc31426d9fc57a9013b33d8991c754c2fc573b1bc6b386824461e7e180.cuenote modified=2026-10-19T03:55:57.265Z"
+    },
+    {
+      "id": "history-no-005",
+      "desc": "no history snapshot contains 005",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "history-matches-idle",
+      "desc": "history contains idle save (0)",
+      "status": "PASS",
+      "detail": "sha=be922eaf99bf99910f2031c3b4ee758b5b54b631412fb9916301b9b44a2e79e2"
+    },
+    {
+      "id": "history-matches-switched",
+      "desc": "history contains switched save (0,1)",
+      "status": "PASS",
+      "detail": "sha=0a15938feab4dae32fb4afa5494a0e8afc637d26cf423774638f8a3ea9c23614"
+    },
+    {
+      "id": "history-matches-latest-saved",
+      "desc": "history contains latest-saved save (0,1,2,3)",
+      "status": "PASS",
+      "detail": "sha=c3015d10c0eceff8def0f433833ce49fc5152e0a0f75021ec2e725666bfe4470"
+    },
+    {
+      "id": "failed-draft",
+      "desc": "failed-drafts has one complete 001..005 draft",
+      "status": "PASS",
+      "detail": "draft-96bf44b8c9fe408688be26cac07e9fd8.cuenote modified=2026-10-19T03:57:27.053Z markers=0,1,2,3,4"
+    },
+    {
+      "id": "tmp-occupied-failed",
+      "desc": "occupied-failed preserves candidate .tmp with complete 005",
+      "status": "PASS",
+      "detail": "sha=e4ec7169d1488e97c82a17d4279319df671de771391b4e4920b0ddbd9726a886 markers=0,1,2,3,4"
+    },
+    {
+      "id": "tmp-reopened",
+      "desc": "reopened preserves candidate .tmp with complete 005",
+      "status": "PASS",
+      "detail": "sha=e4ec7169d1488e97c82a17d4279319df671de771391b4e4920b0ddbd9726a886 markers=0,1,2,3,4"
+    },
+    {
+      "id": "tmp-not-native-note",
+      "desc": "candidate .tmp counted/recorded separately, not as native note",
+      "status": "PASS",
+      "detail": "filesListed=True"
+    },
+    {
+      "id": "plans-no-ctrls",
+      "desc": "no input plan uses key code 83 (Ctrl+S)",
+      "status": "PASS",
+      "detail": "plans=13"
+    },
+    {
+      "id": "plans-idle",
+      "desc": "idle plan is text 001 + wait (no key)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "plans-switch",
+      "desc": "switch plan is text 002 + click open-note (no key)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "plans-close",
+      "desc": "close-wait plan uses Alt+F4 (code 115 mod 18)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "plans-cancel",
+      "desc": "cancel plans click 取消切换 / 取消关闭",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "scope-dirs",
+      "desc": "exactly the 14 expected a09 dirs (no failed-close/occupied-close success dir)",
+      "status": "PASS",
+      "detail": "windows-editor-4f517a4-a09-close-cancelled, windows-editor-4f517a4-a09-close-wait, windows-editor-4f517a4-a09-idle, windows-editor-4f517a4-a09-initial, windows-editor-4f517a4-a09-latest-saved, windows-editor-4f517a4-a09-new, windows-editor-4f517a4-a09-newer, windows-editor-4f517a4-a09-occupied-failed, windows-editor-4f517a4-a09-reopened, windows-editor-4f517a4-a09-returned, windows-editor-4f517a4-a09-switch-cancelled, windows-editor-4f517a4-a09-switch-wait, windows-editor-4f517a4-a09-switched, windows-editor-4f517a4-a09-wait"
+    },
+    {
+      "id": "lock-acquired",
+      "desc": "real OS lock acquired with exclusion self-check",
+      "status": "PASS",
+      "detail": "pid=50200 lock=C:\\Users\\Hobo\\AppData\\Local\\com.hobocy.cuenote\\recovery\\.locks\\9657c58a4a8cc3d689d2f1fd2a0aea54517842f18e01f052900e44c13d301908.lock"
+    },
+    {
+      "id": "lock-released",
+      "desc": "lock explicitly released",
+      "status": "PASS",
+      "detail": "releasedUtc=10/19/2026 03:56:47"
+    },
+    {
+      "id": "receipt-shas",
+      "desc": "occupied source sha unchanged 001..004 (c3015d10)",
+      "status": "PASS",
+      "detail": "before=c3015d10c0eceff8def0f433833ce49fc5152e0a0f75021ec2e725666bfe4470 after=c3015d10c0eceff8def0f433833ce49fc5152e0a0f75021ec2e725666bfe4470"
+    },
+    {
+      "id": "receipt-order",
+      "desc": "acquired < released < occupied start < end",
+      "status": "PASS",
+      "detail": "acq=10/19/2026 03:55:42 rel=10/19/2026 03:56:47 start=10/19/2026 03:57:25 end=10/19/2026 03:57:28"
+    },
+    {
+      "id": "lock-stdio",
+      "desc": "lock stdout/stderr empty (no hidden error text)",
+      "status": "PASS",
+      "detail": "stdout=0 stderr=0"
+    },
+    {
+      "id": "reopen-uia-verify",
+      "desc": "read-only UIA verification: pid 48204, no foreground, five markers",
+      "status": "PASS",
+      "detail": "pid=48204 foreground=False markers=True"
+    },
+    {
+      "id": "reopen-uia-markers",
+      "desc": "read-only UIA independently contains all five markers",
+      "status": "PASS",
+      "detail": "found=5/5"
+    },
+    {
+      "id": "lim-original-exact",
+      "desc": "original occupied script asserts exact 保存失败 (suffix makes it abort early)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "lim-corrected-wildcard",
+      "desc": "corrected script uses 保存失败* wildcard (self-checked, not rerun)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "lim-explicit-conflict",
+      "desc": "explicit conflict case retested",
+      "status": "NOT_TESTED",
+      "detail": "NOT TESTED: assignment states 明确冲突尚未补测; no conflict evidence in the allowed inputs"
+    },
+    {
+      "id": "lim-unsaved-close-path",
+      "desc": "observable unsaved-close completion path proven",
+      "status": "NOT_TESTED",
+      "detail": "NOT TESTED: Alt+F4 plan returned foreground guard error; program exit and 005 persisted 2026-10-19T03:57:52.338Z cannot be attributed strictly to an automation close; reopened only proves full reopen; no a09 failed-close success dir"
+    }
+  ],
+  "artifactOriginalDirectory": "C:\\Users\\Hobo\\AppData\\Local\\AgentDock\\data\\engine\\94405d157b7142bba67dfe7068588fc5-83b13922\\runtime\\check-artifacts",
+  "fullMachineResultsSha256": "6b73ef42010aaa34de7c37ccf85bd563fa9ed0029cbcbafec1795697476f6c4d",
+  "unchangedOtherFacts": {
+    "notes": 9,
+    "notebooks": 2,
+    "totalFiles": 11
+  }
+}

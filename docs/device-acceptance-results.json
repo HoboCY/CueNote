@@ -587,7 +587,7 @@
       "id": "A09",
       "windows": "未测",
       "mac": "通过",
-      "notes": "Mac ordinary4f517a4 idle autosave/immediate switch and quit/real readonly failure/cancel/retry/in-flight newer input and cancel-wait passed (23 snapshots230 facts); explicit native conflict never claims saved, preview/read-only/restore-to-copy and reopen passed (15 selected snapshots157 facts). Mac frozen A09 complete; Windows ordinary supplement in progress. See macos-autosave-4f517a4-results.json and macos-external-conflict-4f517a4-results.json."
+      "notes": "Mac ordinary4f517a4 idle autosave/immediate switch and quit/real readonly failure/cancel/retry/in-flight newer input and cancel-wait passed (23 snapshots230 facts); explicit native conflict never claims saved, preview/read-only/restore-to-copy and reopen passed (15 selected snapshots157 facts). Mac frozen A09 complete; Windows ordinary supplement in progress. See macos-autosave-4f517a4-results.json and macos-external-conflict-4f517a4-results.json. Windows native ordinary supplement verified14 snapshots,162 assertions passed,0 failed,2 untested: explicit conflict and observable unsaved-close completion. File-lock wait/cancel/newer-input,occupied failure/protected draft and full readonly UIA reopen passed. See windows-autosave-4f517a4-results.json."
     },
     {
       "id": "A10",
@@ -629,7 +629,7 @@
       "id": "A16",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Mac ordinary4f517a4 real readonly directory failure, protected draft, cancel close/switch, restored permission/retry/reopen passed; other complete A16 filesystem/capacity/recovery-failure cases remain open. See macos-autosave-4f517a4-results.json."
+      "notes": "Mac ordinary4f517a4 real readonly directory failure, protected draft, cancel close/switch, restored permission/retry/reopen passed; other complete A16 filesystem/capacity/recovery-failure cases remain open. See macos-autosave-4f517a4-results.json. Windows real target-file occupation caused os error32; original unchanged and full005 draft/candidate retained. Other complete A16 failures remain open."
     },
     {
       "id": "A17",
@@ -788,5 +788,16 @@
     "macA09": "通过",
     "fullA12": "未测",
     "overallFullyPassedCases": 11
+  },
+  "windowsAutosaveFollowup": {
+    "report": "windows-autosave-4f517a4-results.json",
+    "summary": {
+      "total": 164,
+      "pass": 162,
+      "fail": 0,
+      "notTested": 2
+    },
+    "fullA09Accepted": false,
+    "otherFactsUnchanged": 11
   }
 }
