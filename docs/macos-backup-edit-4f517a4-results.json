@@ -1,0 +1,23 @@
+{
+  "date": "2026-10-19",
+  "ordinaryCandidate": "4f517a4",
+  "platform": "macOS M1 Pro",
+  "passed": 1038,
+  "failed": 0,
+  "facts": 1010,
+  "notes": 1000,
+  "notebooks": 10,
+  "remoteBackupPayloadHashChecks": 4040,
+  "oldBackupFilesPreserved": 1012,
+  "retryBackupId": "763f0972-253f-4294-8524-ce83b4d00975",
+  "cancelledIncompleteNotPublished": true,
+  "wholeRetrySnapshotExact": true,
+  "titleOnlyEditAssetsPreserved": true,
+  "normalCloseObserved": true,
+  "appExitCode": null,
+  "macA19Accepted": true,
+  "bothA19Accepted": true,
+  "archive": "management-678-694-4f517a4.tar.gz",
+  "archiveSha256": "4e35014863d9d7062b7e69738056f88aa4d7a0ab4f140f67ab53c08fcd318828",
+  "scope": "Ordinary native manual backup, edit/save cancellation, explicit retry. Read-only remote captures hash every backup payload; local verification checks complete manifests, source hashes and full edited package. Failed686 plan rejected unsupported key before input and is excluded. Other native fault coverage reused; not Q51 timing."
+}

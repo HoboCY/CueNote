@@ -646,8 +646,8 @@
     {
       "id": "A19",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "Windows ordinary3518441 native title save during running manual backup explicitly cancelled changed-source snapshot; no partial/complete snapshot published. Native manual retry produced exact1010-file snapshot; all images/maps preserved, prior backups unchanged, outside OneDrive.27 aggregate assertions and5050 backup payload checks. Existing native fault/round-trip cases reused. Mac ordinary edit-during-backup still pending. See windows-backup-edit-3518441-results.json."
+      "mac": "通过",
+      "notes": "Both ordinary platforms completed native edit during running backup, cancellation without incomplete publication and successful explicit manual retry. Mac1038 independent checks,4040 remote payload hash checks,1010-file exact snapshot; all images/maps preserved. Existing native external-change/failure cases reused. See windows-backup-edit-3518441-results.json and macos-backup-edit-4f517a4-results.json."
     },
     {
       "id": "A20",
@@ -801,8 +801,8 @@
     "fullA09Accepted": false,
     "otherFactsUnchanged": 11
   },
-  "currentCompletedBothPlatforms": 16,
-  "currentRemainingFullCases": 10,
+  "currentCompletedBothPlatforms": 17,
+  "currentRemainingFullCases": 9,
   "autosaveAndReverseSyncFollowup": {
     "fullCasesRemaining": 13,
     "bothA10Accepted": true,
@@ -875,5 +875,10 @@
     "checksFailed": 0,
     "ordinaryCandidate": "4f517a4",
     "acceptedCase": "A20"
+  },
+  "macBackupEditFollowup": {
+    "acceptedCase": "A19",
+    "report": "macos-backup-edit-4f517a4-results.json",
+    "checksPassed": 1038
   }
 }
