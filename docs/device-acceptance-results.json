@@ -652,8 +652,8 @@
     {
       "id": "A20",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "Cumulative native fault/round-trip substeps passed on both target devices. Windows ordinary4f517a4 single-note restore passed; original whole restore unsafePath failure preserved as historical evidence. Fix3518441 now passes native whole confirmation/replacement, complete pre-backup, exact source files/assets, normal Explorer reopen and preservation of all3 unrelated journals;109 checks. Mac ordinary single-note restore57 checks and whole preview/cancel passed; whole replacement still pending window obstruction. Initial Mac wrong-note selections excluded. See restore-journal-path-fix-results.json and macos-backup-restore-ui-4f517a4-results.json."
+      "mac": "通过",
+      "notes": "Cumulative native interruption/recovery tests and both ordinary single-note restores reused. Windows3518441 whole restore and normal reopen passed109 checks, preserves3 unrelated journals. Mac4f517a4 native whole replacement and LaunchServices reopen passed177 checks: exact3 source files, complete4-file prebackup,21 prior backup files unchanged,3 displaced notes retained. See macos-whole-restore-4f517a4-results.json and restore-journal-path-fix-results.json."
     },
     {
       "id": "A21",
@@ -801,8 +801,8 @@
     "fullA09Accepted": false,
     "otherFactsUnchanged": 11
   },
-  "currentCompletedBothPlatforms": 15,
-  "currentRemainingFullCases": 11,
+  "currentCompletedBothPlatforms": 16,
+  "currentRemainingFullCases": 10,
   "autosaveAndReverseSyncFollowup": {
     "fullCasesRemaining": 13,
     "bothA10Accepted": true,
@@ -868,5 +868,12 @@
     "remainingFullCases": 11,
     "completedBothPlatforms": 15,
     "report": "code-acceptance-cumulative-results.json"
+  },
+  "macWholeRestoreFollowup": {
+    "report": "macos-whole-restore-4f517a4-results.json",
+    "checksPassed": 177,
+    "checksFailed": 0,
+    "ordinaryCandidate": "4f517a4",
+    "acceptedCase": "A20"
   }
 }
