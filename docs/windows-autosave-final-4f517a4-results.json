@@ -1,0 +1,1194 @@
+{
+  "report": "windows-a09-final-verifier",
+  "generatedAt": "2026-10-19T05:32:16.0311524Z",
+  "scope": "Bounded addendum: 7 new A09 stages + failure-cancel receipt + close-completion + conflict2 + protected-final; old 164-assertion report reused read-only. Not whole #33, not A10/A12.",
+  "environment": {
+    "pwsh": "7.6.6",
+    "os": "Microsoft Windows NT 10.0.26200.0"
+  },
+  "candidateExeSha256": "ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68",
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "oldEvidenceReuse": {
+    "total": 164,
+    "pass": 162,
+    "fail": 0,
+    "notTested": 2,
+    "overall": "PASS_WITH_UNTESTED",
+    "windowsA09FullyPassed": false,
+    "blockers": [
+      "explicit conflict case not retested (A09 cannot be marked fully passed)",
+      "observable unsaved-close completion path not established (foreground guard error; close causality ambiguous; only full reopen proven)"
+    ],
+    "notTestedIds": [
+      "lim-explicit-conflict",
+      "lim-unsaved-close-path"
+    ]
+  },
+  "summary": {
+    "total": 159,
+    "pass": 159,
+    "fail": 0
+  },
+  "gateCoverage": {
+    "lim-explicit-conflict": {
+      "coveredInScope": true,
+      "openFails": [],
+      "evidence": [
+        "c2-detected exact conflict texts, no saved",
+        "disk keeps externalSha",
+        "protected local 010 + external 011 valid versions",
+        "before/external document diff verified",
+        "first trial excluded as script File.Replace bug"
+      ]
+    },
+    "lim-unsaved-close-path": {
+      "coveredInScope": true,
+      "openFails": [],
+      "evidence": [
+        "close-completion exit 0 on bound PID 48204",
+        "plan text 007 then Alt+F4 last, no Ctrl+S",
+        "sha chain bae32e -> d5498 -> reopened-007",
+        "reopened-007 UIA edit area has 001-007"
+      ]
+    }
+  },
+  "keySha": {
+    "candidateExe": "ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68",
+    "noteSaved001to005": "5be26531cbe00e2c8cdbfbfaf55a0d22d15368c4dc645cd365bc5b764a98a0ba",
+    "noteRetry001to006": "bae32e045a74a320f995302ce7402e437a0b33bd1099a95a8988b6323a5ca1b1",
+    "noteReopened001to007": "d5498c46f98f0b7a8d5e9033b9d0ad22559a1a71ffecf23e64afff1e9d7f186f",
+    "conflictBefore001to008": "4442a32265a1308ed0541f64f1a60ac739a8fa37f85daa7f12e85db5c1ae242f",
+    "conflictExternal001to008plus011": "292508cf457593d9f900baa8b98a313e927c1b34f7293adff9809ae4b3c82ca6"
+  },
+  "stages": [
+    {
+      "stage": "failure-cancel-failed",
+      "pid": 48204,
+      "files": 14,
+      "notes": 10,
+      "books": 2,
+      "testNoteSha": "5be26531cbe00e2c8cdbfbfaf55a0d22d15368c4dc645cd365bc5b764a98a0ba",
+      "testNoteBytes": 843,
+      "diskMarkers": [
+        "WIN-AUTO-IDLE-001",
+        "WIN-AUTO-SWITCH-002",
+        "WIN-AUTO-WAIT-003",
+        "WIN-AUTO-DURING-004",
+        "WIN-AUTO-FAIL-005"
+      ],
+      "uiaRows": 206,
+      "uiaSaved": 0,
+      "uiaFailure": 2,
+      "uiaCancelClose": false,
+      "uiaConflictTitle": false,
+      "editDraft": "WIN-AUTO-IDLE-001：停止输入后自动保存。🙂 WIN-AUTO-SWITCH-002：输入后立即切换。 WIN-AUTO-WAIT-003：第一份保存等待文件锁。 WIN-AUTO-DURING-004：保存期间继续输入，必须完整保留。 WIN-AUTO-FAIL-005：目标文件被占用时也必须保留草稿。  WIN-AUTO-FAIL-006：保存失败后取消关闭，再重试保存。"
+    },
+    {
+      "stage": "failure-cancel-close",
+      "pid": 48204,
+      "files": 15,
+      "notes": 10,
+      "books": 2,
+      "testNoteSha": "5be26531cbe00e2c8cdbfbfaf55a0d22d15368c4dc645cd365bc5b764a98a0ba",
+      "testNoteBytes": 843,
+      "diskMarkers": [
+        "WIN-AUTO-IDLE-001",
+        "WIN-AUTO-SWITCH-002",
+        "WIN-AUTO-WAIT-003",
+        "WIN-AUTO-DURING-004",
+        "WIN-AUTO-FAIL-005"
+      ],
+      "uiaRows": 224,
+      "uiaSaved": 0,
+      "uiaFailure": 2,
+      "uiaCancelClose": true,
+      "uiaConflictTitle": false,
+      "editDraft": "WIN-AUTO-IDLE-001：停止输入后自动保存。🙂 WIN-AUTO-SWITCH-002：输入后立即切换。 WIN-AUTO-WAIT-003：第一份保存等待文件锁。 WIN-AUTO-DURING-004：保存期间继续输入，必须完整保留。 WIN-AUTO-FAIL-005：目标文件被占用时也必须保留草稿。  WIN-AUTO-FAIL-006：保存失败后取消关闭，再重试保存。"
+    },
+    {
+      "stage": "failure-cancel-cancelled",
+      "pid": 48204,
+      "files": 15,
+      "notes": 10,
+      "books": 2,
+      "testNoteSha": "5be26531cbe00e2c8cdbfbfaf55a0d22d15368c4dc645cd365bc5b764a98a0ba",
+      "testNoteBytes": 843,
+      "diskMarkers": [
+        "WIN-AUTO-IDLE-001",
+        "WIN-AUTO-SWITCH-002",
+        "WIN-AUTO-WAIT-003",
+        "WIN-AUTO-DURING-004",
+        "WIN-AUTO-FAIL-005"
+      ],
+      "uiaRows": 210,
+      "uiaSaved": 0,
+      "uiaFailure": 2,
+      "uiaCancelClose": false,
+      "uiaConflictTitle": false,
+      "editDraft": "WIN-AUTO-IDLE-001：停止输入后自动保存。🙂 WIN-AUTO-SWITCH-002：输入后立即切换。 WIN-AUTO-WAIT-003：第一份保存等待文件锁。 WIN-AUTO-DURING-004：保存期间继续输入，必须完整保留。 WIN-AUTO-FAIL-005：目标文件被占用时也必须保留草稿。  WIN-AUTO-FAIL-006：保存失败后取消关闭，再重试保存。"
+    },
+    {
+      "stage": "retry-006",
+      "pid": 48204,
+      "files": 15,
+      "notes": 10,
+      "books": 2,
+      "testNoteSha": "bae32e045a74a320f995302ce7402e437a0b33bd1099a95a8988b6323a5ca1b1",
+      "testNoteBytes": 879,
+      "diskMarkers": [
+        "WIN-AUTO-IDLE-001",
+        "WIN-AUTO-SWITCH-002",
+        "WIN-AUTO-WAIT-003",
+        "WIN-AUTO-DURING-004",
+        "WIN-AUTO-FAIL-005",
+        "WIN-AUTO-FAIL-006"
+      ],
+      "uiaRows": 202,
+      "uiaSaved": 3,
+      "uiaFailure": 0,
+      "uiaCancelClose": false,
+      "uiaConflictTitle": false,
+      "editDraft": "WIN-AUTO-IDLE-001：停止输入后自动保存。🙂 WIN-AUTO-SWITCH-002：输入后立即切换。 WIN-AUTO-WAIT-003：第一份保存等待文件锁。 WIN-AUTO-DURING-004：保存期间继续输入，必须完整保留。 WIN-AUTO-FAIL-005：目标文件被占用时也必须保留草稿。  WIN-AUTO-FAIL-006：保存失败后取消关闭，再重试保存。"
+    },
+    {
+      "stage": "reopened-007",
+      "pid": 37664,
+      "files": 15,
+      "notes": 10,
+      "books": 2,
+      "testNoteSha": "d5498c46f98f0b7a8d5e9033b9d0ad22559a1a71ffecf23e64afff1e9d7f186f",
+      "testNoteBytes": 920,
+      "diskMarkers": [
+        "WIN-AUTO-IDLE-001",
+        "WIN-AUTO-SWITCH-002",
+        "WIN-AUTO-WAIT-003",
+        "WIN-AUTO-DURING-004",
+        "WIN-AUTO-FAIL-005",
+        "WIN-AUTO-FAIL-006",
+        "WIN-AUTO-CLOSE-007"
+      ],
+      "uiaRows": 198,
+      "uiaSaved": 3,
+      "uiaFailure": 0,
+      "uiaCancelClose": false,
+      "uiaConflictTitle": false,
+      "editDraft": "WIN-AUTO-IDLE-001：停止输入后自动保存。🙂 WIN-AUTO-SWITCH-002：输入后立即切换。 WIN-AUTO-WAIT-003：第一份保存等待文件锁。 WIN-AUTO-DURING-004：保存期间继续输入，必须完整保留。 WIN-AUTO-FAIL-005：目标文件被占用时也必须保留草稿。  WIN-AUTO-FAIL-006：保存失败后取消关闭，再重试保存。 WIN-AUTO-CLOSE-007：新输入后立即正常关闭，重开内容完整。"
+    },
+    {
+      "stage": "conflict2-wait",
+      "pid": 37664,
+      "files": 16,
+      "notes": 10,
+      "books": 2,
+      "testNoteSha": "4442a32265a1308ed0541f64f1a60ac739a8fa37f85daa7f12e85db5c1ae242f",
+      "testNoteBytes": 950,
+      "diskMarkers": [
+        "WIN-AUTO-IDLE-001",
+        "WIN-AUTO-SWITCH-002",
+        "WIN-AUTO-WAIT-003",
+        "WIN-AUTO-DURING-004",
+        "WIN-AUTO-FAIL-005",
+        "WIN-AUTO-FAIL-006",
+        "WIN-AUTO-CLOSE-007",
+        "WIN-AUTO-LOCAL-008"
+      ],
+      "uiaRows": 202,
+      "uiaSaved": 0,
+      "uiaFailure": 0,
+      "uiaCancelClose": false,
+      "uiaConflictTitle": false,
+      "editDraft": "WIN-AUTO-IDLE-001：停止输入后自动保存。🙂 WIN-AUTO-SWITCH-002：输入后立即切换。 WIN-AUTO-WAIT-003：第一份保存等待文件锁。 WIN-AUTO-DURING-004：保存期间继续输入，必须完整保留。 WIN-AUTO-FAIL-005：目标文件被占用时也必须保留草稿。  WIN-AUTO-FAIL-006：保存失败后取消关闭，再重试保存。 WIN-AUTO-CLOSE-007：新输入后立即正常关闭，重开内容完整。 WIN-AUTO-LOCAL-008：冲突时本地草稿必须保留。 WIN-AUTO-LOCAL-010：冲突时本地草稿必须保留。"
+    },
+    {
+      "stage": "conflict2-detected",
+      "pid": 37664,
+      "files": 16,
+      "notes": 10,
+      "books": 2,
+      "testNoteSha": "292508cf457593d9f900baa8b98a313e927c1b34f7293adff9809ae4b3c82ca6",
+      "testNoteBytes": 997,
+      "diskMarkers": [
+        "WIN-AUTO-IDLE-001",
+        "WIN-AUTO-SWITCH-002",
+        "WIN-AUTO-WAIT-003",
+        "WIN-AUTO-DURING-004",
+        "WIN-AUTO-FAIL-005",
+        "WIN-AUTO-FAIL-006",
+        "WIN-AUTO-CLOSE-007",
+        "WIN-AUTO-LOCAL-008",
+        "WIN-AUTO-EXTERNAL-011"
+      ],
+      "uiaRows": 300,
+      "uiaSaved": 0,
+      "uiaFailure": 0,
+      "uiaCancelClose": false,
+      "uiaConflictTitle": true,
+      "editDraft": ""
+    }
+  ],
+  "assertions": [
+    {
+      "id": "old-total",
+      "desc": "old report reused (not rerun): total assertions = 164",
+      "status": "PASS",
+      "detail": "total=164"
+    },
+    {
+      "id": "old-pass",
+      "desc": "old report reused: pass = 162",
+      "status": "PASS",
+      "detail": "pass=162"
+    },
+    {
+      "id": "old-fail",
+      "desc": "old report reused: fail = 0",
+      "status": "PASS",
+      "detail": "fail=0"
+    },
+    {
+      "id": "old-untested",
+      "desc": "old report reused: notTested = 2",
+      "status": "PASS",
+      "detail": "notTested=2"
+    },
+    {
+      "id": "old-overall",
+      "desc": "old report reused: PASS_WITH_UNTESTED / not fully passed",
+      "status": "PASS",
+      "detail": "overall=PASS_WITH_UNTESTED"
+    },
+    {
+      "id": "old-blockers",
+      "desc": "old blockers name explicit conflict and observable close path",
+      "status": "PASS",
+      "detail": "explicit conflict case not retested (A09 cannot be marked fully passed) | observable unsaved-close completion path not established (foreground guard error; close causality ambiguous; only full reopen proven)"
+    },
+    {
+      "id": "old-untested-ids",
+      "desc": "old untouched gate ids are lim-explicit-conflict and lim-unsaved-close-path",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "baseline-11-files",
+      "desc": "reopened baseline holds exactly 9 other notes + 2 books",
+      "status": "PASS",
+      "detail": "count=11"
+    },
+    {
+      "id": "stg-failure-cancel-failed-artifacts",
+      "desc": "native-snapshot + notes/ + notebooks/ + accessibility.json present",
+      "status": "PASS",
+      "detail": "C:\\Users\\Hobo\\.codex\\visualizations\\2026\\10\\10\\01a12393-3b57-76e3-afff-50bd8ef5f539\\implementation-execution\\issue-33\\windows-editor-4f517a4-a09-failure-cancel-failed"
+    },
+    {
+      "id": "stg-failure-cancel-failed-inspection",
+      "desc": "installed candidate exe sha/path and expected PID",
+      "status": "PASS",
+      "detail": "pid=48204 sha=ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68"
+    },
+    {
+      "id": "stg-failure-cancel-failed-filehashes",
+      "desc": "every native-snapshot file record matches disk sha/bytes",
+      "status": "PASS",
+      "detail": "records=14 mismatches="
+    },
+    {
+      "id": "stg-failure-cancel-failed-dirset",
+      "desc": "package dirs contain exactly the snapshot file set",
+      "status": "PASS",
+      "detail": "extra= missing="
+    },
+    {
+      "id": "stg-failure-cancel-failed-counts",
+      "desc": "10 native .cuenote notes and 2 notebooks",
+      "status": "PASS",
+      "detail": "cuenote=10 notes=10 books=2"
+    },
+    {
+      "id": "stg-failure-cancel-failed-testnote",
+      "desc": "exactly one test note c8e46c7c-... exists",
+      "status": "PASS",
+      "detail": "path=notes/c8e46c7c-5699-4e9e-a2da-4f664aba5c21.cuenote"
+    },
+    {
+      "id": "stg-failure-cancel-failed-zip",
+      "desc": "test-note ZIP has document.json and assets/manifest.json",
+      "status": "PASS",
+      "detail": "error="
+    },
+    {
+      "id": "stg-failure-cancel-failed-zip-assets",
+      "desc": "ZIP asset sha256/byteLength match assets manifest",
+      "status": "PASS",
+      "detail": "assets=0 issues="
+    },
+    {
+      "id": "stg-failure-cancel-failed-zip-vs-snapshot",
+      "desc": "ZIP document matches snapshot note id/title/text/contentModifiedAt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-failure-cancel-failed-test-file-sha",
+      "desc": "test-note file sha/bytes equal snapshot record",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-failure-cancel-failed-baseline11",
+      "desc": "other 9 notes + 2 books unchanged vs reopened baseline",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-failure-cancel-failed-baseline-candidate-tmp",
+      "desc": "baseline candidate tmp unchanged",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-failure-cancel-close-artifacts",
+      "desc": "native-snapshot + notes/ + notebooks/ + accessibility.json present",
+      "status": "PASS",
+      "detail": "C:\\Users\\Hobo\\.codex\\visualizations\\2026\\10\\10\\01a12393-3b57-76e3-afff-50bd8ef5f539\\implementation-execution\\issue-33\\windows-editor-4f517a4-a09-failure-cancel-close"
+    },
+    {
+      "id": "stg-failure-cancel-close-inspection",
+      "desc": "installed candidate exe sha/path and expected PID",
+      "status": "PASS",
+      "detail": "pid=48204 sha=ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68"
+    },
+    {
+      "id": "stg-failure-cancel-close-filehashes",
+      "desc": "every native-snapshot file record matches disk sha/bytes",
+      "status": "PASS",
+      "detail": "records=15 mismatches="
+    },
+    {
+      "id": "stg-failure-cancel-close-dirset",
+      "desc": "package dirs contain exactly the snapshot file set",
+      "status": "PASS",
+      "detail": "extra= missing="
+    },
+    {
+      "id": "stg-failure-cancel-close-counts",
+      "desc": "10 native .cuenote notes and 2 notebooks",
+      "status": "PASS",
+      "detail": "cuenote=10 notes=10 books=2"
+    },
+    {
+      "id": "stg-failure-cancel-close-testnote",
+      "desc": "exactly one test note c8e46c7c-... exists",
+      "status": "PASS",
+      "detail": "path=notes/c8e46c7c-5699-4e9e-a2da-4f664aba5c21.cuenote"
+    },
+    {
+      "id": "stg-failure-cancel-close-zip",
+      "desc": "test-note ZIP has document.json and assets/manifest.json",
+      "status": "PASS",
+      "detail": "error="
+    },
+    {
+      "id": "stg-failure-cancel-close-zip-assets",
+      "desc": "ZIP asset sha256/byteLength match assets manifest",
+      "status": "PASS",
+      "detail": "assets=0 issues="
+    },
+    {
+      "id": "stg-failure-cancel-close-zip-vs-snapshot",
+      "desc": "ZIP document matches snapshot note id/title/text/contentModifiedAt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-failure-cancel-close-test-file-sha",
+      "desc": "test-note file sha/bytes equal snapshot record",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-failure-cancel-close-baseline11",
+      "desc": "other 9 notes + 2 books unchanged vs reopened baseline",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-failure-cancel-close-baseline-candidate-tmp",
+      "desc": "baseline candidate tmp unchanged",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-artifacts",
+      "desc": "native-snapshot + notes/ + notebooks/ + accessibility.json present",
+      "status": "PASS",
+      "detail": "C:\\Users\\Hobo\\.codex\\visualizations\\2026\\10\\10\\01a12393-3b57-76e3-afff-50bd8ef5f539\\implementation-execution\\issue-33\\windows-editor-4f517a4-a09-failure-cancel-cancelled"
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-inspection",
+      "desc": "installed candidate exe sha/path and expected PID",
+      "status": "PASS",
+      "detail": "pid=48204 sha=ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68"
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-filehashes",
+      "desc": "every native-snapshot file record matches disk sha/bytes",
+      "status": "PASS",
+      "detail": "records=15 mismatches="
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-dirset",
+      "desc": "package dirs contain exactly the snapshot file set",
+      "status": "PASS",
+      "detail": "extra= missing="
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-counts",
+      "desc": "10 native .cuenote notes and 2 notebooks",
+      "status": "PASS",
+      "detail": "cuenote=10 notes=10 books=2"
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-testnote",
+      "desc": "exactly one test note c8e46c7c-... exists",
+      "status": "PASS",
+      "detail": "path=notes/c8e46c7c-5699-4e9e-a2da-4f664aba5c21.cuenote"
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-zip",
+      "desc": "test-note ZIP has document.json and assets/manifest.json",
+      "status": "PASS",
+      "detail": "error="
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-zip-assets",
+      "desc": "ZIP asset sha256/byteLength match assets manifest",
+      "status": "PASS",
+      "detail": "assets=0 issues="
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-zip-vs-snapshot",
+      "desc": "ZIP document matches snapshot note id/title/text/contentModifiedAt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-test-file-sha",
+      "desc": "test-note file sha/bytes equal snapshot record",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-baseline11",
+      "desc": "other 9 notes + 2 books unchanged vs reopened baseline",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-failure-cancel-cancelled-baseline-candidate-tmp",
+      "desc": "baseline candidate tmp unchanged",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-retry-006-artifacts",
+      "desc": "native-snapshot + notes/ + notebooks/ + accessibility.json present",
+      "status": "PASS",
+      "detail": "C:\\Users\\Hobo\\.codex\\visualizations\\2026\\10\\10\\01a12393-3b57-76e3-afff-50bd8ef5f539\\implementation-execution\\issue-33\\windows-editor-4f517a4-a09-retry-006"
+    },
+    {
+      "id": "stg-retry-006-inspection",
+      "desc": "installed candidate exe sha/path and expected PID",
+      "status": "PASS",
+      "detail": "pid=48204 sha=ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68"
+    },
+    {
+      "id": "stg-retry-006-filehashes",
+      "desc": "every native-snapshot file record matches disk sha/bytes",
+      "status": "PASS",
+      "detail": "records=15 mismatches="
+    },
+    {
+      "id": "stg-retry-006-dirset",
+      "desc": "package dirs contain exactly the snapshot file set",
+      "status": "PASS",
+      "detail": "extra= missing="
+    },
+    {
+      "id": "stg-retry-006-counts",
+      "desc": "10 native .cuenote notes and 2 notebooks",
+      "status": "PASS",
+      "detail": "cuenote=10 notes=10 books=2"
+    },
+    {
+      "id": "stg-retry-006-testnote",
+      "desc": "exactly one test note c8e46c7c-... exists",
+      "status": "PASS",
+      "detail": "path=notes/c8e46c7c-5699-4e9e-a2da-4f664aba5c21.cuenote"
+    },
+    {
+      "id": "stg-retry-006-zip",
+      "desc": "test-note ZIP has document.json and assets/manifest.json",
+      "status": "PASS",
+      "detail": "error="
+    },
+    {
+      "id": "stg-retry-006-zip-assets",
+      "desc": "ZIP asset sha256/byteLength match assets manifest",
+      "status": "PASS",
+      "detail": "assets=0 issues="
+    },
+    {
+      "id": "stg-retry-006-zip-vs-snapshot",
+      "desc": "ZIP document matches snapshot note id/title/text/contentModifiedAt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-retry-006-test-file-sha",
+      "desc": "test-note file sha/bytes equal snapshot record",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-retry-006-baseline11",
+      "desc": "other 9 notes + 2 books unchanged vs reopened baseline",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-retry-006-baseline-candidate-tmp",
+      "desc": "baseline candidate tmp unchanged",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-reopened-007-artifacts",
+      "desc": "native-snapshot + notes/ + notebooks/ + accessibility.json present",
+      "status": "PASS",
+      "detail": "C:\\Users\\Hobo\\.codex\\visualizations\\2026\\10\\10\\01a12393-3b57-76e3-afff-50bd8ef5f539\\implementation-execution\\issue-33\\windows-editor-4f517a4-a09-reopened-007"
+    },
+    {
+      "id": "stg-reopened-007-inspection",
+      "desc": "installed candidate exe sha/path and expected PID",
+      "status": "PASS",
+      "detail": "pid=37664 sha=ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68"
+    },
+    {
+      "id": "stg-reopened-007-filehashes",
+      "desc": "every native-snapshot file record matches disk sha/bytes",
+      "status": "PASS",
+      "detail": "records=15 mismatches="
+    },
+    {
+      "id": "stg-reopened-007-dirset",
+      "desc": "package dirs contain exactly the snapshot file set",
+      "status": "PASS",
+      "detail": "extra= missing="
+    },
+    {
+      "id": "stg-reopened-007-counts",
+      "desc": "10 native .cuenote notes and 2 notebooks",
+      "status": "PASS",
+      "detail": "cuenote=10 notes=10 books=2"
+    },
+    {
+      "id": "stg-reopened-007-testnote",
+      "desc": "exactly one test note c8e46c7c-... exists",
+      "status": "PASS",
+      "detail": "path=notes/c8e46c7c-5699-4e9e-a2da-4f664aba5c21.cuenote"
+    },
+    {
+      "id": "stg-reopened-007-zip",
+      "desc": "test-note ZIP has document.json and assets/manifest.json",
+      "status": "PASS",
+      "detail": "error="
+    },
+    {
+      "id": "stg-reopened-007-zip-assets",
+      "desc": "ZIP asset sha256/byteLength match assets manifest",
+      "status": "PASS",
+      "detail": "assets=0 issues="
+    },
+    {
+      "id": "stg-reopened-007-zip-vs-snapshot",
+      "desc": "ZIP document matches snapshot note id/title/text/contentModifiedAt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-reopened-007-test-file-sha",
+      "desc": "test-note file sha/bytes equal snapshot record",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-reopened-007-baseline11",
+      "desc": "other 9 notes + 2 books unchanged vs reopened baseline",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-reopened-007-baseline-candidate-tmp",
+      "desc": "baseline candidate tmp unchanged",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-conflict2-wait-artifacts",
+      "desc": "native-snapshot + notes/ + notebooks/ + accessibility.json present",
+      "status": "PASS",
+      "detail": "C:\\Users\\Hobo\\.codex\\visualizations\\2026\\10\\10\\01a12393-3b57-76e3-afff-50bd8ef5f539\\implementation-execution\\issue-33\\windows-editor-4f517a4-a09-conflict2-wait"
+    },
+    {
+      "id": "stg-conflict2-wait-inspection",
+      "desc": "installed candidate exe sha/path and expected PID",
+      "status": "PASS",
+      "detail": "pid=37664 sha=ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68"
+    },
+    {
+      "id": "stg-conflict2-wait-filehashes",
+      "desc": "every native-snapshot file record matches disk sha/bytes",
+      "status": "PASS",
+      "detail": "records=16 mismatches="
+    },
+    {
+      "id": "stg-conflict2-wait-dirset",
+      "desc": "package dirs contain exactly the snapshot file set",
+      "status": "PASS",
+      "detail": "extra= missing="
+    },
+    {
+      "id": "stg-conflict2-wait-counts",
+      "desc": "10 native .cuenote notes and 2 notebooks",
+      "status": "PASS",
+      "detail": "cuenote=10 notes=10 books=2"
+    },
+    {
+      "id": "stg-conflict2-wait-testnote",
+      "desc": "exactly one test note c8e46c7c-... exists",
+      "status": "PASS",
+      "detail": "path=notes/c8e46c7c-5699-4e9e-a2da-4f664aba5c21.cuenote"
+    },
+    {
+      "id": "stg-conflict2-wait-zip",
+      "desc": "test-note ZIP has document.json and assets/manifest.json",
+      "status": "PASS",
+      "detail": "error="
+    },
+    {
+      "id": "stg-conflict2-wait-zip-assets",
+      "desc": "ZIP asset sha256/byteLength match assets manifest",
+      "status": "PASS",
+      "detail": "assets=0 issues="
+    },
+    {
+      "id": "stg-conflict2-wait-zip-vs-snapshot",
+      "desc": "ZIP document matches snapshot note id/title/text/contentModifiedAt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-conflict2-wait-test-file-sha",
+      "desc": "test-note file sha/bytes equal snapshot record",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-conflict2-wait-baseline11",
+      "desc": "other 9 notes + 2 books unchanged vs reopened baseline",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-conflict2-wait-baseline-candidate-tmp",
+      "desc": "baseline candidate tmp unchanged",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-conflict2-detected-artifacts",
+      "desc": "native-snapshot + notes/ + notebooks/ + accessibility.json present",
+      "status": "PASS",
+      "detail": "C:\\Users\\Hobo\\.codex\\visualizations\\2026\\10\\10\\01a12393-3b57-76e3-afff-50bd8ef5f539\\implementation-execution\\issue-33\\windows-editor-4f517a4-a09-conflict2-detected"
+    },
+    {
+      "id": "stg-conflict2-detected-inspection",
+      "desc": "installed candidate exe sha/path and expected PID",
+      "status": "PASS",
+      "detail": "pid=37664 sha=ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68"
+    },
+    {
+      "id": "stg-conflict2-detected-filehashes",
+      "desc": "every native-snapshot file record matches disk sha/bytes",
+      "status": "PASS",
+      "detail": "records=16 mismatches="
+    },
+    {
+      "id": "stg-conflict2-detected-dirset",
+      "desc": "package dirs contain exactly the snapshot file set",
+      "status": "PASS",
+      "detail": "extra= missing="
+    },
+    {
+      "id": "stg-conflict2-detected-counts",
+      "desc": "10 native .cuenote notes and 2 notebooks",
+      "status": "PASS",
+      "detail": "cuenote=10 notes=10 books=2"
+    },
+    {
+      "id": "stg-conflict2-detected-testnote",
+      "desc": "exactly one test note c8e46c7c-... exists",
+      "status": "PASS",
+      "detail": "path=notes/c8e46c7c-5699-4e9e-a2da-4f664aba5c21.cuenote"
+    },
+    {
+      "id": "stg-conflict2-detected-zip",
+      "desc": "test-note ZIP has document.json and assets/manifest.json",
+      "status": "PASS",
+      "detail": "error="
+    },
+    {
+      "id": "stg-conflict2-detected-zip-assets",
+      "desc": "ZIP asset sha256/byteLength match assets manifest",
+      "status": "PASS",
+      "detail": "assets=0 issues="
+    },
+    {
+      "id": "stg-conflict2-detected-zip-vs-snapshot",
+      "desc": "ZIP document matches snapshot note id/title/text/contentModifiedAt",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-conflict2-detected-test-file-sha",
+      "desc": "test-note file sha/bytes equal snapshot record",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "stg-conflict2-detected-baseline11",
+      "desc": "other 9 notes + 2 books unchanged vs reopened baseline",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "stg-conflict2-detected-baseline-candidate-tmp",
+      "desc": "baseline candidate tmp unchanged",
+      "status": "PASS",
+      "detail": "changed="
+    },
+    {
+      "id": "fcf-failure-cancel-failed-disk005",
+      "desc": "disk note keeps 001-005, no 006/007",
+      "status": "PASS",
+      "detail": "markers=WIN-AUTO-IDLE-001,WIN-AUTO-SWITCH-002,WIN-AUTO-WAIT-003,WIN-AUTO-DURING-004,WIN-AUTO-FAIL-005"
+    },
+    {
+      "id": "fcf-failure-cancel-failed-no-saved",
+      "desc": "UI shows no 已保存到本地",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcf-failure-cancel-close-disk005",
+      "desc": "disk note keeps 001-005, no 006/007",
+      "status": "PASS",
+      "detail": "markers=WIN-AUTO-IDLE-001,WIN-AUTO-SWITCH-002,WIN-AUTO-WAIT-003,WIN-AUTO-DURING-004,WIN-AUTO-FAIL-005"
+    },
+    {
+      "id": "fcf-failure-cancel-close-no-saved",
+      "desc": "UI shows no 已保存到本地",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcf-failure-cancel-cancelled-disk005",
+      "desc": "disk note keeps 001-005, no 006/007",
+      "status": "PASS",
+      "detail": "markers=WIN-AUTO-IDLE-001,WIN-AUTO-SWITCH-002,WIN-AUTO-WAIT-003,WIN-AUTO-DURING-004,WIN-AUTO-FAIL-005"
+    },
+    {
+      "id": "fcf-failure-cancel-cancelled-no-saved",
+      "desc": "UI shows no 已保存到本地",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcf-failed-status",
+      "desc": "failure stage shows honest failure status",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcf-failed-draft006",
+      "desc": "failure stage edit area keeps draft 006",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcf-close-cancel-button",
+      "desc": "close stage offers 取消关闭",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcf-close-draft006",
+      "desc": "close stage edit area keeps draft 006",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcf-close-plan-altf4",
+      "desc": "close plan uses Alt+F4 (115/mod 18) and no Ctrl+S",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcf-cancelled-draft006",
+      "desc": "after cancel-close, in-memory draft 006 retained",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcf-cancelled-no-cancel-button",
+      "desc": "cancel-close control gone after cancel",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fcr-sha-before-after",
+      "desc": "receipt source sha before=after=5be26531",
+      "status": "PASS",
+      "detail": "before=5be26531 after=5be26531"
+    },
+    {
+      "id": "fcr-released",
+      "desc": "receipt released=true with real read handle method",
+      "status": "PASS",
+      "detail": "Real read handle with FileShare.Read denies atomic replacement; no product hooks"
+    },
+    {
+      "id": "fcr-time-order",
+      "desc": "lock held across failed/close/cancel stages then released",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "retry-disk006",
+      "desc": "retry disk note has 001-006, no 007",
+      "status": "PASS",
+      "detail": "markers=WIN-AUTO-IDLE-001,WIN-AUTO-SWITCH-002,WIN-AUTO-WAIT-003,WIN-AUTO-DURING-004,WIN-AUTO-FAIL-005,WIN-AUTO-FAIL-006"
+    },
+    {
+      "id": "retry-sha",
+      "desc": "retry saved file equals close-completion sourceShaBefore",
+      "status": "PASS",
+      "detail": "sha=bae32e04"
+    },
+    {
+      "id": "retry-saved-ui",
+      "desc": "retry UI shows 已保存到本地 and no failure status",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "retry-edit006",
+      "desc": "retry edit area shows saved 006 and not 007",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "retry-plan",
+      "desc": "retry plan is Ctrl+S then wait 1600ms",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "close-json",
+      "desc": "close completion: PID 48204, exited=true, exitCode=0",
+      "status": "PASS",
+      "detail": "exited=True exitCode=0"
+    },
+    {
+      "id": "close-sha-chain",
+      "desc": "close source before/after match retry-006/reopened-007 snapshots",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "close-marker",
+      "desc": "close marker WIN-AUTO-CLOSE-007 and no force/Ctrl+S in method",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "close-duration",
+      "desc": "close plan took about 0.52 s (0.45-0.65) end of input",
+      "status": "PASS",
+      "detail": "inputSec=0.523 observedSec=0.577"
+    },
+    {
+      "id": "close-plan-shape",
+      "desc": "close plan: click edit, Ctrl+End, text 007, Alt+F4 last, no Ctrl+S",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "close-script-bound-handle",
+      "desc": "close script binds process handle and waits for exit",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "close-script-no-force",
+      "desc": "close script has no force kill",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "reopened-launch-parent",
+      "desc": "reopened-007 PID 37664 launched by explorer.exe with candidate sha",
+      "status": "PASS",
+      "detail": "pid=37664 parent=explorer.exe:10500"
+    },
+    {
+      "id": "reopened-launch-order",
+      "desc": "launch after close observed, before reopened inspection",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "reopened-disk7",
+      "desc": "reopened disk note carries 001-007 in order",
+      "status": "PASS",
+      "detail": "markers=WIN-AUTO-IDLE-001,WIN-AUTO-SWITCH-002,WIN-AUTO-WAIT-003,WIN-AUTO-DURING-004,WIN-AUTO-FAIL-005,WIN-AUTO-FAIL-006,WIN-AUTO-CLOSE-007"
+    },
+    {
+      "id": "reopened-uia-edit7",
+      "desc": "edit-area UIA text (not sidebar list) contains all 001-007",
+      "status": "PASS",
+      "detail": "type=ControlType.Text offscreen=True"
+    },
+    {
+      "id": "reopened-sidebar-not-source",
+      "desc": "sidebar summary row does not contain CLOSE-007 (not used as edit area)",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "reopened-zip7",
+      "desc": "reopened-007 ZIP document contains all seven markers",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-publication-hashes",
+      "desc": "publication beforeSha/externalSha match independent file hashes",
+      "status": "PASS",
+      "detail": "before=4442a322 external=292508cf"
+    },
+    {
+      "id": "c2-not-onedrive",
+      "desc": "publication declares local synthetic fixture, no OneDrive transport",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-before",
+      "desc": "before.cuenote is independent local baseline 001-008",
+      "status": "PASS",
+      "detail": "markers=WIN-AUTO-IDLE-001,WIN-AUTO-SWITCH-002,WIN-AUTO-WAIT-003,WIN-AUTO-DURING-004,WIN-AUTO-FAIL-005,WIN-AUTO-FAIL-006,WIN-AUTO-CLOSE-007,WIN-AUTO-LOCAL-008"
+    },
+    {
+      "id": "c2-external",
+      "desc": "external.cuenote has 001-008 + EXTERNAL-011, no LOCAL-010",
+      "status": "PASS",
+      "detail": "markers=WIN-AUTO-IDLE-001,WIN-AUTO-SWITCH-002,WIN-AUTO-WAIT-003,WIN-AUTO-DURING-004,WIN-AUTO-FAIL-005,WIN-AUTO-FAIL-006,WIN-AUTO-CLOSE-007,WIN-AUTO-LOCAL-008,WIN-AUTO-EXTERNAL-011"
+    },
+    {
+      "id": "c2-input-native010",
+      "desc": "input plan types LOCAL-010 natively under held save lock",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-script-lock-and-replace",
+      "desc": "conflict2 script holds real lock and publishes fixture with proper null backup",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-wait-disk-before",
+      "desc": "conflict2-wait disk still equals beforeSha, draft 010 not on disk",
+      "status": "PASS",
+      "detail": "sha=4442a322"
+    },
+    {
+      "id": "c2-wait-uia010",
+      "desc": "conflict2-wait edit area shows in-memory LOCAL-010 draft",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-wait-no-saved-no-conflict",
+      "desc": "conflict2-wait shows no saved state and no conflict banner yet",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-detected-disk-external",
+      "desc": "conflict2-detected disk keeps externalSha 001-008+011, no LOCAL-010",
+      "status": "PASS",
+      "detail": "sha=292508cf"
+    },
+    {
+      "id": "c2-detected-exact-ui",
+      "desc": "conflict UI shows exact 磁盘版本与草稿冲突 and retention detail",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-detected-no-saved",
+      "desc": "conflict UI shows no 已保存到本地",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-doc-headers-equal",
+      "desc": "before/external documents share identity, cue, summary, timestamps except content",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-doc-content-append",
+      "desc": "external content = before content + one appended EXTERNAL-011 paragraph",
+      "status": "PASS",
+      "detail": "beforeParagraphs=1 externalParagraphs=2"
+    },
+    {
+      "id": "c2-nondoc-entries-unchanged",
+      "desc": "assets/manifest.json sha identical and ZIP entry sets identical",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "c2-publication-order",
+      "desc": "local draft before atomic external publish before conflict detection",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fc-failed-excluded",
+      "desc": "failed first conflict trial documented as script File.Replace null-backup bug, no publication.json",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fc-script-null-bug",
+      "desc": "first conflict script passes $null backup path to [IO.File]::Replace",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "fc-009-unpublished",
+      "desc": "009 fixture built but never published; source drafts have no 009",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "prot-manifest-shape",
+      "desc": "protected manifest: 53 files, 20 versionFolders, noteId c8e46c7c",
+      "status": "PASS",
+      "detail": "files=53 versionFolders=20"
+    },
+    {
+      "id": "prot-file-count",
+      "desc": "protected dir holds 53 files besides manifest.json",
+      "status": "PASS",
+      "detail": "count=53"
+    },
+    {
+      "id": "prot-manifest-hashes",
+      "desc": "all 53 manifest file sha256/bytes match disk",
+      "status": "PASS",
+      "detail": "mismatches="
+    },
+    {
+      "id": "prot-no-extra",
+      "desc": "no unlisted files in protected dir",
+      "status": "PASS",
+      "detail": "extra="
+    },
+    {
+      "id": "prot-version-folders",
+      "desc": "20 version folders",
+      "status": "PASS",
+      "detail": "count=20"
+    },
+    {
+      "id": "prot-version-metadata",
+      "desc": "version metadata noteId/versionId/revision consistent with folder and note sha",
+      "status": "PASS",
+      "detail": "mismatches="
+    },
+    {
+      "id": "prot-cuenote-count",
+      "desc": "33 .cuenote files (5 drafts + 8 history + 20 version notes); 53 manifest files incl 20 metadata.json",
+      "status": "PASS",
+      "detail": "count=33"
+    },
+    {
+      "id": "prot-zip-noteids",
+      "desc": "every protected .cuenote ZIP is valid and carries noteId c8e46c7c",
+      "status": "PASS",
+      "detail": "files=33"
+    },
+    {
+      "id": "prot-local010",
+      "desc": "local draft 001-008+010 without 011 is protected",
+      "status": "PASS",
+      "detail": "files=4"
+    },
+    {
+      "id": "prot-external011",
+      "desc": "external valid version 001-008+011 without 010 is protected",
+      "status": "PASS",
+      "detail": "files=2"
+    },
+    {
+      "id": "prot-no-009",
+      "desc": "no protected file contains LOCAL-009",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "prot-no-mixed",
+      "desc": "no protected file mixes LOCAL-010 and EXTERNAL-011",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "id": "prot-history-chain",
+      "desc": "history keeps saved snapshots 000..007 (8 files, sha=filename)",
+      "status": "PASS",
+      "detail": "issues="
+    },
+    {
+      "id": "prot-manifest-history-hashes",
+      "desc": "manifest history paths hash-name consistent",
+      "status": "PASS",
+      "detail": ""
+    }
+  ],
+  "limitations": [
+    "Read-only verification; no product tests, no desktop automation, no network, no live recovery access.",
+    "Conflict evidence is a local synthetic fixture, not OneDrive transport.",
+    "Old 164-assertion run was reused, not rerun; this addendum covers only the 7 new stages and companion artifacts.",
+    "No statement about #33 as a whole, A10, A12, other platforms, or production/clean-machine acceptance."
+  ],
+  "originalEvidenceSha256": "65e5710226fc1f2b9ecfb52e7b4a58f36fac4f831ba4ae0a1dfb863e804198bd",
+  "windowsA09FullyPassed": true,
+  "mainReviewCorrection": "Actual close plan uses Ctrl+End (VK35/modifier17), not Ctrl+A. Original report retained unchanged; final Alt+F4 and no Ctrl+S independently checked."
+}

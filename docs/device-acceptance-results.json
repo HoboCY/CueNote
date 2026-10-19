@@ -585,27 +585,27 @@
     },
     {
       "id": "A09",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "通过",
-      "notes": "Mac ordinary4f517a4 idle autosave/immediate switch and quit/real readonly failure/cancel/retry/in-flight newer input and cancel-wait passed (23 snapshots230 facts); explicit native conflict never claims saved, preview/read-only/restore-to-copy and reopen passed (15 selected snapshots157 facts). Mac frozen A09 complete; Windows ordinary supplement in progress. See macos-autosave-4f517a4-results.json and macos-external-conflict-4f517a4-results.json. Windows native ordinary supplement verified14 snapshots,162 assertions passed,0 failed,2 untested: explicit conflict and observable unsaved-close completion. File-lock wait/cancel/newer-input,occupied failure/protected draft and full readonly UIA reopen passed. See windows-autosave-4f517a4-results.json."
+      "notes": "Both ordinary 4f517a4 devices passed cumulative A09. Windows initial162 passed + final159 passed: native failed-close cancellation/retry, bound-process immediate unsaved quit exit0 and full reopen, explicit local fixture conflict retains both versions and never reports saved. Mac autosave and external-conflict reports remain valid. See windows-autosave-final-4f517a4-results.json; full A16 remains open."
     },
     {
       "id": "A10",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": "cf350d8 ordinary candidates completed one real OneDrive Windows -> Mac -> Windows -> Mac rich-note sequence. Eight snapshots and 24 files verified; only requested title, summary, root-map text, image width and content timestamp changed. Full case remains unaccepted; see onedrive-sequential-cf350d8-results.json."
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "Forward ordinary cf350d8 sequence plus reverse ordinary4f517a4 Mac -> real OneDrive -> Windows -> Mac passed. Reverse115 assertions,9 snapshots/27 files, native edits and both app reopens; note identity/sections/block order/asset bytes/display width/editable map preserved, no source-machine absolute paths. Mac transient cloud unreadable state protected drafts and required retry/continuation. See onedrive-reverse-4f517a4-results.json; not full A11/A12/A15."
     },
     {
       "id": "A11",
       "windows": "未测",
       "mac": "未测",
-      "notes": "cf350d8 ordinary candidates completed one real OneDrive Windows -> Mac -> Windows -> Mac rich-note sequence. Eight snapshots and 24 files verified; only requested title, summary, root-map text, image width and content timestamp changed. Full case remains unaccepted; see onedrive-sequential-cf350d8-results.json."
+      "notes": "Both real-account sequential directions passed (onedrive-sequential-cf350d8 and onedrive-reverse-4f517a4); fully downloaded offline edit/reconnect remains untested. UI says local save, not remote receipt. Full case remains open."
     },
     {
       "id": "A12",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Mac isolated ordinary local-file fixture clean B preserves A; dirty external C preserves local D and all obtained versions, read-only preview and independent copy/reopen verified. This is not OneDrive delivery or missed-event startup/refocus acceptance; full A12 remains open. See macos-external-conflict-4f517a4-results.json."
+      "notes": "Mac isolated ordinary local-file fixture clean B preserves A; dirty external C preserves local D and all obtained versions, read-only preview and independent copy/reopen verified. This is not OneDrive delivery or missed-event startup/refocus acceptance; full A12 remains open. See macos-external-conflict-4f517a4-results.json. Reverse real OneDrive Windows clean update retained prior valid source revision and displayed actual new editor text; Mac transient unreadable state protected drafts and continued after explicit retry. Startup/refocus/save missed-event checks and full dirty OneDrive conflict/no-pruning remain open. See onedrive-reverse-4f517a4-results.json."
     },
     {
       "id": "A13",
@@ -623,7 +623,7 @@
       "id": "A15",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Real Mac OneDrive transient unreadable state displayed actual cloud-download reason, kept protected drafts, and reopened valid files after explicit retry without blank overwrite. Full placeholder/offline/external-deletion/corrupt/future-version/missing-image matrix remains open."
     },
     {
       "id": "A16",
@@ -799,5 +799,19 @@
     },
     "fullA09Accepted": false,
     "otherFactsUnchanged": 11
+  },
+  "currentCompletedBothPlatforms": 13,
+  "currentRemainingFullCases": 13,
+  "autosaveAndReverseSyncFollowup": {
+    "fullCasesRemaining": 13,
+    "bothA10Accepted": true,
+    "bothA09Accepted": true,
+    "date": "2026-10-19",
+    "scope": "Cumulative evidence; previous followup counts are historical. Issue33 open and dailyUseApproved false.",
+    "bothPlatformsCompleted": 13,
+    "reports": [
+      "windows-autosave-final-4f517a4-results.json",
+      "onedrive-reverse-4f517a4-results.json"
+    ]
   }
 }

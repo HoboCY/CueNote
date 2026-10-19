@@ -1,0 +1,508 @@
+{
+  "assertions": [
+    {
+      "name": "initial file count",
+      "passed": true
+    },
+    {
+      "name": "initial hash notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "initial hash notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "initial hash notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "mac file count",
+      "passed": true
+    },
+    {
+      "name": "mac hash notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "mac hash notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "mac hash notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "received file count",
+      "passed": true
+    },
+    {
+      "name": "received hash notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "received hash notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "received hash notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "real OneDrive receipt notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "real OneDrive receipt notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "real OneDrive receipt notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "valid package e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "valid package e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "same note identity",
+      "passed": true
+    },
+    {
+      "name": "native Mac title append only",
+      "passed": true
+    },
+    {
+      "name": "unchanged cue",
+      "passed": true
+    },
+    {
+      "name": "unchanged summary",
+      "passed": true
+    },
+    {
+      "name": "one new paragraph",
+      "passed": true
+    },
+    {
+      "name": "existing block order and content 0",
+      "passed": true
+    },
+    {
+      "name": "existing block order and content 1",
+      "passed": true
+    },
+    {
+      "name": "existing block order and content 2",
+      "passed": true
+    },
+    {
+      "name": "existing block order and content 3",
+      "passed": true
+    },
+    {
+      "name": "existing block order and content 4",
+      "passed": true
+    },
+    {
+      "name": "existing block order and content 5",
+      "passed": true
+    },
+    {
+      "name": "existing block order and content 6",
+      "passed": true
+    },
+    {
+      "name": "existing block order and content 7",
+      "passed": true
+    },
+    {
+      "name": "Mac native marker",
+      "passed": true
+    },
+    {
+      "name": "unchanged asset bytes assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "unchanged asset bytes assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "readonly UIA scope",
+      "passed": true
+    },
+    {
+      "name": "Windows adopted actual body text",
+      "passed": true
+    },
+    {
+      "name": "Windows honest local saved label",
+      "passed": true
+    },
+    {
+      "name": "previous valid source revision retained",
+      "passed": true
+    },
+    {
+      "name": "valid package note.cuenote",
+      "passed": true
+    },
+    {
+      "name": "retained previous sections",
+      "passed": true
+    },
+    {
+      "name": "retained previous title and identity",
+      "passed": true
+    },
+    {
+      "name": "retained previous asset assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "retained previous asset assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "windowsRichReopened count",
+      "passed": true
+    },
+    {
+      "name": "windowsRichReopened bytes notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "windowsRichReopened bytes notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "windowsRichReopened bytes notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReceived count",
+      "passed": true
+    },
+    {
+      "name": "macReceived bytes notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReceived bytes notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReceived bytes notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "windowsReopened count",
+      "passed": true
+    },
+    {
+      "name": "windowsReopened bytes notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "windowsReopened bytes notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "windowsReopened bytes notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReopened count",
+      "passed": true
+    },
+    {
+      "name": "macReopened bytes notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReopened bytes notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReopened bytes notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "windowsFinal count",
+      "passed": true
+    },
+    {
+      "name": "windowsFinal bytes notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "windowsFinal bytes notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "windowsFinal bytes notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "windowsRich count",
+      "passed": true
+    },
+    {
+      "name": "windowsRich bytes notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "windowsRich bytes notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "windowsRich bytes notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "windowsReopened exact final file notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "windowsReopened exact final file notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "windowsReopened exact final file notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "windowsRichReopened exact final file notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "windowsRichReopened exact final file notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "windowsRichReopened exact final file notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReceived exact final file notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "macReceived exact final file notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReceived exact final file notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReopened exact final file notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "macReopened exact final file notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "macReopened exact final file notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "valid package e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "Windows keeps rich note identity",
+      "passed": true
+    },
+    {
+      "name": "Windows native title append",
+      "passed": true
+    },
+    {
+      "name": "Windows unchanged cue",
+      "passed": true
+    },
+    {
+      "name": "Windows unchanged summary",
+      "passed": true
+    },
+    {
+      "name": "Windows one new paragraph",
+      "passed": true
+    },
+    {
+      "name": "Windows existing block 0",
+      "passed": true
+    },
+    {
+      "name": "Windows existing block 1",
+      "passed": true
+    },
+    {
+      "name": "Windows existing block 2",
+      "passed": true
+    },
+    {
+      "name": "Windows existing block 3",
+      "passed": true
+    },
+    {
+      "name": "Windows existing block 4",
+      "passed": true
+    },
+    {
+      "name": "Windows existing block 5",
+      "passed": true
+    },
+    {
+      "name": "Windows existing block 6",
+      "passed": true
+    },
+    {
+      "name": "Windows existing block 7",
+      "passed": true
+    },
+    {
+      "name": "Windows existing block 8",
+      "passed": true
+    },
+    {
+      "name": "Windows native marker",
+      "passed": true
+    },
+    {
+      "name": "Windows payload assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "Windows payload assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "valid package 1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "valid package 1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "code note identity",
+      "passed": true
+    },
+    {
+      "name": "code title only append",
+      "passed": true
+    },
+    {
+      "name": "all code and math sections exact",
+      "passed": true
+    },
+    {
+      "name": "no machine absolute paths e4d388db-32e3-4feb-a146-2d002463c10c",
+      "passed": true
+    },
+    {
+      "name": "portable ZIP names e4d388db-32e3-4feb-a146-2d002463c10c",
+      "passed": true
+    },
+    {
+      "name": "no machine absolute paths 1a7ec137-17d5-43f1-be3f-11f4fbe036c3",
+      "passed": true
+    },
+    {
+      "name": "portable ZIP names 1a7ec137-17d5-43f1-be3f-11f4fbe036c3",
+      "passed": true
+    },
+    {
+      "name": "Mac AX complete 560",
+      "passed": true
+    },
+    {
+      "name": "Mac actual editor both markers 560",
+      "passed": true
+    },
+    {
+      "name": "Mac local saved 560",
+      "passed": true
+    },
+    {
+      "name": "Mac AX complete 567",
+      "passed": true
+    },
+    {
+      "name": "Mac actual editor both markers 567",
+      "passed": true
+    },
+    {
+      "name": "Mac local saved 567",
+      "passed": true
+    },
+    {
+      "name": "Windows reopened actual text REVERSE-MAC-001",
+      "passed": true
+    },
+    {
+      "name": "Windows reopened actual text REVERSE-WINDOWS-001",
+      "passed": true
+    },
+    {
+      "name": "Windows reopened local saved",
+      "passed": true
+    },
+    {
+      "name": "Windows normal close exit",
+      "passed": true
+    }
+  ],
+  "fullA15Accepted": false,
+  "scope": "Native Mac edit -> real OneDrive -> native Windows edit -> real OneDrive -> native Mac reopen; both ordinary apps restarted. Previous forward sequence is docs/onedrive-sequential-cf350d8-results.json. Mac transient unreadable state required check-file-updates and protected-draft continuation; not automatic clean adoption.",
+  "utc": "2026-10-19T05:48:13.9740624Z",
+  "fullA11Accepted": false,
+  "reverseRoundAccepted": true,
+  "fullA12Accepted": false,
+  "passed": 115,
+  "failed": 0,
+  "finalFiles": [
+    {
+      "bytes": 197,
+      "path": "notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "sha256": "b79f8daca851d7fdb0994d11a78480bb519778d56192b3402424d4bdf8468d62"
+    },
+    {
+      "bytes": 1479,
+      "path": "notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "sha256": "38e039abda5a3af363bf6243ee886623066224c50d4a73f7634b707640d99291"
+    },
+    {
+      "bytes": 6184,
+      "path": "notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "sha256": "fc196f81a4f29af2beab3f6697fdceb829098fc60b710177a43487a0ab38bb30"
+    }
+  ],
+  "fullA10AcceptedWithPreviousForwardRound": true,
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "previousForwardReport": "onedrive-sequential-cf350d8-results.json",
+  "macEvidenceArchive": {
+    "verifiedFiles": 6531,
+    "name": "management-through-568-4f517a4.tar.gz",
+    "sha256": "014618ff205cccf02bd3703b17c55771e38ff6d61a83b66d257b61ed5ac76eb5",
+    "bytes": 110525085
+  },
+  "independentReview": {
+    "failed": 0,
+    "limitations": [
+      "Mac code AX value capped at512; package content compared in full",
+      "Old forward8 note hashes rechecked; previous24 facts reused",
+      "Mac archive6531 files checked by primary, not included in independent count"
+    ],
+    "passed": 562,
+    "sourceResultSha256": "abcb540edf5e91754b46e931400c4be6275a287a5879909333bcfd9b58a59cd1"
+  }
+}
