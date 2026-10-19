@@ -641,7 +641,7 @@
       "id": "A18",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json."
+      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json. Mac ordinary GUI automatic/manual backup outside OneDrive observed; same-day saves retain one automatic backup. Native rotation evidence remains separate; full case not promoted."
     },
     {
       "id": "A19",
@@ -653,7 +653,7 @@
       "id": "A20",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json."
+      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json. Mac ordinary single-note restore57 checks passed; exact source document/assets restored, complete pre-restore manual backup retains edit. Whole-library preview/cancel preserves4 active facts and21 backup files; replacement not executed because foreign window covered input. Initial two comparisons selected the wrong code note and are not product failures. See macos-backup-restore-ui-4f517a4-results.json."
     },
     {
       "id": "A21",
@@ -813,5 +813,12 @@
       "windows-autosave-final-4f517a4-results.json",
       "onedrive-reverse-4f517a4-results.json"
     ]
+  },
+  "macBackupRestoreUiFollowup": {
+    "fullA18A19A20Accepted": false,
+    "report": "macos-backup-restore-ui-4f517a4-results.json",
+    "wholeRestoreExecuted": false,
+    "wholeRestoreCancellationPassed": true,
+    "singleNoteRestoreSubstepPassed": true
   }
 }

@@ -1,0 +1,253 @@
+{
+  "failed": 0,
+  "correctRestoreActionJob": 617,
+  "passed": 57,
+  "scope": "Mac ordinary single-note restore substep only; jobs605/610 selected code note and cannot establish rich-note restore failure. Whole-library, errors and Windows GUI remain separate.",
+  "fullA20Accepted": false,
+  "checks": [
+    {
+      "name": "backups outside OneDrive",
+      "passed": true
+    },
+    {
+      "name": "one automatic plus four manual backups including two mistarget runs",
+      "passed": true
+    },
+    {
+      "name": "evidence hash .cuenote-backup.lock",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 472a452f-57ed-4bb0-8385-dcf913c62998/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 472a452f-57ed-4bb0-8385-dcf913c62998/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 472a452f-57ed-4bb0-8385-dcf913c62998/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 472a452f-57ed-4bb0-8385-dcf913c62998/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 53734408-0d56-4e4f-97aa-38b68c1f3efe/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 53734408-0d56-4e4f-97aa-38b68c1f3efe/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 53734408-0d56-4e4f-97aa-38b68c1f3efe/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 53734408-0d56-4e4f-97aa-38b68c1f3efe/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 978a6d04-5c4d-4400-b16a-f8a89d06b523/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 978a6d04-5c4d-4400-b16a-f8a89d06b523/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 978a6d04-5c4d-4400-b16a-f8a89d06b523/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "evidence hash 978a6d04-5c4d-4400-b16a-f8a89d06b523/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "evidence hash a4f897d6-dda7-47ef-8ce6-05d4ba4aa3a7/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash a4f897d6-dda7-47ef-8ce6-05d4ba4aa3a7/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash a4f897d6-dda7-47ef-8ce6-05d4ba4aa3a7/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "evidence hash a4f897d6-dda7-47ef-8ce6-05d4ba4aa3a7/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "evidence hash b7df9e56-26eb-4c35-af9a-2fbe36222dc1/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash b7df9e56-26eb-4c35-af9a-2fbe36222dc1/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "evidence hash b7df9e56-26eb-4c35-af9a-2fbe36222dc1/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "evidence hash b7df9e56-26eb-4c35-af9a-2fbe36222dc1/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest 472a452f-57ed-4bb0-8385-dcf913c62998/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "backup manifest 472a452f-57ed-4bb0-8385-dcf913c62998/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest 472a452f-57ed-4bb0-8385-dcf913c62998/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest 53734408-0d56-4e4f-97aa-38b68c1f3efe/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "backup manifest 53734408-0d56-4e4f-97aa-38b68c1f3efe/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest 53734408-0d56-4e4f-97aa-38b68c1f3efe/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest 978a6d04-5c4d-4400-b16a-f8a89d06b523/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "backup manifest 978a6d04-5c4d-4400-b16a-f8a89d06b523/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest 978a6d04-5c4d-4400-b16a-f8a89d06b523/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest a4f897d6-dda7-47ef-8ce6-05d4ba4aa3a7/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "backup manifest a4f897d6-dda7-47ef-8ce6-05d4ba4aa3a7/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest a4f897d6-dda7-47ef-8ce6-05d4ba4aa3a7/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest b7df9e56-26eb-4c35-af9a-2fbe36222dc1/notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "backup manifest b7df9e56-26eb-4c35-af9a-2fbe36222dc1/notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "backup manifest b7df9e56-26eb-4c35-af9a-2fbe36222dc1/notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "current source hash notes/1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "current source hash notes/e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "current source hash notebooks/28d319e3-132a-45c2-bbc4-22d53a316c53.json",
+      "passed": true
+    },
+    {
+      "name": "valid package e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "valid package e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "valid package e4d388db-32e3-4feb-a146-2d002463c10c.cuenote",
+      "passed": true
+    },
+    {
+      "name": "correct restored document matches selected backup",
+      "passed": true
+    },
+    {
+      "name": "pre-restore manual backup retains native edit",
+      "passed": true
+    },
+    {
+      "name": "pre-restore sections intact",
+      "passed": true
+    },
+    {
+      "name": "restored ZIP entry set intact",
+      "passed": true
+    },
+    {
+      "name": "restored payload assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "protected payload assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "restored payload assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "protected payload assets/264faec3-1fb7-4d3e-9551-f9a265c3f0a1",
+      "passed": true
+    },
+    {
+      "name": "valid package 1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "valid package 1a7ec137-17d5-43f1-be3f-11f4fbe036c3.cuenote",
+      "passed": true
+    },
+    {
+      "name": "earlier mistargeted code restore preserves full document",
+      "passed": true
+    },
+    {
+      "name": "actual selected radio and confirmation both rich note",
+      "passed": true
+    },
+    {
+      "name": "correct pre-backup precedes snapshot",
+      "passed": true
+    }
+  ],
+  "utc": "2026-10-19T06:16:21.3427145Z",
+  "wholeRestoreCancellation": {
+    "passed": true,
+    "wholeRestoreExecuted": false,
+    "backupFilesUnchanged": 21,
+    "libraryFactsUnchanged": 4
+  },
+  "candidateSource": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "evidenceArchive": {
+    "file": "management-through-639-4f517a4.tar.gz",
+    "sha256": "55d08da39caa436a101185472715481169f82c92ffd3adba037bfed79ceea7b8",
+    "verifiedFiles": 7225,
+    "bytes": 126874529
+  },
+  "fullA18Accepted": false,
+  "fullA19Accepted": false
+}
