@@ -538,26 +538,26 @@
     {
       "id": "A01",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
+      "mac": "通过",
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
     },
     {
       "id": "A02",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
+      "mac": "通过",
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
     },
     {
       "id": "A03",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
+      "mac": "通过",
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
     },
     {
       "id": "A04",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
+      "mac": "通过",
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
     },
     {
       "id": "A05",
@@ -580,8 +580,8 @@
     {
       "id": "A08",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "079fa6e->7a11fb1 ordinary Windows: node text/add/delete/hierarchy, internal undo/redo, collapsed body undo/redo, preview, body block moves/delete/undo, collapse focus, normal reopen and continued editing passed. Same map button/context restored; exact pixel scroll position not claimed (87px shift). Mac full case untested. See editor-block-followup-7a11fb1-results.json."
+      "mac": "通过",
+      "notes": "Windows079fa6e->7a11fb1 evidence retained. Mac ordinary4f517a4: native creation/text/child/sibling/indent/outdent/delete/internal and body undo/redo, block move/delete/undo, collapse focus, two normal reopens and continued node editing passed. 26 snapshots,182 facts,130 package documents,52 asset payloads. Exact pixel scroll position not claimed. See macos-mindmap-4f517a4-results.json."
     },
     {
       "id": "A09",
@@ -658,14 +658,14 @@
     {
       "id": "A21",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "Ordinary Windows 9760cf6 completed on a dedicated synthetic local library; see windows-functional-followup-9760cf6-results.json. Mac full case remains untested."
+      "mac": "通过",
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
     },
     {
       "id": "A22",
       "windows": "通过",
-      "mac": "未测",
-      "notes": "Windows 9760cf6 ordinary installed UI: two exports, 23 files and 21 relative references exact after moving directories; source unchanged; static map notice verified. Mac full case untested."
+      "mac": "通过",
+      "notes": "Windows9760cf6 ordinary export evidence retained. Mac4f517a4 ordinary native UI: two exports,23 files,21 relative links exact after moving; native source unchanged; static-map notice and all3 pages present; independent target-Mac reader9 captures reviewed. See macos-markdown-export-4f517a4-results.json."
     },
     {
       "id": "A23",
@@ -693,7 +693,7 @@
     }
   ],
   "pending": [
-    "Full A06 and Mac A08 remain open. Both ordinary4f517a4 image deletion direct-undo regression passed; cumulative A07 and Mac A05 accepted.",
+    "Full A06, A25 and A26 input/cross-device/offline cases remain open. Both image and map editing cases A07/A08 now accepted; remaining source-specific substeps tracked separately.",
     "079fa6e full Q51 passed on Windows and M1; two separate M1 immediate-startup save diagnostics while list-pending also passed. Full A23 Q52 UI boundaries remain open.",
     "Human IME and two-external-app clipboard substeps are separately recorded; remaining A06 syntax/input coverage is incomplete.",
     "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and late organization metadata; one ordinary rich-note sequential round trip has passed.",
@@ -748,5 +748,25 @@
     "macOwnedTestTerminalClosed": true,
     "remainingOriginalTerminals": 2,
     "scope": "Cumulative evidence with platform/candidate provenance, not overall #33 acceptance."
+  },
+  "macManagementMapAndExportFollowup": {
+    "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+    "reports": [
+      "macos-management-4f517a4-results.json",
+      "macos-mindmap-4f517a4-results.json",
+      "macos-markdown-export-4f517a4-results.json"
+    ],
+    "macCasesAccepted": [
+      "A01",
+      "A02",
+      "A03",
+      "A04",
+      "A08",
+      "A21",
+      "A22"
+    ],
+    "bothPlatformsCompleted": 10,
+    "fullCasesRemaining": 16,
+    "scope": "Completed cases only; overall #33 open and daily use not approved."
   }
 }

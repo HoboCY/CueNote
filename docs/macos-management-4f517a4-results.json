@@ -1,0 +1,342 @@
+{
+  "format": 1,
+  "issue": 33,
+  "platform": "macOS",
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "binarySha256": "fc323333171cefbacd3822b1fdd6a99468b8b0a8cb23ad9715c80a22b8243df0",
+  "scope": "Ordinary installed macOS candidate at /Applications; native GUI input and dedicated synthetic library. No observer/business IPC; external file operations limited to missing last note, derived cache removal and out-of-library fixture preparation.",
+  "dailyUseApproved": false,
+  "issueClosed": false,
+  "cases": {
+    "A01": "通过",
+    "A02": "通过",
+    "A03": "通过",
+    "A04": "通过",
+    "A21": "通过"
+  },
+  "stages": {
+    "through127": [
+      "before-reopen",
+      "beta-note-content",
+      "beta-note-created",
+      "beta-note-title",
+      "beta-opened",
+      "beta-pinned-book",
+      "beta-pinned-global",
+      "beta-retrashed",
+      "beta-trashed",
+      "book-beta-created",
+      "book-beta-renamed",
+      "book-create-blank",
+      "book-create-duplicate",
+      "delete-nonempty-rejected",
+      "empty-book-delete-cancel",
+      "empty-book-deleted",
+      "global-note-content",
+      "global-note-created",
+      "initial",
+      "missing-note-before-close",
+      "missing-note-reopen",
+      "missing-note-returned",
+      "moved-back-beta",
+      "moved-default",
+      "permanent-cancelled",
+      "permanent-deleted",
+      "permanent-dialog",
+      "rename-blank",
+      "rename-duplicate",
+      "reopened",
+      "reopened-expanded",
+      "reopened-ready",
+      "restore-missing-target-dialog",
+      "restore-target-cancel",
+      "restore-target-reopened",
+      "restored-editable",
+      "restored-original-book",
+      "restored-selected-default",
+      "search-cue-lowercase",
+      "search-note-content",
+      "search-note-created",
+      "search-note-created-confirmed",
+      "search-rebuilt-found",
+      "search-trash-excluded-confirmed",
+      "trash-before-restart",
+      "trash-readonly-input",
+      "trash-reopen-list",
+      "trash-reopened-readonly",
+      "unpin-order"
+    ],
+    "through195": [
+      "before-reopen",
+      "beta-note-content",
+      "beta-note-created",
+      "beta-note-title",
+      "beta-opened",
+      "beta-pinned-book",
+      "beta-pinned-global",
+      "beta-retrashed",
+      "beta-trashed",
+      "book-beta-created",
+      "book-beta-renamed",
+      "book-create-blank",
+      "book-create-duplicate",
+      "delete-nonempty-rejected",
+      "empty-book-delete-cancel",
+      "empty-book-deleted",
+      "external-backup-library",
+      "external-copied-to-alpha",
+      "external-open-library",
+      "external-saved-library",
+      "external-search-excluded",
+      "global-note-content",
+      "global-note-created",
+      "imported-copy-edited",
+      "initial",
+      "missing-note-before-close",
+      "missing-note-reopen",
+      "missing-note-returned",
+      "moved-back-beta",
+      "moved-default",
+      "permanent-cancelled",
+      "permanent-deleted",
+      "permanent-dialog",
+      "rename-blank",
+      "rename-duplicate",
+      "reopened",
+      "reopened-expanded",
+      "reopened-ready",
+      "restore-missing-target-dialog",
+      "restore-target-cancel",
+      "restore-target-reopened",
+      "restored-editable",
+      "restored-original-book",
+      "restored-selected-default",
+      "rich-cache-reopened",
+      "rich-restored",
+      "rich-search-after-cache-removal",
+      "rich-search-code",
+      "rich-search-content",
+      "rich-search-cue",
+      "rich-search-external-source",
+      "rich-search-formula",
+      "rich-search-image-pixels",
+      "rich-search-manual-rebuild",
+      "rich-search-map",
+      "rich-search-restored-hit",
+      "rich-search-scope-hit",
+      "rich-search-scope-miss",
+      "rich-search-summary",
+      "rich-search-title",
+      "rich-search-trash-excluded",
+      "rich-search-trashed",
+      "search-and-external-final",
+      "search-cue-lowercase",
+      "search-note-content",
+      "search-note-created",
+      "search-note-created-confirmed",
+      "search-rebuilt-found",
+      "search-trash-excluded-confirmed",
+      "trash-before-restart",
+      "trash-readonly-input",
+      "trash-reopen-list",
+      "trash-reopened-readonly",
+      "unpin-order"
+    ]
+  },
+  "verification": {
+    "through127": {
+      "snapshotStages": 49,
+      "manifestFiles": 1403,
+      "manifestSha256": "cce8c5d1442011170ee2e185bfdec6c879a24bf6159711e2c16ab7ad16d21107",
+      "archiveSha256": "f56e39050563233d9521c01f6c02155764787f1e597844c582edca7d760a28c5",
+      "independentVerifier": {
+        "taskId": "df6a04858664417b8e0a1e55ee6b1252",
+        "status": "Completed",
+        "eventCursor": 270,
+        "hasMore": false,
+        "criteria": {
+          "GLOBAL": "8/8",
+          "A01": "12/12",
+          "A02": "9/9",
+          "A04": "7/7"
+        },
+        "overall": "36/36 pass",
+        "report": "verifier-management-results.json",
+        "method": "read-only recomputation from copied evidence; no desktop/SSH/browser, no product/repo writes"
+      },
+      "initialNotesByteIdenticalAcrossAllStages": true,
+      "macCloseAssertedExitCode": false
+    },
+    "through195": {
+      "manifestFiles": 2159,
+      "manifestSha256": "9dd64e00f8fde68325e359974ae0084993b2b2fd39917427af498d465102edb4",
+      "archiveSha256": "f66e12aad4cf52615a3edf4e476ba4e9c995b1cabdba29340003a775c8f8ca4d",
+      "packages": {
+        "snapshots": 74,
+        "externalSnapshots": 3,
+        "factCopies": 514,
+        "packageDocuments": 336,
+        "assetPayloads": 98
+      },
+      "searchExternalChecks": {
+        "passed": 21,
+        "total": 21,
+        "cases": {
+          "A03": "通过",
+          "A21": "通过"
+        }
+      },
+      "cacheRemovalRebuildFactsUnchanged": true
+    },
+    "allManifestsReverifiedByPrimary": true
+  },
+  "searchMatches": [
+    {
+      "job": 155,
+      "query": "macsearchrich",
+      "count": 1,
+      "excerpt": "命中标题"
+    },
+    {
+      "job": 157,
+      "query": "win-cue-001",
+      "count": 1,
+      "excerpt": "命中线索区"
+    },
+    {
+      "job": 159,
+      "query": "win-content-001",
+      "count": 1,
+      "excerpt": "命中内容区"
+    },
+    {
+      "job": 161,
+      "query": "mac-summary-002",
+      "count": 1,
+      "excerpt": "命中总结区"
+    },
+    {
+      "job": 163,
+      "query": "CONSOLE.LOG",
+      "count": 1,
+      "excerpt": "console.log"
+    },
+    {
+      "job": 165,
+      "query": "\\frac{1}{3}",
+      "count": 1,
+      "excerpt": "命中内容区"
+    },
+    {
+      "job": 167,
+      "query": "知识地图",
+      "count": 1,
+      "excerpt": "命中内容区"
+    },
+    {
+      "job": 169,
+      "query": "sync image",
+      "count": 0,
+      "excerpt": "没有找到匹配笔记"
+    },
+    {
+      "job": 171,
+      "query": "macexternalonly",
+      "count": 0,
+      "excerpt": "没有找到匹配笔记"
+    },
+    {
+      "job": 179,
+      "query": "console.log",
+      "count": 0,
+      "excerpt": "没有找到匹配笔记"
+    },
+    {
+      "job": 185,
+      "query": "console.log",
+      "count": 1,
+      "excerpt": "命中内容区"
+    },
+    {
+      "job": 191,
+      "query": "console.log",
+      "count": 1,
+      "excerpt": "命中内容区"
+    },
+    {
+      "job": 193,
+      "query": "console.log",
+      "count": 1,
+      "excerpt": "命中内容区"
+    }
+  ],
+  "searchScopes": [
+    {
+      "job": 173,
+      "scope": "Mac验收甲",
+      "count": 1,
+      "result": "1 条匹配 · “Mac验收甲”"
+    },
+    {
+      "job": 175,
+      "scope": "默认笔记本",
+      "count": 0,
+      "result": "0 条匹配 · “默认笔记本”"
+    }
+  ],
+  "externalNote": {
+    "sourceId": "d2732090-8d20-4a37-9177-e132d7018126",
+    "importedId": "30491cab-8b23-4ff7-b8c1-72dd8e2b5a02",
+    "importedToNotebook": "1d2b2470-5370-44c0-9b81-664c01da9eb9",
+    "sourceBytes": 5936,
+    "sourceSha256AfterCopyEdit": "02f93fde37390f5a6a9c0c23115c437b564f3a3b99fe4d517dc1431db07d17f9",
+    "saveChangesOnlyTitleAndContentModifiedAt": true,
+    "externalExcludedFromSearchAndBackup": true
+  },
+  "backup": {
+    "backupId": "a7b3fb73-60f6-48a6-b2d9-3ffaf3e09cef",
+    "kind": "manual",
+    "facts": 6,
+    "notes": 4,
+    "notebooks": 2,
+    "externalSourceExcluded": true,
+    "manifestSha256": "d0dbcdf7223dea7965de149ae7ed2c7473cca3eba81bee24fac1d1a04617d776"
+  },
+  "closeEvidence": {
+    "normalTerminateRequested": true,
+    "processDisappeared": true,
+    "exitStatusAvailable": false,
+    "appExitCodeClaimed": false,
+    "helperExitCodeNote": "Runner/helper exitCode 0 is not an application exit code."
+  },
+  "failedJobs": [
+    {
+      "job": "006",
+      "reason": "动作计划缺修饰键或被拒绝的键码",
+      "inputProduced": false
+    },
+    {
+      "job": "024",
+      "reason": "单次允许激活后未取得前台（Edge 抢焦）；用户确认切回后才继续",
+      "inputProduced": false
+    },
+    {
+      "job": "116",
+      "reason": "动作计划键字段不合法",
+      "inputProduced": false
+    }
+  ],
+  "noop": [
+    {
+      "job": "035",
+      "note": "搜索结果页第一次点击未创建笔记；第二次创建于默认本才计入"
+    }
+  ],
+  "clarifications": [
+    "A21 covers normal in-place save and imported-copy editing only; write failure, process interruption and recovery protection remain A16/A17.",
+    "Image-pixel and out-of-library search exclusions use synthetic fixtures.",
+    "Mac close evidence is a normal terminate request plus process disappearance only; no app exit code is claimed.",
+    "Failed or interrupted jobs produced no input and are neither passes nor product defects; the first no-op result-view click is treated the same.",
+    "Mac other cases and daily-use acceptance remain open; this record does not close #33 and Windows results are not inherited."
+  ]
+}

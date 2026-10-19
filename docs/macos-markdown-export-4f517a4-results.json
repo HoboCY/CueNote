@@ -1,0 +1,291 @@
+{
+  "format": 1,
+  "issue": 33,
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "platform": "macOS",
+  "case": "A22",
+  "status": "通过",
+  "binarySha256": "fc323333171cefbacd3822b1fdd6a99468b8b0a8cb23ad9715c80a22b8243df0",
+  "ordinaryNativeUiExport": true,
+  "nativeLibraryFactsUnchanged": 7,
+  "sourceNativeFilesUnchanged": true,
+  "exports": [
+    {
+      "label": "rich",
+      "sourceSha256": "1c1877dbbe5a8d62443046068356feffed80b06aee30c0c697f767e372437c04",
+      "noteId": "30491cab-8b23-4ff7-b8c1-72dd8e2b5a02",
+      "oldPathAbsent": true,
+      "files": [
+        {
+          "path": "assets/code-1.txt",
+          "sha256": "d7fb731e32fff31bc5f702ced14c4ee8e892170b0db596d40d0978fa00cdce0a",
+          "bytes": 100
+        },
+        {
+          "path": "assets/image-264faec3-1fb7-4d3e-9551-f9a265c3f0a1.png",
+          "sha256": "48f5e3c6b7717d06b0996cf5432b7622e0ba989456e70c5733f21aaf13c443c5",
+          "bytes": 4329
+        },
+        {
+          "path": "assets/mind-map-32ead5f2-466e-4278-9ef3-4f6807b2b2a3-0001.svg",
+          "sha256": "ba41e51a46cb5ec7a5b9de24c5735f75b016ce5b623edee72909885cc4cc8ce4",
+          "bytes": 826
+        },
+        {
+          "path": "assets/mind-map-32ead5f2-466e-4278-9ef3-4f6807b2b2a3.json",
+          "sha256": "ac15d08f7b0b65ce664cf210f063dfa2179d78ba295bfad509b0bfbfb5081684",
+          "bytes": 475
+        },
+        {
+          "path": "note.md",
+          "sha256": "897d2a3e487ba0a9b865632a1e6634f77309929b2ee3f213daf7e3b47f33c3a6",
+          "bytes": 1039
+        }
+      ],
+      "relativeReferences": [
+        "assets/image-264faec3-1fb7-4d3e-9551-f9a265c3f0a1.png",
+        "assets/mind-map-32ead5f2-466e-4278-9ef3-4f6807b2b2a3-0001.svg",
+        "assets/mind-map-32ead5f2-466e-4278-9ef3-4f6807b2b2a3.json",
+        "assets/code-1.txt"
+      ],
+      "codes": 1,
+      "languages": [
+        "typescript"
+      ],
+      "formulas": 1,
+      "images": 1,
+      "maps": 1,
+      "sourceUnchanged": true,
+      "allContentChecksPassed": true
+    },
+    {
+      "label": "all-formats",
+      "sourceSha256": "daff84e556c4bf5b104d164f0a8983e3f33a6cc21b374405f24e950b827f8b1d",
+      "noteId": "61c9d991-58e0-46e0-bd02-e2ee6f85a922",
+      "oldPathAbsent": true,
+      "files": [
+        {
+          "path": "assets/code-1.txt",
+          "sha256": "5409be47fa0a8b90af596f493936bf4b62873a31c653619d5219326f63ea6bd8",
+          "bytes": 138
+        },
+        {
+          "path": "assets/code-2.txt",
+          "sha256": "9612adfb440ece84be9572b966a1c5d1d0af915ac26979b0cd57ee8379f54b8e",
+          "bytes": 119
+        },
+        {
+          "path": "assets/code-3.txt",
+          "sha256": "97828568bd79e5ed233a3b62623904a818ecebd3d8edd48fc25461a294651d5a",
+          "bytes": 121
+        },
+        {
+          "path": "assets/code-4.txt",
+          "sha256": "da888c211954d7bebdd73cd0817e1287e5d1eb1bd30299ee8a87752817d8889f",
+          "bytes": 81
+        },
+        {
+          "path": "assets/code-5.txt",
+          "sha256": "679af565f3afdc0440dcb53c6e5afb141fb9cd341db7f5e544433fea22554dd3",
+          "bytes": 126
+        },
+        {
+          "path": "assets/code-6.txt",
+          "sha256": "da48984e4bdfa0abb8f1da9eb065afe20877dd5acfd22d0162ae545102558a7a",
+          "bytes": 103
+        },
+        {
+          "path": "assets/code-7.txt",
+          "sha256": "2014556bdb92445a791840134f4e5c7c18e367266ab725e5b041b430ea0e9c47",
+          "bytes": 69
+        },
+        {
+          "path": "assets/code-8.txt",
+          "sha256": "64ea8c47a0be0889b696ea0f05ed764907209c6969df59e6bb57904727ee524c",
+          "bytes": 68
+        },
+        {
+          "path": "assets/image-10c4eaf6-3832-4bcb-bc4b-8e81bb23023b.png",
+          "sha256": "977388359993da3d2b6daefb0edcf1236cee76098d4055f1282a3b5114ff1792",
+          "bytes": 1048576
+        },
+        {
+          "path": "assets/image-776e7b15-c41e-47fd-8e9d-56fe79b11408.png",
+          "sha256": "ba43dbb2822b46d3765f94b7e8ffd176b869310289bc06ac7647ab7fe647f6ee",
+          "bytes": 1048576
+        },
+        {
+          "path": "assets/image-a262a1ea-fa33-48ee-94fa-a3844efe5635.png",
+          "sha256": "2681264d829858c8ab76637e8b1c5e0466619da0c63c0cb624208fc5fa438196",
+          "bytes": 1048576
+        },
+        {
+          "path": "assets/image-d45aa9f8-86e2-477a-a9d8-f431c078a3e9.png",
+          "sha256": "a4ad302ddf520f8f00984763897bc70f3db6f7ca9ab0f33226eb4bb187860f58",
+          "bytes": 1048576
+        },
+        {
+          "path": "assets/image-f8035b54-d239-4739-b47e-95ff2eb85b22.png",
+          "sha256": "4b39636db900a76c20913414f99e2b57f33abeed277ee7fa00f4fe30341b3931",
+          "bytes": 1048576
+        },
+        {
+          "path": "assets/mind-map-bf9ec0d3-d8a4-49be-82b7-974f14447144-0001.svg",
+          "sha256": "72632d7cf32ee16d30ea36ce378c44f1ee542b7ddf4b92a087bd2a83534f5337",
+          "bytes": 5534
+        },
+        {
+          "path": "assets/mind-map-bf9ec0d3-d8a4-49be-82b7-974f14447144-0002.svg",
+          "sha256": "b0804582d8e37fb1ea30115ca15a51e8d904b15538d8bb6d3e7392ac495077a8",
+          "bytes": 5564
+        },
+        {
+          "path": "assets/mind-map-bf9ec0d3-d8a4-49be-82b7-974f14447144-0003.svg",
+          "sha256": "cc42f6b2a34036635629a67def4a51963eb216f7c6e438974cc609c8072d6cc4",
+          "bytes": 2319
+        },
+        {
+          "path": "assets/mind-map-bf9ec0d3-d8a4-49be-82b7-974f14447144.json",
+          "sha256": "e73e29787bcb00acc5fb5e60fe34255f37b59eb6ae81d5f36f5b4c6799256f8d",
+          "bytes": 8971
+        },
+        {
+          "path": "note.md",
+          "sha256": "a10b0324cbd7c26ea32c5b2869bc75aab85687eabee76f1985553d34ead4cd60",
+          "bytes": 8655
+        }
+      ],
+      "relativeReferences": [
+        "assets/image-a262a1ea-fa33-48ee-94fa-a3844efe5635.png",
+        "assets/mind-map-bf9ec0d3-d8a4-49be-82b7-974f14447144-0001.svg",
+        "assets/mind-map-bf9ec0d3-d8a4-49be-82b7-974f14447144-0002.svg",
+        "assets/mind-map-bf9ec0d3-d8a4-49be-82b7-974f14447144-0003.svg",
+        "assets/mind-map-bf9ec0d3-d8a4-49be-82b7-974f14447144.json",
+        "assets/code-1.txt",
+        "assets/code-2.txt",
+        "assets/code-3.txt",
+        "assets/code-4.txt",
+        "assets/code-5.txt",
+        "assets/code-6.txt",
+        "assets/code-7.txt",
+        "assets/code-8.txt",
+        "assets/image-776e7b15-c41e-47fd-8e9d-56fe79b11408.png",
+        "assets/image-10c4eaf6-3832-4bcb-bc4b-8e81bb23023b.png",
+        "assets/image-d45aa9f8-86e2-477a-a9d8-f431c078a3e9.png",
+        "assets/image-f8035b54-d239-4739-b47e-95ff2eb85b22.png"
+      ],
+      "codes": 8,
+      "languages": [
+        "javascript",
+        "typescript",
+        "python",
+        "rust",
+        "csharp",
+        "sql",
+        "json",
+        "brainfuck"
+      ],
+      "formulas": 3,
+      "images": 5,
+      "maps": 1,
+      "sourceUnchanged": true,
+      "allContentChecksPassed": true
+    }
+  ],
+  "totalFiles": 23,
+  "totalRelativeReferences": 21,
+  "reader": {
+    "engine": "PowerShell Markdig -> installed target Mac Microsoft Edge headless",
+    "isolatedFreshProfiles": true,
+    "formulaRendering": "Source readable; reader has no math renderer",
+    "visualReviewCompleted": true,
+    "captures": [
+      {
+        "name": "all-formats-0",
+        "sha256": "82e91993394f38128cce51cb76c0be91254c726affc8913b60ca43c1a65a4c2e",
+        "imageCount": 8,
+        "allImagesLoaded": true,
+        "tables": 1,
+        "codeBlocks": 8
+      },
+      {
+        "name": "all-formats-1200",
+        "sha256": "27f3e5267439bee20c99cf18ba09ebb5ce2ff26ca29e37837a7f5962938515dd",
+        "imageCount": 8,
+        "allImagesLoaded": true,
+        "tables": 1,
+        "codeBlocks": 8
+      },
+      {
+        "name": "all-formats-2400",
+        "sha256": "c944b993611a025cd6e77afc7abae2e0a2ecfdbcd086d2a9b08e4437391cc8fa",
+        "imageCount": 8,
+        "allImagesLoaded": true,
+        "tables": 1,
+        "codeBlocks": 8
+      },
+      {
+        "name": "all-formats-3600",
+        "sha256": "b3f772af99a81c5328b0f21ff7dae0c46981f97a1267156013b22d3dc22ca7a0",
+        "imageCount": 8,
+        "allImagesLoaded": true,
+        "tables": 1,
+        "codeBlocks": 8
+      },
+      {
+        "name": "all-formats-4800",
+        "sha256": "4f10366d0ef2f20aa26d19550ed57c7c87fff69d49e852312cfd5acbb610394a",
+        "imageCount": 8,
+        "allImagesLoaded": true,
+        "tables": 1,
+        "codeBlocks": 8
+      },
+      {
+        "name": "all-formats-6000",
+        "sha256": "3319f7193549bd589ceede38d23a9c8e42205a10bd44837446248f941e543219",
+        "imageCount": 8,
+        "allImagesLoaded": true,
+        "tables": 1,
+        "codeBlocks": 8
+      },
+      {
+        "name": "all-formats-7200",
+        "sha256": "274e88bcd2515ab2e39aea381b569c244a9f7372addd62ef91488ad9a077e459",
+        "imageCount": 8,
+        "allImagesLoaded": true,
+        "tables": 1,
+        "codeBlocks": 8
+      },
+      {
+        "name": "all-formats-8400",
+        "sha256": "2d70bf59a8121fbe180786a1bd403735f546e0137f5776277adca29e8306d146",
+        "imageCount": 8,
+        "allImagesLoaded": true,
+        "tables": 1,
+        "codeBlocks": 8
+      },
+      {
+        "name": "rich-0",
+        "sha256": "a99b5449843f3842d0b875132ef1ee9c423eead29b80a5df42227b3a7f7dc4c4",
+        "imageCount": 2,
+        "allImagesLoaded": true,
+        "tables": 0,
+        "codeBlocks": 1
+      }
+    ]
+  },
+  "evidence": {
+    "archive": "management-through-311-4f517a4.tar.gz",
+    "files": 3396,
+    "archiveSha256": "98196df67da3b4fea6d0c0a2b80170f6bd5ba5d5c691458e824e820d1f834b38",
+    "manifestSha256": "29284e2e9213cd18fde611ef29d78ffb5c8b11053600e9ded9d9af4bf71bb32c",
+    "scope": "Cumulative with management and map evidence; independent reader derived browser caches excluded, exact export files and reader receipts included."
+  },
+  "limitations": [
+    "Prepared all-formats fixture validates export only, not input or cross-device editing.",
+    "Initial scroll captures and small-SVG stylesheet not used for visual pass; retained separately.",
+    "Validator section-label and single-SVG assumptions corrected; exported bytes unchanged.",
+    "Job284 out-of-range scroll rejected before input."
+  ],
+  "dailyUseApproved": false
+}
