@@ -567,9 +567,9 @@
     },
     {
       "id": "A06",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": "7a11fb1 ordinary candidates: task markers, native checkbox toggles and normal save/reopen passed on both devices. Other existing editor/human IME evidence remains separately recorded; full case not accepted."
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "Cumulative frozen A06 passed: Windows079fa6e body/undo/table/code/math,7a11fb1 task/quote/rule fix,4f517a4 cue/summary simple formatting; Mac4f517a4 full native syntax/three-region undo/table/code/math/save/reopen. Prior explicit human IME confirmations retained with candidate provenance. Independent evidence verification10448 assertions/0 failures. A25/A26 offline/cross-direction remain separate. See macos-editor-4f517a4-results.json and windows-simple-editor-4f517a4-results.json."
     },
     {
       "id": "A07",
@@ -587,7 +587,7 @@
       "id": "A09",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Mac ordinary4f517a4 idle autosave, immediate switch/quit, readonly failure/cancel/retry, real per-note-lock in-flight editing/cancel-wait/newer-save/reopen passed:23 snapshots230 facts,3 failed drafts retained. Explicit conflicts and Windows ordinary consolidation remain; full A09 open. See macos-autosave-4f517a4-results.json."
     },
     {
       "id": "A10",
@@ -629,7 +629,7 @@
       "id": "A16",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": "Mac ordinary4f517a4 real readonly directory failure, protected draft, cancel close/switch, restored permission/retry/reopen passed; other complete A16 filesystem/capacity/recovery-failure cases remain open. See macos-autosave-4f517a4-results.json."
     },
     {
       "id": "A17",
@@ -693,9 +693,8 @@
     }
   ],
   "pending": [
-    "Full A06, A25 and A26 input/cross-device/offline cases remain open. Both image and map editing cases A07/A08 now accepted; remaining source-specific substeps tracked separately.",
+    "A06 accepted on both devices using cumulative native editor evidence and prior explicit human IME results. Full A25/A26 offline/cross-direction/export/search requirements remain open.",
     "079fa6e full Q51 passed on Windows and M1; two separate M1 immediate-startup save diagnostics while list-pending also passed. Full A23 Q52 UI boundaries remain open.",
-    "Human IME and two-external-app clipboard substeps are separately recorded; remaining A06 syntax/input coverage is incomplete.",
     "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and late organization metadata; one ordinary rich-note sequential round trip has passed.",
     "Full A01-A26, Q51/Q52 target-device evidence",
     "Interactive installation, actual upgrade/uninstall data retention and remaining formal-candidate UI cases on both devices"
@@ -768,5 +767,20 @@
     "bothPlatformsCompleted": 10,
     "fullCasesRemaining": 16,
     "scope": "Completed cases only; overall #33 open and daily use not approved."
+  },
+  "editorAndAutosaveFollowup": {
+    "date": "2026-10-19",
+    "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+    "reports": [
+      "macos-editor-4f517a4-results.json",
+      "windows-simple-editor-4f517a4-results.json",
+      "macos-autosave-4f517a4-results.json"
+    ],
+    "bothA06Accepted": true,
+    "bothPlatformsCompleted": 11,
+    "fullCasesRemaining": 15,
+    "macAutosaveSubstepsPassed": true,
+    "fullA09Accepted": false,
+    "scope": "Overall #33 open; daily use not yet approved."
   }
 }

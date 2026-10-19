@@ -1,0 +1,187 @@
+{
+  "format": 1,
+  "date": "2026-10-19",
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "macBinarySha256": "fc323333171cefbacd3822b1fdd6a99468b8b0a8cb23ad9715c80a22b8243df0",
+  "sourceDiffScope": "4f517a4 touches only src/image-extensions.ts, tests/image-editor.test.ts and docs/image-delete-focus-fix.md; editor/code/math input paths unchanged",
+  "candidateLibrary": "/Users/hobo/CueNote-ordinary-acceptance-20261019/library",
+  "editorNote": {
+    "noteId": "c8c8e83c-7997-45f2-bf96-63afc8c8b8f3",
+    "title": "Mac Markdown 完整编辑验收 · 4f517a4",
+    "finalSha256": "05d4f50dd79680c764b691dcc94fd41befa9be61c794c92d9480fba8eb0861b0",
+    "stagesVerified": [
+      "editor-new-note",
+      "editor-title",
+      "editor-three-sections",
+      "editor-cue-body-filled",
+      "editor-all-three-filled",
+      "editor-undo-summary",
+      "editor-undo-cue",
+      "editor-undo-body",
+      "editor-redo-summary",
+      "editor-redo-cue",
+      "editor-redo-body",
+      "editor-headings",
+      "editor-marks",
+      "editor-lists-quote-rule",
+      "editor-link",
+      "editor-table-created",
+      "editor-table-filled",
+      "editor-table-row-added",
+      "editor-table-column-added",
+      "editor-table-row-deleted",
+      "editor-table-row-restored",
+      "editor-table-column-deleted",
+      "editor-table-column-restored",
+      "editor-task-toggled",
+      "editor-cue-formatted",
+      "editor-summary-formatted",
+      "editor-basic-reopened",
+      "editor-basic-reopened-visible",
+      "editor-basic-reopened-bottom"
+    ],
+    "stage316NoInputExcluded": {
+      "stage": "editor-three-sections",
+      "reason": "plan clicked wrong toolbar coordinates; native file identical to editor-title; no input produced",
+      "countedAsPassOrDefect": false
+    },
+    "paragraphsH1toH3": true,
+    "marks": [
+      "bold",
+      "italic",
+      "strike",
+      "inlineCode",
+      "link(https://example.com)"
+    ],
+    "listsQuoteRule": [
+      "bulletList",
+      "orderedList",
+      "taskList",
+      "blockquote",
+      "horizontalRule"
+    ],
+    "tableSequence": "2x2 -> row added 3x2 -> column added 3x3 -> row deleted 2x3 -> Cmd+Z row restored 3x3 -> column deleted 3x2 -> Cmd+Z column restored 3x3",
+    "tableRowsColumnsAndCellTextVerified": true,
+    "taskToggled": true,
+    "cueAndSummaryFormatted": "heading2 + bold paragraph + bulletList + orderedList + taskList (each region, verified from document.json)",
+    "threeRegionUndoRedoOnlyTargetChanged": true,
+    "undoOrder": [
+      "summary",
+      "cue",
+      "body"
+    ],
+    "redoOrder": [
+      "summary",
+      "cue",
+      "body"
+    ],
+    "reopenByteIdentical": true
+  },
+  "codeMathNote": {
+    "noteId": "1a7ec137-17d5-43f1-be3f-11f4fbe036c3",
+    "title": "Mac 公式与代码验收 · 4f517a4",
+    "finalSha256": "9f1d645f1ca40fb9795697ee7dd0da7443f5d288409edc76edd20b3d4af5d3e5",
+    "expectedCodeSources": 8,
+    "allEightSourcesExact": true,
+    "languages": [
+      "javascript",
+      "typescript",
+      "python",
+      "rust",
+      "csharp",
+      "sql",
+      "json",
+      "brainfuck"
+    ],
+    "unknownLanguagePlainText": "brainfuck",
+    "firstLineOnlyIncompleteInputExcluded": {
+      "stage": "code-first",
+      "observed": "only the first JavaScript line inserted",
+      "sha256": "44d651c7a92e627c31f981efd412b199b5d4e3cebd4db3e2385f730dfc7d7a2f",
+      "lossClaim": false
+    },
+    "codeRestoredByRealEnterTabKeys": true,
+    "mathInlineNodes": 9,
+    "mathInlineValid": 8,
+    "mathInlineInvalidSourcePreserved": "\\thisCommandDoesNotExist",
+    "escapedDollarPreservedAsText": "\\$5",
+    "inlineCodeExcludedFromMath": "$not_math$",
+    "mathBlockExact": "\\begin{aligned}\n\\sum_{i=1}^{n} i &= \\frac{n(n+1)}{2} \\\\\n\\int_0^1 x^2\\,dx &= \\frac{1}{3}\n\\end{aligned}",
+    "mathSourceEdit": "x_i^2 -> x_i^3; undo restores x_i^2; redo restores x_i^3; only target formula changed",
+    "reopenByteIdentical": true
+  },
+  "evidence": {
+    "frozenRoot": "implementation-execution/issue-33/management-through-405-4f517a4-evidence",
+    "archiveSha256": "ae137beb717d9c552687c093c20871ad9b67e2616d751b30b3599c222b08243b",
+    "archiveBytes": 73586392,
+    "manifestFiles": 4563,
+    "manifestBytes": 105781055,
+    "librarySnapshots": 149,
+    "externalSnapshots": 3,
+    "factCopies": 1100,
+    "packageDocuments": 772,
+    "assetPayloads": 248,
+    "baselineSnapshot": "export-all-formats-published",
+    "priorNotesAndBooksUnchanged": true,
+    "priorNoteIds": [
+      "0e4e816b-79d5-43f4-8798-062bfc8d8e38",
+      "287e0dd2-d84b-4fbd-89d8-d2549aa701a2",
+      "30491cab-8b23-4ff7-b8c1-72dd8e2b5a02",
+      "85e624d8-d9e5-41ed-a600-d987acb0b1e2",
+      "bd4f5a25-2e82-4f66-aa20-f3d08195dcf2"
+    ],
+    "bookIds": [
+      "1d2b2470-5370-44c0-9b81-664c01da9eb9",
+      "28d319e3-132a-45c2-bbc4-22d53a316c53"
+    ]
+  },
+  "jobs": {
+    "actionJobsChecked": 45,
+    "executedPlanEqualsRecordedInput": true,
+    "allHelperExitCodesZero": true,
+    "nativeSyntheticInputOnly": true,
+    "noIpcJavascriptClipboard": true,
+    "appPids": [
+      8712,
+      10951,
+      11538
+    ],
+    "normalCloseObserved": true,
+    "normalCloseExitStatusAvailable": false,
+    "normalAppExitCodeClaimed": false
+  },
+  "humanInputReuse": {
+    "mac": "9760cf6 explicit user confirmation (Chinese IME, per-region undo/redo, reopen) remains valid; 4f517a4 diff does not touch input/editor paths; no repeat required",
+    "screenshotsParentViewedOnly": [
+      "job-369-window.png",
+      "job-371-window.png",
+      "job-401-window.png",
+      "job-403-window.png",
+      "job-405-window.png"
+    ]
+  },
+  "verification": {
+    "script": "verify-editor-405.ps1 (adapted from verify-packages-through279.ps1; original untouched)",
+    "output": "packages-through405-verified.json",
+    "log": "verify-editor-405.log",
+    "artifactLocation": "implementation-execution/issue-33/mac-management-4f517a4/editor-verifier-405; parent copied and SHA-256 verified all three artifacts",
+    "assertions": 10448,
+    "failed": 0,
+    "taskId": "4d72310325c143128691fd4e7cb57bf8",
+    "taskStatus": "Completed",
+    "finalCursor": 372,
+    "hasMore": false,
+    "resultSha256": "568db922f133a507dac2a1c52abb0a2f3c8f905ee4c9563a7073fb291595817a"
+  },
+  "limitations": [
+    "editor-three-sections (316) produced no input (wrong toolbar coordinates) and is preserved/excluded.",
+    "code-first (376) is incomplete first-line input and excluded from the 8-source claim.",
+    "Normal close: only termination request plus process disappearance; app exit code unavailable (exitStatusAvailable=false).",
+    "Window screenshots were not independently re-viewed by this verifier; highlight/rendering claims are parent-viewed only.",
+    "A25/A26 offline, cross-direction and remaining source-specific checks remain open; they are not additional frozen A06 gates. Overall #33 remains open."
+  ],
+  "scope": "Mac A06 accepted from ordinary native editor/save/reopen evidence plus explicit human IME confirmation; A25/A26 and #33 remain open.",
+  "acceptedCases": [
+    "A06"
+  ]
+}

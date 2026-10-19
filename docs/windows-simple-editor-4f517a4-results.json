@@ -1,0 +1,109 @@
+{
+  "format": 1,
+  "date": "2026-10-19",
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "windowsBinarySha256": "ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68",
+  "executable": "D:\\Apps\\CueNote\\cuenote.exe",
+  "candidateLibrary": "D:\\Projects\\notebook\\package-output\\ordinary-win-management-9760cf6\\library",
+  "note": {
+    "noteId": "6c41d3b0-4661-460c-91c9-87d05b0ee2d7",
+    "title": "Windows 精简分区排版验收 · 4f517a4",
+    "finalSha256": "47beefa86b88834b81b4716153954c8f38722e6848f857bac8709c5fdeae13c7",
+    "stages": [
+      "windows-editor-4f517a4-simple-new",
+      "windows-editor-4f517a4-simple-title",
+      "windows-editor-4f517a4-simple-cue",
+      "windows-editor-4f517a4-simple-summary"
+    ],
+    "cueRegion": "heading2 + bold paragraph + bulletList + orderedList + taskList (unchecked) + empty paragraph",
+    "summaryRegion": "heading2 + bold paragraph + bulletList + orderedList + taskList (unchecked) + empty paragraph",
+    "contentRegionEmpty": true,
+    "noNestedOuterBullet": true,
+    "priorNotesAndBooksUnchanged": true,
+    "priorNoteIds": [
+      "3cc81d0e-c18e-4704-8774-b3326f5d4b04",
+      "53f4911e-b23e-403e-92cc-98e866c34587",
+      "6e8f59b1-6167-49bd-8048-8bae61d3f7e8",
+      "a5cffb72-d21b-4aa1-a9b9-3cd01b0f94be",
+      "b0d73462-51d8-4510-93fc-d63356e007d2",
+      "b9964af6-0aac-4609-a630-3585f6bedbd5",
+      "de63e7b1-12b2-4b88-bc80-287b618be1f9",
+      "ea03c676-d543-41f8-9213-1f56425d4769"
+    ],
+    "bookIds": [
+      "288e4300-bb22-425e-bff5-00343c7fda72",
+      "4cf8e8ba-34ee-4ff2-ae94-76d52f32ac96"
+    ]
+  },
+  "closeAndReopen": {
+    "editPid": 31992,
+    "normalRequestAccepted": true,
+    "processEnded": true,
+    "exitCode": null,
+    "exitStatusAvailable": false,
+    "appExitCodeClaimed": false,
+    "relaunchParentName": "explorer.exe",
+    "relaunchPid": 38980,
+    "relaunchBinarySha256Matches": true,
+    "allElevenNativeFilesExactAfterReopen": true,
+    "liveLibraryRecheck": "11/11"
+  },
+  "reopenedUia": {
+    "mode": "read-only background UIA; OS could not foreground the reopened window",
+    "elements": 211,
+    "checks": 10,
+    "passed": true,
+    "exactStringsFound": [
+      "Win Cue 小标题",
+      "Win CueBold",
+      "Win Cue bullet",
+      "Win Cue ordered",
+      "Win Cue task",
+      "Win Summary 小标题",
+      "Win SummaryBold",
+      "Win Summary bullet",
+      "Win Summary ordered",
+      "Win Summary task"
+    ],
+    "titleFound": "Windows 精简分区排版验收 · 4f517a4",
+    "noForegroundOrScreenshotClaim": true
+  },
+  "preOpenState": {
+    "readyWindow": "windows-simple-format-ready-4f517a4 (inspection/accessibility/window.png)",
+    "previousLaunchRecord": "windows-previous-launch-before-simple-format.json",
+    "initialDirEmpty": true,
+    "productFilesUnchanged": true,
+    "parentViewedBeforeCloseScreenshot": "windows-editor-4f517a4-simple-summary/window.png"
+  },
+  "reuse": {
+    "bodyMarkdownUndoRedoCodeMathTable": "079fa6e ordinary Windows editor substeps (windows-editor-079fa6e.md)",
+    "taskQuoteHorizontalRuleFix": "7a11fb1 (editor-block-followup-7a11fb1.md)",
+    "justification": "4f517a4 git diff touches only src/image-extensions.ts, tests/image-editor.test.ts and docs/image-delete-focus-fix.md",
+    "humanIme": "cbd9c08 explicit user confirmation in docs/windows-user-launch-results.json humanEditingFollowup; synthetic events do not replace human IME"
+  },
+  "verification": {
+    "script": "verify-editor-405.ps1 (adapted from verify-packages-through279.ps1; original untouched)",
+    "output": "packages-through405-verified.json",
+    "log": "verify-editor-405.log",
+    "artifactLocation": "implementation-execution/issue-33/mac-management-4f517a4/editor-verifier-405; parent copied and SHA-256 verified all three artifacts",
+    "windowsFacts": 44,
+    "windowsPackageDocuments": 36,
+    "assertions": 10448,
+    "failed": 0,
+    "taskId": "4d72310325c143128691fd4e7cb57bf8",
+    "taskStatus": "Completed",
+    "finalCursor": 372,
+    "hasMore": false,
+    "resultSha256": "568db922f133a507dac2a1c52abb0a2f3c8f905ee4c9563a7073fb291595817a"
+  },
+  "limitations": [
+    "Reopened window could not be foregrounded; verification is background UIA only, with no reopened foreground screenshot claim.",
+    "The four simple-* stage directories hold programmatic UI-inspection plans via native UIA/keyboard; they do not replace human IME evidence.",
+    "windows-simple-format-initial-4f517a4 is an empty directory.",
+    "A25/A26 offline, cross-direction and remaining source-specific checks remain open; they are not additional frozen A06 gates. Overall #33 remains open."
+  ],
+  "scope": "Windows A06 accepted cumulatively: prior body/undo/code/math/table and human IME evidence plus current simple-section supplement; A25/A26 and #33 remain open.",
+  "acceptedCasesWithPriorEvidence": [
+    "A06"
+  ]
+}

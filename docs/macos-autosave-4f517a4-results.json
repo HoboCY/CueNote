@@ -1,0 +1,85 @@
+{
+  "format": 1,
+  "date": "2026-10-19",
+  "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+  "macBinarySha256": "fc323333171cefbacd3822b1fdd6a99468b8b0a8cb23ad9715c80a22b8243df0",
+  "noteId": "36b43d7c-5c9a-4d50-b274-0fd7615ab16d",
+  "archive": {
+    "file": "management-through-461-4f517a4.tar.gz",
+    "sha256": "ac50016008a0cdebf6a94e4e77e7cabc5f5c4a6bdba70107ca64914e15dc1d4a",
+    "bytes": 86274558,
+    "filesVerified": 5268
+  },
+  "facts": {
+    "snapshots": 23,
+    "nativeFiles": 230,
+    "otherFactsUnchanged": 9,
+    "failedDraftsPreserved": 3
+  },
+  "passedSubsteps": [
+    "idle autosave without Save",
+    "switch flushes pending input",
+    "normal quit flushes pending input",
+    "real readonly failure retains draft",
+    "cancel failed close and switch",
+    "restore permission and retry",
+    "edit while real save waits on per-note OS lock",
+    "cancel in-flight switch and close",
+    "newer input saved after earlier snapshot",
+    "normal reopen byte-identical"
+  ],
+  "immediateClose": {
+    "inputEndToRequestMs": 254.7306673526764,
+    "job": 416,
+    "normalTerminateRequested": true,
+    "processDisappeared": true,
+    "exitStatusAvailable": false
+  },
+  "realFailure": {
+    "directoryModeBefore": "0755",
+    "during": "0555",
+    "restored": "0755",
+    "nativeError": "无法创建同目录候选笔记: Permission denied (os error 13)",
+    "all10LibraryFactsUnchangedDuringFailure": true,
+    "protectedCloseJob": 424,
+    "cancelCloseJob": 426,
+    "cancelSwitchJob": 430
+  },
+  "inflight": {
+    "passed": true,
+    "snapshots": 8,
+    "facts": 80,
+    "firstSnapshotHistoryCopies": [
+      {
+        "file": "ecc3816df357c719db47d72c62bec399c7e5817bf9d19d41c725f6da21284994.cuenote",
+        "sha256": "ecc3816df357c719db47d72c62bec399c7e5817bf9d19d41c725f6da21284994"
+      }
+    ],
+    "saveWaitSeconds": 125.67506265640259,
+    "normalReopenJob": 457,
+    "cancelSwitchJob": 448,
+    "cancelCloseJob": 452,
+    "retainedLatestInput": true,
+    "otherFactsUnchanged": 9,
+    "scope": "Ordinary Mac binary, real per-note advisory lock only; no injected host responses. File lock released and directory permissions restored."
+  },
+  "checks": [
+    {
+      "file": "verify-autosave-substeps.py",
+      "result": "autosave-substeps-verified.json",
+      "passed": true
+    },
+    {
+      "file": "verify-autosave-inflight.py",
+      "result": "autosave-inflight-verified.json",
+      "passed": true
+    }
+  ],
+  "limitations": [
+    "Job432 saved the failed draft but attempted extra text missed the moved editor; only Job434 is counted as later continued input.",
+    "Close helper failures at424/450 are expected observations of app refusing quit; no force kill.",
+    "No application exit code is claimed.",
+    "Windows corresponding current ordinary scenarios and explicit conflict behavior remain to be consolidated; full A09/A16/#33 not accepted."
+  ],
+  "scope": "Mac ordinary candidate autosave and real filesystem wait/failure substeps; no product change, fault build, injected IPC response or physical power-cut claim."
+}
