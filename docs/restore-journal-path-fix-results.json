@@ -31,6 +31,36 @@
       "file": "green-final-main.txt"
     }
   ],
-  "ordinaryCandidateRetestPassed": false,
-  "scope": "Local Windows regression only; packaging and ordinary Windows/Mac follow-up remain separate."
+  "ordinaryCandidateRetestPassed": true,
+  "scope": "Windows ordinary candidate retest passed in original failure scene; Mac ordinary whole restore pending. Does not establish complete dual-platform A20 or daily-use approval.",
+  "windowsOrdinaryRetest": {
+    "sourceCommit": "35184413dcad8e7ee14da18206101106bb82811f",
+    "sourceDirty": false,
+    "binarySha256": "25088246e094f831d47e8c8f0fe4d7a1e01a799533155a896878a843aee8b4b4",
+    "installerSha256": "829c484442971cd8d63117285e1c2bc261d8d4a58619bade164d0162ed62de37",
+    "installExitCode": 0,
+    "preUpdateFilesPreserved": 1709,
+    "nativeWholeRestorePassed": true,
+    "normalExplorerReopenPassed": true,
+    "sourceBackupUnchanged": true,
+    "completePreRestoreBackup": true,
+    "unrelatedJournalsPreserved": 3,
+    "retainedDisplacementArtifactByteExact": true,
+    "checksPassed": 109,
+    "checksFailed": 0,
+    "sourceBackupId": "fc5f6c3b-00e3-4cb9-8172-7ee7ad80d4ea",
+    "preRestoreBackupId": "cc53af80-2d71-4a74-89f3-22fca839152d",
+    "checkEvidence": "mac-management-4f517a4/windows-restore-3518441-results.json",
+    "checkEvidenceSha256": "7157599ff8cd36272c8512ec590ac7af610072e5adee4fe0a2c8785d3ce84c5e",
+    "windowsA20Accepted": true,
+    "bothA20Accepted": false
+  },
+  "independentReview": {
+    "status": "Completed",
+    "scope": "Pinned fix and direct callers/path guards/test coverage; no builds, GUI, live macOS, or adversarial junction race test.",
+    "cursor": 180,
+    "hasMore": false,
+    "taskId": "51a7f068b5e64e8a87e1e7cee08c9ae8",
+    "actionableFindings": 0
+  }
 }

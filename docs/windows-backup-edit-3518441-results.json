@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-19",
+  "sourceCommit": "35184413dcad8e7ee14da18206101106bb82811f",
+  "ordinaryWindows": true,
+  "passed": 27,
+  "failed": 0,
+  "facts": 1010,
+  "notes": 1000,
+  "notebooks": 10,
+  "verifiedBackupFiles": 5050,
+  "cancelledIncompleteNotPublished": true,
+  "explicitManualRetrySucceeded": true,
+  "wholeRetrySnapshotExact": true,
+  "titleOnlyEditAssetsPreserved": true,
+  "windowsA19Accepted": true,
+  "bothA19Accepted": false,
+  "retryBackupId": "8c2119ce-8dfb-4c99-9b3c-f58d3bdef704",
+  "checks": [
+    {
+      "name": "ordinary UI witnessed active backup before edit",
+      "passed": true
+    },
+    {
+      "name": "native save cancels changed-source backup explicitly",
+      "passed": true
+    },
+    {
+      "name": "edited note saved independently",
+      "passed": true
+    },
+    {
+      "name": "cancelled attempt publishes no complete or partial snapshot",
+      "passed": true
+    },
+    {
+      "name": "retry publishes exactly one complete snapshot",
+      "passed": true
+    },
+    {
+      "name": "all cancelled and retry backup payloads verified",
+      "passed": true
+    },
+    {
+      "name": "one changed note and ten preserved notebooks",
+      "passed": true
+    },
+    {
+      "name": "source unchanged during completed retry",
+      "passed": true
+    },
+    {
+      "name": "prior backup unchanged 57ccefa5-c7d8-4e5c-9239-431f66729623",
+      "passed": true
+    },
+    {
+      "name": "prior backup unchanged 96187fb3-6c9e-4c77-9d61-29d0e7819c38",
+      "passed": true
+    },
+    {
+      "name": "new manual retry source identity",
+      "passed": true
+    },
+    {
+      "name": "all1010 retry snapshot files exactly match current library",
+      "passed": true
+    },
+    {
+      "name": "backup outside synthetic library and OneDrive",
+      "passed": true
+    },
+    {
+      "name": "both native title markers persisted",
+      "passed": true
+    },
+    {
+      "name": "identity organization and all sections unchanged",
+      "passed": true
+    },
+    {
+      "name": "entry set preserved",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/647b99c1-a06a-49d9-86a8-7b425fd12973",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/9aa605aa-5427-4da1-b7ab-2ca0011c4c63",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/7409f95e-d913-4ada-8bd3-2ec691074e12",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/b465e075-c4f9-45c1-bfa1-1e29621e1591",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/fafb6cea-1603-4636-ae6f-dfcd30467e35",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/1537aac3-4b31-4360-9cd5-6c05d874f135",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/8878d4c8-0e41-45c9-b266-122c7781d9b9",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/c869ebfa-f76d-43b6-a293-6bfa22b111f8",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/c8f97920-335e-4741-9d78-aabd349809df",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/manifest.json",
+      "passed": true
+    },
+    {
+      "name": "asset or manifest preserved assets/498aa390-b25c-417b-8ee1-2ced9af9e1e0",
+      "passed": true
+    }
+  ],
+  "scope": "Native ordinary GUI edit during backup and explicit retry. First slower682/683 attempt completed backup before overlap was established and is excluded from cancellation evidence. Other filesystem/fault cases reuse valid native target-device coverage. Mac ordinary overlap still pending; not Q51 timing.",
+  "evidenceSha256": "8d17ac6060e02cd9ef2fb1c128ed4bff7fe843c86d264da839a831c29fbece09",
+  "evidenceFile": "mac-management-4f517a4/windows-backup-edit-3518441-results.json",
+  "finalNativeUi": {
+    "saved": true,
+    "nativeNormalClose": true,
+    "stages": [
+      684,
+      685,
+      686,
+      687,
+      689,
+      690
+    ],
+    "idle": true,
+    "backups": 3,
+    "exitCode": null
+  }
+}

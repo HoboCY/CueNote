@@ -645,15 +645,15 @@
     },
     {
       "id": "A19",
-      "windows": "未测",
+      "windows": "通过",
       "mac": "未测",
-      "notes": "Windows 独立性能变体：一次真实保存触发来源检查取消，约 60 秒后原会话自动重试成功，1010 项快照与原库一致；完整 A19、普通包和 Mac 未验收。 Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json."
+      "notes": "Windows ordinary3518441 native title save during running manual backup explicitly cancelled changed-source snapshot; no partial/complete snapshot published. Native manual retry produced exact1010-file snapshot; all images/maps preserved, prior backups unchanged, outside OneDrive.27 aggregate assertions and5050 backup payload checks. Existing native fault/round-trip cases reused. Mac ordinary edit-during-backup still pending. See windows-backup-edit-3518441-results.json."
     },
     {
       "id": "A20",
-      "windows": "失败",
+      "windows": "通过",
       "mac": "未测",
-      "notes": "Native fault/round-trip substeps passed on both target devices; full ordinary GUI case remains open. See native-fault-acceptance-12da826-results.json. Mac ordinary single-note restore57 checks passed; exact source document/assets restored, complete pre-restore manual backup retains edit. Whole-library preview/cancel preserves4 active facts and21 backup files; replacement not executed because foreign window covered input. Initial two comparisons selected the wrong code note and are not product failures. See macos-backup-restore-ui-4f517a4-results.json. Windows ordinary single-note restore passed, including full pre-restore snapshot and source assets. Whole-library confirmation returned publication-journal unsafePath before backup/replacement; all4 library facts and13 backup files unchanged. Fix pending; no whole-restore pass claim."
+      "notes": "Cumulative native fault/round-trip substeps passed on both target devices. Windows ordinary4f517a4 single-note restore passed; original whole restore unsafePath failure preserved as historical evidence. Fix3518441 now passes native whole confirmation/replacement, complete pre-backup, exact source files/assets, normal Explorer reopen and preservation of all3 unrelated journals;109 checks. Mac ordinary single-note restore57 checks and whole preview/cancel passed; whole replacement still pending window obstruction. Initial Mac wrong-note selections excluded. See restore-journal-path-fix-results.json and macos-backup-restore-ui-4f517a4-results.json."
     },
     {
       "id": "A21",
@@ -725,11 +725,12 @@
   },
   "currentOrdinaryCandidates": {
     "windows": {
-      "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
-      "sha256": "ed2391ed6cd1c050d7929631d574dab85636a00959967904e3539568997a1a68",
-      "backupFiles": 1497,
+      "sourceCommit": "35184413dcad8e7ee14da18206101106bb82811f",
+      "sha256": "25088246e094f831d47e8c8f0fe4d7a1e01a799533155a896878a843aee8b4b4",
+      "backupFiles": 1709,
       "installerExitCode": 0,
-      "unchangedData": true
+      "unchangedData": true,
+      "report": "restore-journal-path-fix-results.json"
     },
     "mac": {
       "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
@@ -829,5 +830,36 @@
     "wholeRestorePassed": false,
     "singleRestorePassed": true,
     "completedBothPlatforms": 14
+  },
+  "restoreJournalPathFollowup": {
+    "sourceCommit": "35184413dcad8e7ee14da18206101106bb82811f",
+    "sourceDirty": false,
+    "binarySha256": "25088246e094f831d47e8c8f0fe4d7a1e01a799533155a896878a843aee8b4b4",
+    "installerSha256": "829c484442971cd8d63117285e1c2bc261d8d4a58619bade164d0162ed62de37",
+    "installExitCode": 0,
+    "preUpdateFilesPreserved": 1709,
+    "nativeWholeRestorePassed": true,
+    "normalExplorerReopenPassed": true,
+    "sourceBackupUnchanged": true,
+    "completePreRestoreBackup": true,
+    "unrelatedJournalsPreserved": 3,
+    "retainedDisplacementArtifactByteExact": true,
+    "checksPassed": 109,
+    "checksFailed": 0,
+    "sourceBackupId": "fc5f6c3b-00e3-4cb9-8172-7ee7ad80d4ea",
+    "preRestoreBackupId": "cc53af80-2d71-4a74-89f3-22fca839152d",
+    "checkEvidence": "mac-management-4f517a4/windows-restore-3518441-results.json",
+    "checkEvidenceSha256": "7157599ff8cd36272c8512ec590ac7af610072e5adee4fe0a2c8785d3ce84c5e",
+    "windowsA20Accepted": true,
+    "bothA20Accepted": false
+  },
+  "ordinaryBackupEditFollowup": {
+    "macA19Accepted": false,
+    "fullCasesRemaining": 12,
+    "assertions": 27,
+    "filesPerSnapshot": 1010,
+    "completedBothPlatforms": 14,
+    "report": "windows-backup-edit-3518441-results.json",
+    "windowsA19Accepted": true
   }
 }
