@@ -14,14 +14,23 @@
   "offlineTested": false,
   "offlineScope": "Cancelled by user",
   "fullA15Accepted": false,
-  "remaining": [
-    "Windows real cloud-placeholder behavior"
-  ],
+  "remaining": [],
   "macArchiveSha256": "5b97486fc93be773588c601fe93a3009ac688635b7e2155b89c56f938d215357",
   "subcases": [
     "corrupt ZIP",
     "future schema with unknown content",
     "missing image payload"
   ],
-  "rawChecks": "mac-management-4f517a4/a15-online-anomalies-results.json"
+  "rawChecks": "mac-management-4f517a4/a15-online-anomalies-results.json",
+  "revisedOnlineA15Accepted": true,
+  "windowsPlaceholderFollowup": {
+    "checksPassed": 13,
+    "bytes": 6029,
+    "checksFailed": 0,
+    "beforeAttributes": 5248544,
+    "downloadedSha256": "b27a97fe1f0c608cbe853a6840804c85c0af48c95a2306489fe7dcff16acb047",
+    "reparseTag": "0x9000401a",
+    "rawChecks": "mac-management-4f517a4/online-followup-checks.json",
+    "originalFactsUnchanged": 7
+  }
 }

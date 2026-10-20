@@ -841,6 +841,7 @@ impl Workspace {
                 }
             }
         }
+        storage::probe_directory(&path)?;
         ensure_child_directory(&path, &notes_path, true)?;
         ensure_child_directory(&path, &notebooks_path, true)?;
         let notebook = new_default_notebook();

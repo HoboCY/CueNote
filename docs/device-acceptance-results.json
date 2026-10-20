@@ -910,12 +910,12 @@
     },
     "alreadySatisfiedWithinRevisedScope": [
       "A11",
+      "A15",
       "A25"
     ],
     "remainingWithinRevisedScope": [
       "A12",
       "A13",
-      "A15",
       "A16",
       "A24"
     ],
@@ -926,6 +926,8 @@
     "checksPassed": 53,
     "cleanupOriginalFactsPerDevice": 7,
     "fullA15Accepted": false,
-    "report": "onedrive-online-anomalies-4f517a4-results.json"
+    "report": "onedrive-online-anomalies-4f517a4-results.json",
+    "revisedOnlineA15Accepted": true,
+    "windowsPlaceholderChecksPassed": 13
   }
 }

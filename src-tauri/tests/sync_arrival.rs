@@ -346,6 +346,75 @@ fn unavailable_library_directories_preserve_visible_snapshot_and_cached_session_
 }
 
 #[test]
+fn existing_empty_library_checks_directory_capability_before_initializing() {
+    let temp = sync_temp();
+    let library_path = temp.path().join("selected-empty-library");
+    fs::create_dir_all(library_path.join("notes")).unwrap();
+    fs::create_dir_all(library_path.join("notebooks")).unwrap();
+    let mut workspace = Workspace::new(
+        temp.path().join("settings"),
+        temp.path().join("recovery"),
+        temp.path().join("default-library"),
+    );
+    workspace.select_library(library_path.clone()).unwrap();
+
+    // Child directories remain writable: only the selected directory fails its probe.
+    #[cfg(windows)]
+    let account = {
+        let output = std::process::Command::new("whoami.exe").output().unwrap();
+        assert!(output.status.success());
+        let account = String::from_utf8(output.stdout).unwrap().trim().to_owned();
+        let output = std::process::Command::new("icacls.exe")
+            .arg(&library_path)
+            .args(["/deny", &format!("{account}:(WD)")])
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{output:?}");
+        account
+    };
+    #[cfg(unix)]
+    let permissions = {
+        use std::os::unix::fs::PermissionsExt;
+        let original = fs::metadata(&library_path).unwrap().permissions();
+        fs::set_permissions(&library_path, fs::Permissions::from_mode(0o555)).unwrap();
+        original
+    };
+
+    let result = workspace.initialize_selected_library();
+
+    #[cfg(windows)]
+    {
+        let output = std::process::Command::new("icacls.exe")
+            .arg(&library_path)
+            .args(["/remove:d", &account])
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{output:?}");
+    }
+    #[cfg(unix)]
+    fs::set_permissions(&library_path, permissions).unwrap();
+
+    let error = result
+        .err()
+        .expect("initialization must reject a failed directory probe");
+    assert!(error.message.contains("目录创建探针"), "{}", error.message);
+    assert_eq!(
+        fs::read_dir(library_path.join("notebooks"))
+            .unwrap()
+            .count(),
+        0
+    );
+    assert_eq!(fs::read_dir(&library_path).unwrap().count(), 2);
+    assert!(workspace
+        .initialize_selected_library()
+        .unwrap()
+        .library
+        .unwrap()
+        .default_notebook_id
+        .is_some());
+}
+
+#[test]
 fn same_named_notebooks_from_independent_libraries_remain_distinct_and_warn_until_renamed() {
     let temp = sync_temp();
     let root = temp.path();
