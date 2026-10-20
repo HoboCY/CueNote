@@ -1,10 +1,10 @@
 {
   "format": 1,
   "issue": 33,
-  "candidate": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
-  "version": "0.1.0",
-  "overall": "未测",
-  "dailyUseApproved": false,
+  "candidate": "84dabe85deb33255f20caddc8cd4d5b8b1060d44",
+  "version": "0.1.1",
+  "overall": "通过",
+  "dailyUseApproved": true,
   "windows": {
     "collectedUtc": "2026-10-17T15:45:25.0454881Z",
     "os": {
@@ -539,165 +539,268 @@
       "id": "A01",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A02",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A03",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A04",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A05",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Windows9760cf6 prior layout evidence retained. Mac4f517a4: 28/72, continuous scroll, width618->747->618, title caret6, body caret4, newly typed X retained at caret5 across collapse/expand, normal save/reopen byte-exact. See image-block-focus-4f517a4-results.json."
+      "notes": "Windows9760cf6 prior layout evidence retained. Mac4f517a4: 28/72, continuous scroll, width618->747->618, title caret6, body caret4, newly typed X retained at caret5 across collapse/expand, normal save/reopen byte-exact. See image-block-focus-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A06",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Cumulative frozen A06 passed: Windows079fa6e body/undo/table/code/math,7a11fb1 task/quote/rule fix,4f517a4 cue/summary simple formatting; Mac4f517a4 full native syntax/three-region undo/table/code/math/save/reopen. Prior explicit human IME confirmations retained with candidate provenance. Independent evidence verification10448 assertions/0 failures. A25/A26 offline/cross-direction remain separate. See macos-editor-4f517a4-results.json and windows-simple-editor-4f517a4-results.json."
+      "notes": "Cumulative frozen A06 passed: Windows079fa6e body/undo/table/code/math,7a11fb1 task/quote/rule fix,4f517a4 cue/summary simple formatting; Mac4f517a4 full native syntax/three-region undo/table/code/math/save/reopen. Prior explicit human IME confirmations retained with candidate provenance. Independent evidence verification10448 assertions/0 failures. A25/A26 offline/cross-direction remain separate. See macos-editor-4f517a4-results.json and windows-simple-editor-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A07",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Cumulative frozen A07: prior explicit two-external-app human results (Windows cbd9c08, Mac9760cf6), native block operations and both ordinary4f517a4 direct keyboard undo plus neighbor text/reopen/assets. Earlier Windows079 resize/move evidence retained. Programmatic clipboard is identified separately. Offline is not part of A07. See image-block-focus-4f517a4.md."
+      "notes": "Cumulative frozen A07: prior explicit two-external-app human results (Windows cbd9c08, Mac9760cf6), native block operations and both ordinary4f517a4 direct keyboard undo plus neighbor text/reopen/assets. Earlier Windows079 resize/move evidence retained. Programmatic clipboard is identified separately. Offline is not part of A07. See image-block-focus-4f517a4.md.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A08",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Windows079fa6e->7a11fb1 evidence retained. Mac ordinary4f517a4: native creation/text/child/sibling/indent/outdent/delete/internal and body undo/redo, block move/delete/undo, collapse focus, two normal reopens and continued node editing passed. 26 snapshots,182 facts,130 package documents,52 asset payloads. Exact pixel scroll position not claimed. See macos-mindmap-4f517a4-results.json."
+      "notes": "Windows079fa6e->7a11fb1 evidence retained. Mac ordinary4f517a4: native creation/text/child/sibling/indent/outdent/delete/internal and body undo/redo, block move/delete/undo, collapse focus, two normal reopens and continued node editing passed. 26 snapshots,182 facts,130 package documents,52 asset payloads. Exact pixel scroll position not claimed. See macos-mindmap-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A09",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Both ordinary 4f517a4 devices passed cumulative A09. Windows initial162 passed + final159 passed: native failed-close cancellation/retry, bound-process immediate unsaved quit exit0 and full reopen, explicit local fixture conflict retains both versions and never reports saved. Mac autosave and external-conflict reports remain valid. See windows-autosave-final-4f517a4-results.json; full A16 remains open."
+      "notes": "Both ordinary 4f517a4 devices passed cumulative A09. Windows initial162 passed + final159 passed: native failed-close cancellation/retry, bound-process immediate unsaved quit exit0 and full reopen, explicit local fixture conflict retains both versions and never reports saved. Mac autosave and external-conflict reports remain valid. See windows-autosave-final-4f517a4-results.json; full A16 remains open.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A10",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Forward ordinary cf350d8 sequence plus reverse ordinary4f517a4 Mac -> real OneDrive -> Windows -> Mac passed. Reverse115 assertions,9 snapshots/27 files, native edits and both app reopens; note identity/sections/block order/asset bytes/display width/editable map preserved, no source-machine absolute paths. Mac transient cloud unreadable state protected drafts and required retry/continuation. See onedrive-reverse-4f517a4-results.json; not full A11/A12/A15."
+      "notes": "Forward ordinary cf350d8 sequence plus reverse ordinary4f517a4 Mac -> real OneDrive -> Windows -> Mac passed. Reverse115 assertions,9 snapshots/27 files, native edits and both app reopens; note identity/sections/block order/asset bytes/display width/editable map preserved, no source-machine absolute paths. Mac transient cloud unreadable state protected drafts and required retry/continuation. See onedrive-reverse-4f517a4-results.json; not full A11/A12/A15.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A11",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Both real-account sequential directions passed (onedrive-sequential-cf350d8 and onedrive-reverse-4f517a4); fully downloaded offline edit/reconnect remains untested. UI says local save, not remote receipt. Full case remains open. 用户于2026-10-20取消实际离线/断网验收；对应离线步骤不再待测，也不记为通过。在线证据及其余缺口保留。"
+      "notes": "真实 OneDrive 双向顺序编辑、远端收到与本机保存状态通过；实际离线读写及重连由用户取消、未验证。",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      },
+      "excludedOfflineSteps": "下载完整后的离线打开/编辑及重连"
     },
     {
       "id": "A12",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": "Mac isolated ordinary local-file fixture clean B preserves A; dirty external C preserves local D and all obtained versions, read-only preview and independent copy/reopen verified. This is not OneDrive delivery or missed-event startup/refocus acceptance; full A12 remains open. See macos-external-conflict-4f517a4-results.json. Reverse real OneDrive Windows clean update retained prior valid source revision and displayed actual new editor text; Mac transient unreadable state protected drafts and continued after explicit retry. Startup/refocus/save missed-event checks and full dirty OneDrive conflict/no-pruning remain open. See onedrive-reverse-4f517a4-results.json."
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "两端真实 OneDrive 干净刷新保留旧版、草稿保护、启动/焦点/保存及重开通过；Windows 0.1.1 新增实际云端草稿冲突，七份完整保护包保留基线/本地/云端。监听补查机制另有25项定向测试，不声称强制丢弃了OS事件。见 online-final-acceptance-84dabe8-results.json。",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A13",
       "windows": "未测",
       "mac": "未测",
-      "notes": " 用户于2026-10-20取消实际离线/断网验收；对应离线步骤不再待测，也不记为通过。在线证据及其余缺口保留。"
+      "notes": "在线范围通过：Windows双普通实例同基线并发，Mac实际双原生进程复用未改生产发布协议；真实OneDrive传递的受控重复ID/冲突文件双端识别保留。未做Mac双普通窗口；双端离线同改及两种重连次序由用户取消、未验证。",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      },
+      "excludedOfflineSteps": "双端断网同改及两种复网次序"
     },
     {
       "id": "A14",
       "windows": "通过",
       "mac": "通过",
-      "notes": "真实 OneDrive 普通安装版双端组织同步、迟到笔记本信息及设备偏好独立，226 项核对通过；见 onedrive-organization-4f517a4-results.json。"
+      "notes": "真实 OneDrive 普通安装版双端组织同步、迟到笔记本信息及设备偏好独立，226 项核对通过；见 onedrive-organization-4f517a4-results.json。",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A15",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Real Mac OneDrive transient unreadable state displayed actual cloud-download reason, kept protected drafts, and reopened valid files after explicit retry without blank overwrite. Full placeholder/offline/external-deletion/corrupt/future-version/missing-image matrix remains open. 2026-10-20 真实 OneDrive 外部删除：两端均不创建空文件，各保留2份完整版本，共4份文档/附件核对通过；见 onedrive-external-delete-4f517a4-results.json。仍未通过整个A15。 用户于2026-10-20取消实际离线/断网验收；对应离线步骤不再待测，也不记为通过。在线证据及其余缺口保留。 2026-10-20在线异常文件补测：损坏、未来版本含未知字段、缺图包通过真实OneDrive到达，两端原生提示正确；53项核对通过，10份事实文件双端相同，原有7份事实未变且清理恢复一致。Mac真实dataless占位提示通过；Windows真实占位仍待补，A15不整项通过。见onedrive-online-anomalies-4f517a4-results.json。"
+      "notes": "在线范围通过：真实云占位、外部删除、损坏、未来版本和缺图均有双端提示与原件保护证据；Windows占位新增13项核对，详见 onedrive-online-anomalies-4f517a4-results.json。离线/断网由用户取消、未验证。",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      },
+      "excludedOfflineSteps": "离线占位、断网场景"
     },
     {
       "id": "A16",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": "Mac ordinary4f517a4 real readonly directory failure, protected draft, cancel close/switch, restored permission/retry/reopen passed; other complete A16 filesystem/capacity/recovery-failure cases remain open. See macos-autosave-4f517a4-results.json. Windows real target-file occupation caused os error32; original unchanged and full005 draft/candidate retained. Other complete A16 failures remain open."
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "双端目录负例和另选可用库通过；Windows实际ACL导致安全发布不可用，Mac实际FAT不支持硬链接。只读/占用/恢复区失败原生UI及空间不足/不可达原生注入证据累计有效。普通用户Local/Roaming原子替换自检通过，旧Codex重定向环境反例仍保留；已有库可先读，写入仍执行安全发布和失败保护。见最终报告逐条复核判定。",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A17",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Actual-device fault-injection case: 8 save-stage exits and 3 file-error/corruption stages with restart/readability/durable-draft recovery. See native-fault-acceptance-12da826-results.json; no physical power-cut claim."
+      "notes": "Actual-device fault-injection case: 8 save-stage exits and 3 file-error/corruption stages with restart/readability/durable-draft recovery. See native-fault-acceptance-12da826-results.json; no physical power-cut claim.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A18",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Cumulative native history/31-day rotation evidence on both devices reused with unchanged backup modules. Mac ordinary scheduling already verified; Windows4f517a4 now observed one automatic, no duplicate after same-day native save, independent manual snapshot outside OneDrive, exact manifest/file checks. See windows-backup-restore-4f517a4-results.json and macos-backup-restore-ui-4f517a4-results.json."
+      "notes": "Cumulative native history/31-day rotation evidence on both devices reused with unchanged backup modules. Mac ordinary scheduling already verified; Windows4f517a4 now observed one automatic, no duplicate after same-day native save, independent manual snapshot outside OneDrive, exact manifest/file checks. See windows-backup-restore-4f517a4-results.json and macos-backup-restore-ui-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A19",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Both ordinary platforms completed native edit during running backup, cancellation without incomplete publication and successful explicit manual retry. Mac1038 independent checks,4040 remote payload hash checks,1010-file exact snapshot; all images/maps preserved. Existing native external-change/failure cases reused. See windows-backup-edit-3518441-results.json and macos-backup-edit-4f517a4-results.json."
+      "notes": "Both ordinary platforms completed native edit during running backup, cancellation without incomplete publication and successful explicit manual retry. Mac1038 independent checks,4040 remote payload hash checks,1010-file exact snapshot; all images/maps preserved. Existing native external-change/failure cases reused. See windows-backup-edit-3518441-results.json and macos-backup-edit-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A20",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Cumulative native interruption/recovery tests and both ordinary single-note restores reused. Windows3518441 whole restore and normal reopen passed109 checks, preserves3 unrelated journals. Mac4f517a4 native whole replacement and LaunchServices reopen passed177 checks: exact3 source files, complete4-file prebackup,21 prior backup files unchanged,3 displaced notes retained. See macos-whole-restore-4f517a4-results.json and restore-journal-path-fix-results.json."
+      "notes": "Cumulative native interruption/recovery tests and both ordinary single-note restores reused. Windows3518441 whole restore and normal reopen passed109 checks, preserves3 unrelated journals. Mac4f517a4 native whole replacement and LaunchServices reopen passed177 checks: exact3 source files, complete4-file prebackup,21 prior backup files unchanged,3 displaced notes retained. See macos-whole-restore-4f517a4-results.json and restore-journal-path-fix-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A21",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json."
+      "notes": "Windows 9760cf6 prior ordinary evidence retained. Mac ordinary4f517a4 completed on a dedicated synthetic library: 74 library snapshots, 3 external snapshots, 514 facts, 336 package documents and 98 asset payloads; A01/A02/A04 independently verified36/36. See macos-management-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A22",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Windows9760cf6 ordinary export evidence retained. Mac4f517a4 ordinary native UI: two exports,23 files,21 relative links exact after moving; native source unchanged; static-map notice and all3 pages present; independent target-Mac reader9 captures reviewed. See macos-markdown-export-4f517a4-results.json."
+      "notes": "Windows9760cf6 ordinary export evidence retained. Mac4f517a4 ordinary native UI: two exports,23 files,21 relative links exact after moving; native source unchanged; static-map notice and all3 pages present; independent target-Mac reader9 captures reviewed. See macos-markdown-export-4f517a4-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A23",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Q51 两端各467样本、11/11门槛复用；Q52 Windows复用48项加新增8项，M1实际设备60760ee六套55项全部通过，0失败0跳过。资源测试含支持性回归，不等同于相同数量的独立边界。原始日志经主执行人哈希核验，独立静态复核无阻断；见 resource-preservation-60760ee-results.json。"
+      "notes": "Q51 两端各467样本、11/11门槛复用；Q52 Windows复用48项加新增8项，M1实际设备60760ee六套55项全部通过，0失败0跳过。资源测试含支持性回归，不等同于相同数量的独立边界。原始日志经主执行人哈希核验，独立静态复核无阻断；见 resource-preservation-60760ee-results.json。",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A24",
-      "windows": "未测",
-      "mac": "未测",
-      "notes": "Both ordinary candidates updated to4f517a4 with app/data backups and byte-exact data preservation. Windows1497-file backup and installer exit0; Mac prior app and seven scoped roots preserved. Same-version replacement does not establish actual upgrade/uninstall."
+      "windows": "通过",
+      "mac": "通过",
+      "notes": "实际0.1.0升级0.1.1、卸载、重装、原生编辑保存及正常重开双端通过，笔记/备份/恢复/配置逐文件保留；依赖许可随包追溯。见 online-final-acceptance-84dabe8-results.json。",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     },
     {
       "id": "A25",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Formula types, source editing/undo/error, escaped dollars, cross-platform native package fidelity and Markdown export covered. Physical offline rendering on both ordinary installed platforms remains pending. See code-acceptance-cumulative-results.json. 用户于2026-10-20取消实际离线/断网验收；对应离线步骤不再待测，也不记为通过。在线证据及其余缺口保留。"
+      "notes": "在线公式范围、源码编辑/撤销/错误、双端保真、Markdown导出和美元转义通过；实际断网渲染由用户取消、未验证。",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      },
+      "excludedOfflineSteps": "实际断网公式渲染"
     },
     {
       "id": "A26",
       "windows": "通过",
       "mac": "通过",
-      "notes": "Frozen A26 fulfilled cumulatively: eight-language ordinary editing, exact special characters, Mac-origin full-set real OneDrive round trip, both-platform export fences, code and formula generic search. Main re-viewed original ordinary Windows screenshot for all seven highlights and unknown plain text; Mac ordinary visual evidence already recorded. Relevant paths unchanged through3518441. No claim of new complete run, per-language search, or same-note full chain. See code-acceptance-cumulative-results.json."
+      "notes": "Frozen A26 fulfilled cumulatively: eight-language ordinary editing, exact special characters, Mac-origin full-set real OneDrive round trip, both-platform export fences, code and formula generic search. Main re-viewed original ordinary Windows screenshot for all seven highlights and unknown plain text; Mac ordinary visual evidence already recorded. Relevant paths unchanged through3518441. No claim of new complete run, per-language search, or same-note full chain. See code-acceptance-cumulative-results.json.",
+      "revisedScope": {
+        "windows": "通过",
+        "mac": "通过"
+      }
     }
   ],
-  "pending": [
-    "按用户2026-10-20调整后的在线范围，A11/A25已有证据满足；实际离线能力未验证，不记通过。",
-    "A12/A13在线外部更新、脏草稿冲突、漏事件核对、同机并发及冲突/重复ID。",
-    "A15 Windows真实云占位文件；A16剩余目录能力负例及恢复区失败提示等保护。",
-    "A24实际版本升级与卸载后的数据保留。"
-  ],
+  "pending": [],
   "syncReadiness": {
     "userConfirmedBothDevicesReady": true,
     "windowsToMac": {
@@ -724,19 +827,22 @@
   },
   "currentOrdinaryCandidates": {
     "windows": {
-      "sourceCommit": "35184413dcad8e7ee14da18206101106bb82811f",
-      "sha256": "25088246e094f831d47e8c8f0fe4d7a1e01a799533155a896878a843aee8b4b4",
-      "backupFiles": 1709,
-      "installerExitCode": 0,
-      "unchangedData": true,
-      "report": "restore-journal-path-fix-results.json"
-    },
-    "mac": {
-      "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
-      "sha256": "fc323333171cefbacd3822b1fdd6a99468b8b0a8cb23ad9715c80a22b8243df0",
+      "sourceCommit": "84dabe85deb33255f20caddc8cd4d5b8b1060d44",
+      "version": "0.1.1",
+      "sha256": "a6692bd63da11e4db9b24ac15ceb15b86cb8934779ae021eee595cf1e9fc088a",
+      "installerSha256": "28a386a31ce431d2e656bdae2cb7b78ab38616958992382e4ddc1289235a0d01",
+      "actualUpgradeUninstallReinstallPassed": true,
       "unchangedData": true
     },
-    "scope": "Same-version replacement; not full A24 upgrade/uninstall acceptance."
+    "mac": {
+      "sourceCommit": "84dabe85deb33255f20caddc8cd4d5b8b1060d44",
+      "version": "0.1.1",
+      "sha256": "c72d5eec41b3359bc993d5f766af7d7075504565440827dca14c1a286ec558a8",
+      "installerSha256": "4190428b1e735003cb9b796659aade009404adccb6858b287c28958abc0e6cb8",
+      "actualUpgradeUninstallReinstallPassed": true,
+      "unchangedData": true
+    },
+    "report": "online-final-acceptance-84dabe8-results.json"
   },
   "imageFocusAndLayoutFollowup": {
     "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
@@ -800,8 +906,8 @@
     "fullA09Accepted": false,
     "otherFactsUnchanged": 11
   },
-  "currentCompletedBothPlatforms": 19,
-  "currentRemainingFullCases": 7,
+  "currentCompletedBothPlatforms": 22,
+  "currentRemainingFullCases": 4,
   "autosaveAndReverseSyncFollowup": {
     "fullCasesRemaining": 13,
     "bothA10Accepted": true,
@@ -909,16 +1015,34 @@
       "A11": "下载完整后的离线打开/编辑及重连"
     },
     "alreadySatisfiedWithinRevisedScope": [
+      "A01",
+      "A02",
+      "A03",
+      "A04",
+      "A05",
+      "A06",
+      "A07",
+      "A08",
+      "A09",
+      "A10",
       "A11",
-      "A15",
-      "A25"
-    ],
-    "remainingWithinRevisedScope": [
       "A12",
       "A13",
+      "A14",
+      "A15",
       "A16",
-      "A24"
+      "A17",
+      "A18",
+      "A19",
+      "A20",
+      "A21",
+      "A22",
+      "A23",
+      "A24",
+      "A25",
+      "A26"
     ],
+    "remainingWithinRevisedScope": [],
     "offlineCapabilityVerified": false
   },
   "onlineAnomaliesFollowup": {
@@ -929,5 +1053,46 @@
     "report": "onedrive-online-anomalies-4f517a4-results.json",
     "revisedOnlineA15Accepted": true,
     "windowsPlaceholderChecksPassed": 13
+  },
+  "initialCandidate": {
+    "candidate": "f1308f4b6f88b48e3f8054c09391c4bde822db58",
+    "version": "0.1.0",
+    "scope": "Historical first installation; windows/mac initial snapshots and older followup sections retain their original time-scoped values"
+  },
+  "acceptanceScope": "User-revised personal online use on the two recorded devices; original offline clauses remain unverified",
+  "fullOriginalSpecificationPassed": false,
+  "originalCountScope": "Full original clauses; the remaining four cases only contain user-excluded offline steps, not pending work",
+  "revisedScopeCompletedBothPlatforms": 26,
+  "revisedScopeRemainingCases": 0,
+  "unverifiedExcludedSteps": {
+    "A15": "离线占位、断网场景",
+    "A25": "实际断网公式渲染",
+    "A13": "双端断网同改及两种复网次序",
+    "A11": "下载完整后的离线打开/编辑及重连"
+  },
+  "previousOrdinaryCandidateSnapshot": {
+    "windows": {
+      "sourceCommit": "35184413dcad8e7ee14da18206101106bb82811f",
+      "sha256": "25088246e094f831d47e8c8f0fe4d7a1e01a799533155a896878a843aee8b4b4",
+      "backupFiles": 1709,
+      "installerExitCode": 0,
+      "unchangedData": true,
+      "report": "restore-journal-path-fix-results.json"
+    },
+    "mac": {
+      "sourceCommit": "4f517a4d1461bec164ea92061fb4b596c7572dce",
+      "sha256": "fc323333171cefbacd3822b1fdd6a99468b8b0a8cb23ad9715c80a22b8243df0",
+      "unchangedData": true
+    },
+    "scope": "Same-version replacement; not full A24 upgrade/uninstall acceptance."
+  },
+  "finalOnlineAcceptance": {
+    "report": "online-final-acceptance-84dabe8-results.json",
+    "checksPassed": 236,
+    "frontendFallbackTests": 25,
+    "nativeDirectoryRegressionTests": 21,
+    "reviewTask": "1a849cedaa0841ce8140fe27945feb50",
+    "mainAgentFollowupChecksPassed": 40,
+    "allApplicableCasesPassed": true
   }
 }

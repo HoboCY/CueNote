@@ -1,0 +1,156 @@
+{
+  "format": 1,
+  "issue": 33,
+  "date": "2026-10-20",
+  "sourceCommit": "84dabe85deb33255f20caddc8cd4d5b8b1060d44",
+  "version": "0.1.1",
+  "acceptanceDecision": "通过",
+  "dailyUseApproved": true,
+  "scope": {
+    "revisedByUser": true,
+    "offlineStepsExcluded": true,
+    "offlineTested": false,
+    "networkDisconnectRequests": 0,
+    "watcherEventsDeliberatelyDropped": false,
+    "newCases": [
+      "A12",
+      "A13-online",
+      "A16",
+      "A24"
+    ],
+    "earlierCompletedCase": "A15-online"
+  },
+  "checks": {
+    "mac": 81,
+    "windows": 56,
+    "totalNew": 137,
+    "priorOnlineFollowup": 59,
+    "cumulativeFollowup": 236,
+    "frontendFallbackTests": 25,
+    "nativeDirectoryRegressionTests": 21,
+    "failed": 0,
+    "macEvidenceSha256": "ec87deb3a56e48ad005f124bf0651c5b3fffee6716bb42b607daca65341c21b5",
+    "windowsEvidenceSha256": "352dab7af01f6ff9e09d866a888f6f69b05318d474fa4a86e53b7469d69763d5",
+    "frontendLogSha256": "f3e781f5e080e54c106d3f22e6a869a769095ba102110cc332a774a8e483457b",
+    "reviewFollowup": 40,
+    "reviewFollowupEvidenceSha256": "30bd7ab71e811da4ae0d01b998556a60e74d4dadb14193314f66ca21dfabf2f1"
+  },
+  "packageBuild": {
+    "runId": 39354130234,
+    "url": "https://github.com/HoboCY/CueNote/actions/runs/39354130234",
+    "bothJobs": "success",
+    "ciIsNotDeviceAcceptance": true
+  },
+  "windows": {
+    "binarySha256": "a6692bd63da11e4db9b24ac15ceb15b86cb8934779ae021eee595cf1e9fc088a",
+    "installerSha256": "28a386a31ce431d2e656bdae2cb7b78ab38616958992382e4ddc1289235a0d01",
+    "fromVersion": "0.1.0",
+    "toVersion": "0.1.1",
+    "upgradeUserDataFiles": 7244,
+    "uninstallUserDataFiles": 7251,
+    "reinstallUserDataFiles": 7251,
+    "installerAndUninstallerExitCodes": [
+      0,
+      0,
+      0
+    ],
+    "ordinaryExplorerLaunchVerified": true,
+    "finalNativeTitle": "A24-WIN-REINSTALLED-001",
+    "finalReopenUi": "mac-management-4f517a4/windows-a24-final-reopened-769",
+    "licenseComponents": 410,
+    "licenseTexts": 635,
+    "cloudDirtyFollowup": {
+      "ordinaryVersion": "0.1.1",
+      "sameCloudSha256": "0ddf98fa69495c3a4f76b20b6f6a5750d6d8668a542f3f715338b93887ee8386",
+      "localTitle": "A12-WIN-LOCAL-DRAFT-003",
+      "cloudTitle": "A12-WIN-CLOUD-ARRIVAL-003",
+      "nativeBlurRefocusAndSave": true,
+      "baselineLocalCloudRetained": true,
+      "fullProtectedPackagesChecked": 7,
+      "normalReopenRetainsRecovery": true,
+      "rawUi": "mac-management-4f517a4/windows-a12-reopened-778",
+      "remoteProducer": "Controlled Mac file producer, delivered by real OneDrive; not Mac app save"
+    },
+    "ordinaryAppDataAtomicReplacement": {
+      "passed": true,
+      "directories": [
+        "Local",
+        "Roaming"
+      ],
+      "explorerParent": true,
+      "handlePathsNotRedirected": true,
+      "oldAndNewBytesVerified": true,
+      "productionPreferencesChanged": false,
+      "report": "package-output/ordinary-appdata-probe-84dabe8/completed.json",
+      "historicalCodexRedirectionFixed": false
+    }
+  },
+  "mac": {
+    "binarySha256": "c72d5eec41b3359bc993d5f766af7d7075504565440827dca14c1a286ec558a8",
+    "installerSha256": "4190428b1e735003cb9b796659aade009404adccb6858b287c28958abc0e6cb8",
+    "fromVersion": "0.1.0",
+    "toVersion": "0.1.1",
+    "upgradeUserDataFiles": 5946,
+    "uninstallUserDataFiles": 5954,
+    "reinstallUserDataFiles": 5954,
+    "uninstallMethod": "Remove application bundle from Applications, preserve reversible old copy; no user-data deletion",
+    "finalNativeTitle": "A24-MAC-REINSTALLED-001",
+    "laterSyncTitle": "A12-MAC-FOCUS-SAVE-001",
+    "finalReopenUi": "mac-management-84dabe8/mac-84dabe8-job-034-ax.json",
+    "licenseComponents": 406,
+    "licenseTexts": 634
+  },
+  "concurrency": {
+    "windowsOrdinaryInstances": 2,
+    "sameBaselineSha256": "1c9139c50cae9c8c0534bc41786ab88d696f0faa4a8d6faf2b960e0e731ce167",
+    "lockExclusionSelfCheck": true,
+    "bothShowedSavingBeforeRelease": true,
+    "explicitLockRelease": true,
+    "winningTitle": "A13-WIN-WRITER-B-001",
+    "losingDraftTitle": "A13-WIN-WRITER-A-001",
+    "baselineAndBothWritersPreserved": true,
+    "bothNormalExit": true,
+    "macNativeProcessEvidence": "native-fault-acceptance-12da826-results.json",
+    "macTwoOrdinaryWindowsClaimed": false,
+    "duplicateFileScope": "Controlled same-ID differing valid file delivered by real OneDrive; not organic conflict generation"
+  },
+  "directoryCapability": {
+    "macNativeError": 45,
+    "macTestVolumeDetached": true,
+    "windowsNativeError": 5,
+    "windowsOriginalAclRestored": true,
+    "windowsProbeResidueArchivedAndRetained": true,
+    "noNoteMetadataInitialized": true,
+    "bothSelectedUsableAlternative": true,
+    "capacityFailureIsFaultInjection": true
+  },
+  "evidenceRoot": "implementation-execution/issue-33",
+  "independentReview": {
+    "taskId": "1a849cedaa0841ce8140fe27945feb50",
+    "status": "completed",
+    "scope": "Read-only frozen contract and evidence audit, no GUI rerun",
+    "initialConclusion": "A12/A16 not ready for closure; conditional evidence-layer interpretations for A13/A16; A24 evidence complete",
+    "followupOwner": "Main agent: actual Windows OneDrive dirty/refocus/save/reopen and actual ordinary Local/Roaming atomic-replace checks, 40 assertions passed",
+    "disposition": "All findings addressed by additional evidence or explicit frozen-clause interpretation recorded in the Markdown report",
+    "secondIndependentReviewClaimed": false
+  },
+  "limitations": [
+    "Actual offline, disconnection and reconnect steps canceled by user and not verified",
+    "No physical power-loss or recovery of never-acquired remote versions claimed",
+    "Native fault tests, ordinary GUI tests and actual OneDrive observations remain separately identified",
+    "Only the two recorded devices and personal-use scope; no public release or untested OS compatibility claim"
+  ],
+  "decisionScope": "User-revised personal online use on the two recorded devices; original offline clauses remain unverified",
+  "fullOriginalSpecificationPassed": false,
+  "revisedScopeCasesPassed": 26,
+  "originalFullCasesPassed": 22,
+  "remainingWithinRevisedScope": [],
+  "cleanup": {
+    "macQueueStopped": true,
+    "ownedTerminal25251Closed": true,
+    "preexistingTerminalPreserved": true,
+    "windowsTestLocksExplicitlyReleased": true,
+    "appDataProbeArtifactsArchivedAndRemoved": true,
+    "networkDisconnectRequests": 0
+  }
+}
