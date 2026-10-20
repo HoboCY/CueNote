@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-20",
+  "issue": 33,
+  "case": "A15",
+  "scope": "Online synthetic invalid files delivered through real OneDrive and observed in ordinary installed apps",
+  "windowsCandidate": "3518441",
+  "macCandidate": "4f517a4",
+  "checksPassed": 53,
+  "checksFailed": 0,
+  "cloudFactsPerDevice": 10,
+  "originalFactsUnchanged": 7,
+  "cleanupOriginalFactsPerDevice": 7,
+  "macActualDatalessPlaceholders": 3,
+  "offlineTested": false,
+  "offlineScope": "Cancelled by user",
+  "fullA15Accepted": false,
+  "remaining": [
+    "Windows real cloud-placeholder behavior"
+  ],
+  "macArchiveSha256": "5b97486fc93be773588c601fe93a3009ac688635b7e2155b89c56f938d215357",
+  "subcases": [
+    "corrupt ZIP",
+    "future schema with unknown content",
+    "missing image payload"
+  ],
+  "rawChecks": "mac-management-4f517a4/a15-online-anomalies-results.json"
+}

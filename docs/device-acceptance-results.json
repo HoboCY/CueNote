@@ -599,7 +599,7 @@
       "id": "A11",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Both real-account sequential directions passed (onedrive-sequential-cf350d8 and onedrive-reverse-4f517a4); fully downloaded offline edit/reconnect remains untested. UI says local save, not remote receipt. Full case remains open."
+      "notes": "Both real-account sequential directions passed (onedrive-sequential-cf350d8 and onedrive-reverse-4f517a4); fully downloaded offline edit/reconnect remains untested. UI says local save, not remote receipt. Full case remains open. 用户于2026-10-20取消实际离线/断网验收；对应离线步骤不再待测，也不记为通过。在线证据及其余缺口保留。"
     },
     {
       "id": "A12",
@@ -611,7 +611,7 @@
       "id": "A13",
       "windows": "未测",
       "mac": "未测",
-      "notes": ""
+      "notes": " 用户于2026-10-20取消实际离线/断网验收；对应离线步骤不再待测，也不记为通过。在线证据及其余缺口保留。"
     },
     {
       "id": "A14",
@@ -623,7 +623,7 @@
       "id": "A15",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Real Mac OneDrive transient unreadable state displayed actual cloud-download reason, kept protected drafts, and reopened valid files after explicit retry without blank overwrite. Full placeholder/offline/external-deletion/corrupt/future-version/missing-image matrix remains open. 2026-10-20 真实 OneDrive 外部删除：两端均不创建空文件，各保留2份完整版本，共4份文档/附件核对通过；见 onedrive-external-delete-4f517a4-results.json。仍未通过整个A15。"
+      "notes": "Real Mac OneDrive transient unreadable state displayed actual cloud-download reason, kept protected drafts, and reopened valid files after explicit retry without blank overwrite. Full placeholder/offline/external-deletion/corrupt/future-version/missing-image matrix remains open. 2026-10-20 真实 OneDrive 外部删除：两端均不创建空文件，各保留2份完整版本，共4份文档/附件核对通过；见 onedrive-external-delete-4f517a4-results.json。仍未通过整个A15。 用户于2026-10-20取消实际离线/断网验收；对应离线步骤不再待测，也不记为通过。在线证据及其余缺口保留。 2026-10-20在线异常文件补测：损坏、未来版本含未知字段、缺图包通过真实OneDrive到达，两端原生提示正确；53项核对通过，10份事实文件双端相同，原有7份事实未变且清理恢复一致。Mac真实dataless占位提示通过；Windows真实占位仍待补，A15不整项通过。见onedrive-online-anomalies-4f517a4-results.json。"
     },
     {
       "id": "A16",
@@ -683,7 +683,7 @@
       "id": "A25",
       "windows": "未测",
       "mac": "未测",
-      "notes": "Formula types, source editing/undo/error, escaped dollars, cross-platform native package fidelity and Markdown export covered. Physical offline rendering on both ordinary installed platforms remains pending. See code-acceptance-cumulative-results.json."
+      "notes": "Formula types, source editing/undo/error, escaped dollars, cross-platform native package fidelity and Markdown export covered. Physical offline rendering on both ordinary installed platforms remains pending. See code-acceptance-cumulative-results.json. 用户于2026-10-20取消实际离线/断网验收；对应离线步骤不再待测，也不记为通过。在线证据及其余缺口保留。"
     },
     {
       "id": "A26",
@@ -693,9 +693,10 @@
     }
   ],
   "pending": [
-    "A25 cumulative formula editing/cross-device/export/search evidence passed; actual offline rendering on both devices remains open. A26 is complete.",
-    "Real OneDrive offline simultaneous edits, both reconnect orders, conflict preservation and remaining abnormal-file cases remain. Sequential round trips and A14 organization metadata are complete.",
-    "Interactive installation, actual upgrade/uninstall data retention and remaining formal-candidate UI cases on both devices"
+    "按用户2026-10-20调整后的在线范围，A11/A25已有证据满足；实际离线能力未验证，不记通过。",
+    "A12/A13在线外部更新、脏草稿冲突、漏事件核对、同机并发及冲突/重复ID。",
+    "A15 Windows真实云占位文件；A16剩余目录能力负例及恢复区失败提示等保护。",
+    "A24实际版本升级与卸载后的数据保留。"
   ],
   "syncReadiness": {
     "userConfirmedBothDevicesReady": true,
@@ -893,5 +894,38 @@
     "report": "resource-preservation-60760ee-results.json",
     "windowsReusedTests": 48,
     "independentReview": "Static code and evidence mapping, no blockers; actual logs verified by main agent"
+  },
+  "userScopeChange20261020": {
+    "date": "2026-10-20",
+    "requestedBy": "user",
+    "change": "取消实际离线/断网验收；其余在线验收继续",
+    "networkDisconnectRequests": 0,
+    "windowsControllerStopped": true,
+    "macControllerStarted": false,
+    "excludedSteps": {
+      "A15": "离线占位、断网场景",
+      "A25": "实际断网公式渲染",
+      "A13": "双端断网同改及两种复网次序",
+      "A11": "下载完整后的离线打开/编辑及重连"
+    },
+    "alreadySatisfiedWithinRevisedScope": [
+      "A11",
+      "A25"
+    ],
+    "remainingWithinRevisedScope": [
+      "A12",
+      "A13",
+      "A15",
+      "A16",
+      "A24"
+    ],
+    "offlineCapabilityVerified": false
+  },
+  "onlineAnomaliesFollowup": {
+    "offlineTested": false,
+    "checksPassed": 53,
+    "cleanupOriginalFactsPerDevice": 7,
+    "fullA15Accepted": false,
+    "report": "onedrive-online-anomalies-4f517a4-results.json"
   }
 }
