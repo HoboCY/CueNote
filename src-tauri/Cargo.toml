@@ -1,6 +1,6 @@
 [package]
 name = "cuenote"
-version = "0.1.0"
+version = "0.1.1"
 description = "CueNote desktop application"
 authors = ["CueNote"]
 edition = "2021"
