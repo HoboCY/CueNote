@@ -145,5 +145,5 @@ jobs:
           set -euo pipefail
           cd release
           sha256sum --check SHA256SUMS-x86_64-pc-windows-msvc.txt SHA256SUMS-aarch64-apple-darwin.txt
-          gh release create "$GITHUB_REF_NAME" ./* --verify-tag --draft --title "CueNote $GITHUB_REF_NAME" --notes-file ../docs/release-notes.md
+          gh release create "$GITHUB_REF_NAME" ./*.exe ./*.dmg --verify-tag --draft --title "CueNote $GITHUB_REF_NAME" --notes-file ../docs/release-notes.md
           gh release edit "$GITHUB_REF_NAME" --draft=false --latest

@@ -87,12 +87,13 @@ git push origin v0.1.1
 标签必须采用 `vX.Y.Z`，不得重新指向其他提交。无需 Apple 账号、证书或 Apple Secrets。
 工作流复用双平台测试、许可清单、打包及八阶段生命周期检查；`seal.mjs --release` 验证标签、
 源码提交、目标平台与安装包哈希后，仅整理当前安装器、构建回执、生命周期回执及 SHA-256。
-这些标签构建的 Actions artifacts 和最终 Release 附件均为公开明文，不包含合成旧包或本机用户数据。
+标签构建的 Actions artifacts 保留这些公开明文校验材料，保留期为 14 天，不包含合成旧包或本机用户数据。
 
 两个平台均成功后，独立发布任务使用 `contents: write` 权限下载并再次校验附件，
-创建草稿、上传全部附件，再发布为 Latest。普通构建仅有读取仓库的权限。
+创建草稿、仅上传 `.exe` 和 `.dmg` 安装包，再发布为 Latest。校验文件与 JSON 回执不上传到 Release。
+普通构建仅有读取仓库的权限。
 已存在的 Release 不会被覆盖；若发布中断留下草稿，检查并处理该草稿后再重跑发布任务。
-首次打开、更新与校验说明随 [Release 说明](release-notes.md) 发布。
+首次打开、更新与验证范围随 [Release 说明](release-notes.md) 发布。
 
 ## 验证状态
 
