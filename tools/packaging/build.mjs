@@ -82,6 +82,6 @@ writeJson(path.join(output, 'receipt.json'), { format: 1, ...input, architecture
     xcode: process.platform === 'darwin' ? capture('xcodebuild', ['-version']) : undefined },
   runner: { os: process.platform, image: process.env.ImageOS, imageVersion: process.env.ImageVersion,
     runId: process.env.GITHUB_RUN_ID, attempt: process.env.GITHUB_RUN_ATTEMPT },
-  signing: process.platform === 'darwin' ? 'ad-hoc; not notarized' : 'unsigned personal test',
+  signing: process.platform === 'darwin' ? 'ad-hoc; not notarized' : 'unsigned',
 });
 console.log(`Built ${input.target}: ${path.basename(installer)}`);

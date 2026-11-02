@@ -1,7 +1,7 @@
-# CueNote 个人试用安装包
+# CueNote 安装包与发布
 
-交付范围：Windows x64 与 Apple Silicon Mac，手动更新。未购买签名证书，
-未创建公开 Release、商店分发或自动更新。Windows 包未签名，Mac 为 ad-hoc
+交付范围：Windows x64 与 Apple Silicon Mac，手动更新。版本标签触发公开 GitHub Release，
+普通分支和手动构建保留加密私人交付。未购买签名证书，未接入商店分发或自动更新。Windows 包未签名，Mac 为 ad-hoc
 签名、未公证；系统可能要求用户确认来源。不能把 CI 启动结果当作个人实机或
 OneDrive 验收，后者由 [#33](https://github.com/HoboCY/CueNote/issues/33) 完成。
 
@@ -58,7 +58,7 @@ CI 在标准 `windows-2022`、`macos-15` runner 上检查与构建。
 
 ## 公开仓库中的私人交付
 
-公开仓库的普通 Actions artifact 不是私人文件。流程只上传 age 加密的 `.age`
+公开仓库的普通 Actions artifact 不是私人文件。普通分支和手动分支构建只上传 age 加密的 `.age`
 文件与密文校验值，不上传明文安装包、构建目录、私钥，不创建 Release。
 仓库只保存 `tools/packaging/recipient.txt` 中的收件公钥。私钥在用户本机仓库外
 生成并保存；丢失私钥会失去旧密文的解密能力，应由用户自行保管备份。
@@ -74,6 +74,25 @@ tar -xzf CueNote.tar.gz
 回执记录源码 SHA、架构、版本、工具链、锁文件哈希和 CI run；`lifecycle.json`
 记录隔离环境的每阶段数据保留结果。未通过检查的包不会进入上传步骤。
 更新收件人时，先在仓库外生成新密钥并验证本机往返加密，再只提交新公钥。
+
+## 自动发布 GitHub Release
+
+同步所有版本文件并提交后，推送与应用版本完全一致的稳定版本标签，例如：
+
+```sh
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+标签必须采用 `vX.Y.Z`，不得重新指向其他提交。无需 Apple 账号、证书或 Apple Secrets。
+工作流复用双平台测试、许可清单、打包及八阶段生命周期检查；`seal.mjs --release` 验证标签、
+源码提交、目标平台与安装包哈希后，仅整理当前安装器、构建回执、生命周期回执及 SHA-256。
+这些标签构建的 Actions artifacts 和最终 Release 附件均为公开明文，不包含合成旧包或本机用户数据。
+
+两个平台均成功后，独立发布任务使用 `contents: write` 权限下载并再次校验附件，
+创建草稿、上传全部附件，再发布为 Latest。普通构建仅有读取仓库的权限。
+已存在的 Release 不会被覆盖；若发布中断留下草稿，检查并处理该草稿后再重跑发布任务。
+首次打开、更新与校验说明随 [Release 说明](release-notes.md) 发布。
 
 ## 验证状态
 

@@ -3,6 +3,7 @@ name: Personal packages
 on:
   push:
     branches: [main, codex/project-foundation]
+    tags: ['v*']
     paths:
       - '.gitattributes'
       - '.github/workflows/personal-packages.yml'
@@ -17,6 +18,7 @@ on:
       - 'tsconfig*.json'
       - 'index.html'
       - 'docs/licenses/**'
+      - 'docs/release-notes.md'
   pull_request:
   workflow_dispatch:
 
@@ -59,6 +61,10 @@ jobs:
           rustup toolchain install 1.99.0 --profile minimal --component rustfmt
           rustup target add ${{ matrix.target }} --toolchain 1.99.0
           node --input-type=module -e "import {target,verifyInputs} from './tools/packaging/common.mjs'; if(target() !== '${{ matrix.target }}') throw new Error('Wrong runner architecture'); verifyInputs();"
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+            if ($env:GITHUB_REF_NAME -ne "v$version" -or $env:GITHUB_REF_NAME -notmatch '^v\d+\.\d+\.\d+$') { throw 'Release tag must match the stable package version' }
+          }
           npm ci
       - name: Frontend and native checks
         run: |
@@ -86,10 +92,10 @@ jobs:
         if: github.event_name != 'pull_request'
         run: node tools/packaging/lifecycle.mjs
       - name: Encrypt tested personal delivery
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref_type != 'tag'
         run: node tools/packaging/seal.mjs
       - name: Upload encrypted artifact only
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref_type != 'tag'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: CueNote-personal-${{ matrix.target }}
@@ -99,3 +105,45 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
+      - name: Prepare tested public release assets
+        if: github.ref_type == 'tag'
+        run: node tools/packaging/seal.mjs --release
+      - name: Upload public release assets
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: CueNote-release-${{ matrix.target }}
+          path: package-output/release/*
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  release:
+    needs: package
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: CueNote-release-*
+          path: release
+          merge-multiple: true
+      - name: Verify both platforms and publish complete release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd release
+          sha256sum --check SHA256SUMS-x86_64-pc-windows-msvc.txt SHA256SUMS-aarch64-apple-darwin.txt
+          gh release create "$GITHUB_REF_NAME" ./* --verify-tag --draft --title "CueNote $GITHUB_REF_NAME" --notes-file ../docs/release-notes.md
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest
